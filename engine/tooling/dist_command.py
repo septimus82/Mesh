@@ -1,20 +1,46 @@
 import argparse
+import os
 import shutil
 from pathlib import Path
 
 from engine import json_io
-from engine.tooling import build_demo_command, check, cli_snapshot_command, plan_schema_command, release_command
+from engine.tooling import (
+    build_demo_command,
+    check,
+    cli_snapshot_command,
+    export_bundle,
+    plan_schema_command,
+    release_command,
+)
+from engine.tooling.export_bundle import ExportError
 from mesh_cli.version_info import get_tool_version
 
 
 def handle_dist(args: argparse.Namespace) -> int:
+    """Build the distribution beside its output folder and swap it in only when every step passed (#749). An existing
+    output is replaced only when empty or an earlier distribution exactly as built; a folder that is, or holds, the
+    project, the home folder, a drive root or build-demo's ``dist/demo_content``, or lies inside that, is refused before
+    anything is touched."""
     engine_version = get_tool_version()
-    dist_dir = Path(args.out) if args.out else Path("dist") / f"mesh_dist_{engine_version}"
-    if dist_dir.exists():
-        shutil.rmtree(dist_dir)
-    dist_dir.mkdir(parents=True)
-
+    dist_dir = Path(os.path.abspath(args.out or Path("dist") / f"mesh_dist_{engine_version}"))  # (a link is refused)
     print(f"[Mesh][Dist] Building distribution v{engine_version} to {dist_dir}...")
+
+    def build(stage: Path) -> int:
+        if _build_dist(args, engine_version, stage) != 0:
+            raise ExportError("the distribution was not built (see above)")
+        export_bundle.seal_bundle(stage, "mesh dist")
+        return 0
+
+    demo = Path("dist/demo_content")  # (build-demo's own folder: it empties it, then dist moves it in)
+    if export_bundle.build_into(dist_dir, build, tag="[Mesh][Dist]", created_by="mesh dist", protected=(Path.cwd(), demo),
+                                sources=(demo,), legacy=("dist_manifest.json", "plan_schema.json")) is None:
+        return 1
+    print(f"\n[Mesh][Dist] Distribution complete: {dist_dir}")
+    return 0
+
+
+def _build_dist(args: argparse.Namespace, engine_version: str, dist_dir: Path) -> int:
+    """Every dist step, written into ``dist_dir`` (the build folder); 0 when all passed."""
 
     # 1. Quality Gate (Full)
     print("\n[Mesh][Dist] Step 1/6: Quality Gate")
@@ -140,8 +166,6 @@ def handle_dist(args: argparse.Namespace) -> int:
     }
 
     json_io.write_json_atomic(dist_dir / "dist_manifest.json", dist_manifest)
-
-    print(f"\n[Mesh][Dist] Distribution complete: {dist_dir}")
     return 0
 
 def add_dist_arguments(parser: argparse.ArgumentParser) -> None:

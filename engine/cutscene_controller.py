@@ -36,6 +36,7 @@ class CutsceneController:
         self.step_index: int = -1
         self.step_elapsed: float = 0.0
         self._step_state: dict[str, Any] = {}
+        self._dialogue_opened: bool = False  # this frame (see handle_dialogue_input)
 
     @property
     def is_running(self) -> bool:
@@ -50,8 +51,21 @@ class CutsceneController:
             if cutscene:
                 self.cutscenes[cutscene.id] = cutscene
 
+    def load_project_cutscenes(self) -> None:
+        """The game project's ``cutscenes.json`` (none is fine), in place of any cutscenes held (a project switch)."""
+        self.cutscenes.clear()
+        try:
+            self.load_from_file("cutscenes.json")
+        except FileNotFoundError:
+            pass
+
     def load_from_file(self, path: str) -> None:
+        """A relative ``path`` is the game project's (engine.paths.project_root), not the current folder's (#623)."""
+        from engine.paths import project_root  # noqa: PLC0415
+
         p = Path(path)
+        if not p.is_absolute():
+            p = project_root() / p
         raw = json.loads(p.read_text(encoding="utf-8"))
         validate(raw, "cutscene.schema.json", p)
         raw_entries = raw.get("cutscenes", [])
@@ -110,6 +124,20 @@ class CutsceneController:
             if self.step_index >= len(self.active.steps):
                 self.stop()
 
+    def handle_dialogue_input(self) -> None:
+        """The interact key steps the cutscene's own dialogue box on (#743): nothing else advances owner "cutscene".
+
+        Called after the room's update (engine.game_runtime.tick), so the open box still holds the player on the frame
+        this press closes its last line, and the press can't also interact with whoever stands beside them. A press
+        on the frame the box opened doesn't skip its first line (as the Dialogue behaviour)."""
+        opened, self._dialogue_opened = self._dialogue_opened, False
+        ui = getattr(self.window, "ui_controller", None)
+        manager = getattr(self.window, "input", None)
+        if opened or ui is None or manager is None or not ui.is_dialogue_active(owner="cutscene"):
+            return
+        if manager.was_action_pressed("interact"):
+            ui.advance_dialogue(owner="cutscene")
+
     # ------------------------------------------------------------------
     # Step processing
     # ------------------------------------------------------------------
@@ -140,10 +168,22 @@ class CutsceneController:
         return True
 
     def _find_entity(self, identifier: Any):
+        """The scene's sprite named ``identifier`` (SceneController.find_entity), or None.
+
+        A target that isn't in the scene is a guarded no-op, as every step has always treated it: the step ends
+        (start_dialogue then looks for the dialogue on any sprite) and a warning names it. Errors from the lookup
+        itself are not caught."""
         sc = getattr(self.window, "scene_controller", None)
         if sc is None:
             return None
-        return sc.find_sprite(identifier)
+        sprite = sc.find_entity(identifier)
+        if sprite is None:
+            logger.warning(
+                "[Mesh][Cutscene] '%s': target %r is not in the scene",
+                getattr(self.active, "id", "?"),
+                identifier,
+            )
+        return sprite
 
     def _step_move_entity(self, data: dict[str, Any], dt: float) -> bool:
         target_name = data.get("entity") or data.get("target")
@@ -233,7 +273,7 @@ class CutsceneController:
             candidates = [target] if target is not None else list(getattr(getattr(self.window, "scene_controller", None), "all_sprites", []) or [])
             try:
                 for entity in candidates:
-                    for behaviour in getattr(entity, "behaviours", []):
+                    for behaviour in getattr(entity, "mesh_behaviours_runtime", None) or []:
                         if type(behaviour).__name__ != "DialogueRunnerBehaviour":
                             continue
                         if dialogue_id and getattr(behaviour, "dialogue_id", "") != dialogue_id:
@@ -249,7 +289,7 @@ class CutsceneController:
             entries = [{"speaker": speaker, "text": text}]
         if ui is not None and entries:
             try:
-                ui.show_dialogue(entries, owner=owner)
+                self._dialogue_opened = bool(ui.show_dialogue(entries, owner=owner))
             except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
                 _log_swallow("CUTS-002", "engine/cutscene_controller.py start_dialogue ui.show_dialogue", once=True)
         return True

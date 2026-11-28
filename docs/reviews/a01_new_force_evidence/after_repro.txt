@@ -1,0 +1,18 @@
+== new_sibling: name='../../victim' exit=1
+  victim/MARKER.txt exists: True | sandbox/KEEP.txt exists: True
+  stderr: [mesh] Error: invalid project name '../../victim': it must not contain path separators.
+== new_absolute: name='C:\\Users\\<home>\\AppData\\Local\\Temp\\claude\\c18a071c64bbe7a7\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\A-01\\repro\\new_absolute\\outer\\victim' exit=1
+  victim/MARKER.txt exists: True | sandbox/KEEP.txt exists: True
+  stderr: ame 'C:\\Users\\<home>\\AppData\\Local\\Temp\\claude\\c18a071c64bbe7a7\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\A-01\\repro\\new_absolute\\outer\\victim': it must not contain path separators.
+== new_parent: name='..' exit=1
+  victim/MARKER.txt exists: True | sandbox/KEEP.txt exists: True
+  stderr: [mesh] Error: invalid project name '..': it must be a folder name, not '.' or '..'.
+== new_project_sibling: name='../../victim' exit=1
+  victim/MARKER.txt exists: True | sandbox/KEEP.txt exists: True
+  stderr: [mesh] Error: invalid project name '../../victim': it must not contain path separators.
+== new_project_absolute: name='C:\\Users\\<home>\\AppData\\Local\\Temp\\claude\\c18a071c64bbe7a7\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\A-01\\repro\\new_project_absolute\\outer\\victim' exit=1
+  victim/MARKER.txt exists: True | sandbox/KEEP.txt exists: True
+  stderr: \Users\\<home>\\AppData\\Local\\Temp\\claude\\c18a071c64bbe7a7\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\A-01\\repro\\new_project_absolute\\outer\\victim': it must not contain path separators.
+== new_project_parent: name='..' exit=1
+  victim/MARKER.txt exists: True | sandbox/KEEP.txt exists: True
+  stderr: [mesh] Error: invalid project name '..': it must be a folder name, not '.' or '..'.

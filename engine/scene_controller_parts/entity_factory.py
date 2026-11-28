@@ -1,8 +1,10 @@
 # mypy: ignore-errors
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Any, cast
 
+from engine.scene_runtime import room_memory
 from engine.swallowed_exceptions import _log_swallow
 
 
@@ -42,6 +44,49 @@ def _apply_collision_poly(self, sprite: Any, poly: Any) -> None:
         return
 
 
+_ENTITY_SPRITE_CLASSES: dict[type, type] = {}
+
+
+def _end_behaviours(sprite: Any) -> None:
+    """Tell the sprite's behaviours it is gone (``on_destroy``), once, and end every event-bus subscription they
+    made (#637: several release theirs only in ``destroy()``/``dispose()``, which nothing calls)."""
+    import engine.scene_controller_core as scene_controller_module
+
+    if getattr(sprite, "_mesh_behaviours_ended", False):
+        return
+    sprite._mesh_behaviours_ended = True
+    # (the scene's record holds the same functions and runs them again on leaving the room: each is idempotent)
+    unsubscribes = getattr(sprite, "mesh_behaviour_unsubscribes", None) or []
+    sprite.mesh_behaviour_unsubscribes = []
+    for unsubscribe in unsubscribes:
+        unsubscribe()
+    for behaviour in list(getattr(sprite, "mesh_behaviours_runtime", None) or ()):
+        on_destroy = getattr(behaviour, "on_destroy", None)
+        if not callable(on_destroy):
+            continue
+        try:
+            on_destroy()
+        except Exception:  # noqa: BLE001  # REASON: one behaviour's failing teardown must not stop the others or the removal
+            scene_controller_module.logger.warning(
+                "on_destroy failed for %s on %s", type(behaviour).__name__, getattr(sprite, "mesh_name", "?"), exc_info=True
+            )
+
+
+def _entity_sprite_class(base: type) -> type:
+    """The scene's entity sprite: ``remove_from_sprite_lists`` (also ``kill()``: death, pickup, expiry) ends its
+    behaviours. Moving a sprite between layers goes through the list's own ``remove`` and is not an ending."""
+    cls = _ENTITY_SPRITE_CLASSES.get(base)
+    if cls is None:
+
+        class MeshEntitySprite(base):
+            def remove_from_sprite_lists(self) -> None:
+                super().remove_from_sprite_lists()
+                _end_behaviours(self)
+
+        cls = _ENTITY_SPRITE_CLASSES[base] = MeshEntitySprite
+    return cls
+
+
 def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
     import engine.scene_controller_core as scene_controller_module
 
@@ -61,8 +106,16 @@ def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
             )
             return None
 
-        sprite = scene_controller_module.optional_arcade.arcade.Sprite()
+        if entity.get("flip_x") and hasattr(texture, "flip_left_right"):
+            texture = texture.flip_left_right()  # a mirrored picture (facing the other way)
+        sprite = _entity_sprite_class(scene_controller_module.optional_arcade.arcade.Sprite)()
         sprite.texture = texture
+        # Logic-only entities (arrival spots, triggers) keep the placeholder for their
+        # hitbox but are never drawn: players shouldn't see grey squares. An object with its picture hidden
+        # (a passage, a door over painted map art) is there to touch and use, but never drawn either.
+        hidden_picture = entity.get("picture_hidden") is True
+        sprite.visible = bool(entity.get("sprite")) or hidden_picture
+        cast(Any, sprite).mesh_drawn = bool(entity.get("sprite")) and not hidden_picture
         sprite.center_x = float(entity.get("x", 0))
         sprite.center_y = float(entity.get("y", 0))
         sprite.scale = float(entity.get("scale", 1.0))
@@ -101,6 +154,14 @@ def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
         sprite_any.mesh_behaviour_configs = clean_behaviour_configs
         sprite_any.mesh_behaviours_runtime = []
         sprite_any.mesh_tag = entity_data.get("tag")
+        # Behaviours that filter by target_tags (TriggerVolume, Interactable...) read the list,
+        # and event payloads name the entity by mesh_id; neither was ever set, so they matched nothing.
+        raw_tags = entity_data.get("tags")
+        tags = [t for t in raw_tags if isinstance(t, str) and t] if isinstance(raw_tags, list) else []
+        if isinstance(entity_data.get("tag"), str) and entity_data["tag"] and entity_data["tag"] not in tags:
+            tags.insert(0, entity_data["tag"])
+        sprite_any.mesh_tags = tags
+        sprite_any.mesh_id = entity_data.get("id")
 
         self._apply_collision_poly(sprite, entity_data.get("collision_poly"))
         self._attach_animator(sprite, entity_data)
@@ -146,6 +207,24 @@ def _rebuild_behaviours_for_sprite(self, sprite: Any) -> None:
     entity_data = self._ensure_entity_data_dict(sprite)
     config_root = scene_controller_module.ensure_behaviour_config_root(entity_data)
 
+    # The event-bus subscriptions its behaviours make belong to this scene: the next scene load ends them (they
+    # used to outlive the room, so every visit added another listener to each event). Rebuilt: the old ones end now.
+    for unsubscribe in getattr(sprite, "mesh_behaviour_unsubscribes", None) or ():
+        unsubscribe()
+    bus = getattr(self.window, "event_bus", None)
+    record = getattr(bus, "record_subscriptions", None)
+    with record() if callable(record) else nullcontext([]) as made:
+        runtime_instances = _create_behaviour_instances(self, sprite, names, config_root)
+    cast(Any, sprite).mesh_behaviour_unsubscribes = list(made)
+    for unsubscribe in made:
+        self.track_scene_subscription(unsubscribe)
+    cast(Any, sprite).mesh_behaviours_runtime = runtime_instances
+    cast(Any, sprite)._mesh_behaviours_ended = False  # fresh behaviours: their ending is still to come
+
+
+def _create_behaviour_instances(self, sprite: Any, names: list[str], config_root: dict[str, Any]) -> list[Any]:
+    import engine.scene_controller_core as scene_controller_module
+
     runtime_instances: list[Any] = []
     for index, behaviour_name in enumerate(names):
         config_for_behaviour = dict(config_root.get(behaviour_name, {}) or {})
@@ -164,9 +243,9 @@ def _rebuild_behaviours_for_sprite(self, sprite: Any) -> None:
             current_config.update(config_for_behaviour)
         else:
             setattr(behaviour, "config", dict(config_for_behaviour))
+        room_memory.bind_facts(self, sprite, behaviour)  # (what already happened to it here, before its first update)
         runtime_instances.append(behaviour)
-
-    cast(Any, sprite).mesh_behaviours_runtime = runtime_instances
+    return runtime_instances
 
 
 def _attach_animator(self, sprite: Any, entity_data: dict[str, Any]) -> None:

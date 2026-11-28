@@ -1,0 +1,174 @@
+{
+ "categories": {
+  "terrain": {
+   "sculpt_paint_scatter_in_view": true
+  },
+  "paint": {
+   "tool": "paint",
+   "materials_in_view": true
+  },
+  "scatter": {
+   "tool": "scatter",
+   "meadow_in_view": true
+  },
+  "objects": {
+   "person_in_view": true,
+   "models_in_view": true,
+   "scatter_still_armed": true
+  },
+  "environment": {
+   "camera_and_sun": true,
+   "lighting": true,
+   "wind": true
+  },
+  "audio": {
+   "sounds": true,
+   "place": true
+  }
+ },
+ "inspector_kept": {
+  "Rooms": true,
+  "Terrain": true,
+  "Objects": true,
+  "inspector_hidden": true,
+  "inspector_back": true
+ },
+ "ctrl_s": {
+  "message": "Saved 1 file(s).",
+  "focused": true,
+  "saved_name": "Elder Oak"
+ },
+ "undo_redo": [
+  "Elder",
+  "Elder Oak"
+ ],
+ "panels": {
+  "view": [
+   720
+  ],
+  "view_tools_hidden": 950,
+  "tools_hidden": true,
+  "view_focus": [
+   1280,
+   650
+  ],
+  "focus_clean": true,
+  "back": 720,
+  "wheel_over_panels_kept_the_view": true
+ },
+ "play_stop": [
+  "play",
+  "edit",
+  true
+ ],
+ "sizes": {
+  "640x480": {
+   "window": [
+    640,
+    480
+   ],
+   "view": [
+    410,
+    410
+   ],
+   "view_share": 0.547,
+   "top_bar_past_edge": [],
+   "left_more": [
+    0,
+    0
+   ],
+   "right_more": [
+    0,
+    0
+   ],
+   "panels": [
+    230,
+    0
+   ],
+   "past_the_window": []
+  },
+  "1920x1080": {
+   "window": [
+    1920,
+    1080
+   ],
+   "view": [
+    1360,
+    1010
+   ],
+   "view_share": 0.662,
+   "top_bar_past_edge": [],
+   "left_more": [
+    0,
+    0
+   ],
+   "right_more": [
+    0,
+    0
+   ],
+   "panels": [
+    230,
+    330
+   ],
+   "past_the_window": []
+  },
+  "2560x1440": {
+   "window": [
+    2560,
+    1165
+   ],
+   "view": [
+    2000,
+    1095
+   ],
+   "view_share": 0.734,
+   "top_bar_past_edge": [],
+   "left_more": [
+    0,
+    0
+   ],
+   "right_more": [
+    0,
+    0
+   ],
+   "panels": [
+    230,
+    330
+   ],
+   "past_the_window": []
+  },
+  "1280x720": {
+   "window": [
+    1280,
+    720
+   ],
+   "view": [
+    720,
+    650
+   ],
+   "view_share": 0.508,
+   "top_bar_past_edge": [],
+   "left_more": [
+    0,
+    0
+   ],
+   "right_more": [
+    0,
+    0
+   ],
+   "panels": [
+    230,
+    330
+   ],
+   "past_the_window": []
+  }
+ },
+ "tiles_2d": {
+  "palette": [
+   8,
+   2
+  ],
+  "brush": "Painting Flowers on the ground. Click or drag on the map. Esc goes back to Select.",
+  "tool": "paint"
+ }
+}

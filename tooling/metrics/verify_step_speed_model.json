@@ -1,0 +1,141 @@
+{
+  "advisory_only": true,
+  "description": "Runner-speed model for verify-all's ADVISORY slow-step check (mesh_cli/verify_speed_advisory.py). It never fails a run; the enforced budgets are verify_step_budget.json. Expected = base_ms * speed**slope, advisory threshold = expected * allowance (allowance = exp(k*sigma)); speed = median over the speed_reference_ms steps other than the judged one of current/reference. Refit with tooling/ci_timing_analysis.py --write-model.",
+  "fitted_from": "post-opt CI samples (tests job, step verify-all) of GitHub Actions workflow CI",
+  "k": 4.0,
+  "min_reference_steps": 3,
+  "platforms": {
+    "linux": {
+      "first_run": "2026-10-25T11:41:15Z",
+      "last_run": "2026-10-25T19:11:19Z",
+      "runs": 36,
+      "speed_log_sd": 0.1831,
+      "speed_reference_ms": {
+        "encounter-audit": 323,
+        "exception-policy-scan": 2841,
+        "player-package-gate": 1052,
+        "pytest-fast": 62492,
+        "swallow-scan-gate": 3188,
+        "verify-demo": 8726,
+        "verify-strict": 533,
+        "web-smoke": 3564
+      },
+      "speed_seen": [
+        0.622,
+        1.152
+      ],
+      "steps": {
+        "exception-policy-scan": {
+          "allowance": 1.2688,
+          "base_ms": 2842,
+          "n": 36,
+          "sigma": 0.0595,
+          "slope": 0.7446
+        },
+        "player-package-gate": {
+          "allowance": 1.1319,
+          "base_ms": 1033,
+          "n": 36,
+          "sigma": 0.031,
+          "slope": 0.9267
+        },
+        "pytest-fast": {
+          "allowance": 1.1495,
+          "base_ms": 64257,
+          "n": 36,
+          "sigma": 0.0348,
+          "slope": 0.7324
+        },
+        "swallow-scan-gate": {
+          "allowance": 1.2245,
+          "base_ms": 3156,
+          "n": 36,
+          "sigma": 0.0506,
+          "slope": 0.8062
+        },
+        "verify-demo": {
+          "allowance": 1.3067,
+          "base_ms": 9197,
+          "n": 36,
+          "sigma": 0.0669,
+          "slope": 1.3745
+        },
+        "web-smoke": {
+          "allowance": 1.1466,
+          "base_ms": 3516,
+          "n": 36,
+          "sigma": 0.0342,
+          "slope": 0.8564
+        }
+      }
+    },
+    "windows": {
+      "first_run": "2026-10-25T11:41:15Z",
+      "last_run": "2026-10-25T19:11:19Z",
+      "runs": 35,
+      "speed_log_sd": 0.2328,
+      "speed_reference_ms": {
+        "doctor-assets": 337,
+        "encounter-audit": 571,
+        "exception-policy-scan": 2951,
+        "player-package-gate": 1684,
+        "pytest-fast": 93375,
+        "ruff-gate": 470,
+        "runtime-player-smoke": 222,
+        "swallow-scan-gate": 3423,
+        "verify-demo": 17473,
+        "verify-strict": 836,
+        "web-smoke": 4939
+      },
+      "speed_seen": [
+        0.621,
+        1.302
+      ],
+      "steps": {
+        "exception-policy-scan": {
+          "allowance": 1.3806,
+          "base_ms": 2945,
+          "n": 35,
+          "sigma": 0.0806,
+          "slope": 0.4847
+        },
+        "player-package-gate": {
+          "allowance": 1.1836,
+          "base_ms": 1683,
+          "n": 35,
+          "sigma": 0.0421,
+          "slope": 0.9052
+        },
+        "pytest-fast": {
+          "allowance": 1.465,
+          "base_ms": 95645,
+          "n": 35,
+          "sigma": 0.0955,
+          "slope": 0.7974
+        },
+        "swallow-scan-gate": {
+          "allowance": 1.3944,
+          "base_ms": 3412,
+          "n": 35,
+          "sigma": 0.0831,
+          "slope": 0.6016
+        },
+        "verify-demo": {
+          "allowance": 1.3744,
+          "base_ms": 18013,
+          "n": 35,
+          "sigma": 0.0795,
+          "slope": 1.3603
+        },
+        "web-smoke": {
+          "allowance": 1.216,
+          "base_ms": 4843,
+          "n": 35,
+          "sigma": 0.0489,
+          "slope": 0.7737
+        }
+      }
+    }
+  },
+  "schema_version": 1
+}

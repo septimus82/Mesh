@@ -231,7 +231,7 @@ def _battle_sprite_frames_ready(
 def _sheet_cache(window: GameWindow) -> SpriteSheetCache | None:
     factory = getattr(window, "animation_factory", None)
     if factory is not None:
-        sheets = getattr(factory, "sheets", None)
+        sheets: SpriteSheetCache | None = getattr(factory, "sheets", None)
         if sheets is not None:
             return sheets
     assets = getattr(window, "assets", None)

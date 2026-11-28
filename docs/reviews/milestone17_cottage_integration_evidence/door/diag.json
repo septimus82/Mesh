@@ -1,0 +1,40 @@
+{
+  "door": {
+    "center_m": [
+      10.0,
+      10.940000000000001
+    ],
+    "bottom_m": 9.940000000000001,
+    "size_m": [
+      2.0,
+      2.0
+    ],
+    "elevation_px": 0.0
+  },
+  "cottage_m": [
+    10.0,
+    12.0
+  ],
+  "wall_face_y_m": 10.0,
+  "door_plane_in_front_of_wall_m": 0.06,
+  "sun_shadow_darkens_px": {
+    "template": 185168,
+    "flush": 185168
+  },
+  "door_shadow_px": {
+    "template": 9620,
+    "flush": 9620
+  },
+  "opening_shown_beside_door_px": {
+    "template": {
+      "c": 5459,
+      "w": 5086,
+      "e": 5466
+    },
+    "flush": {
+      "c": 5459,
+      "w": 5086,
+      "e": 5466
+    }
+  }
+}

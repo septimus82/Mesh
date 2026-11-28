@@ -18,6 +18,8 @@ The `mcp` SDK is an *optional* dependency — the engine never requires it:
 pip install -e .[mcp]
 ```
 
+Both `mcp` 1.x and 2.x work (2.x renamed `FastMCP` to `MCPServer`; the server takes either).
+
 ## Quickstart
 
 ```bash
@@ -31,6 +33,105 @@ configuration.
 `mesh mcp install` writes the Claude Desktop config for the current project. It
 backs up any existing config to `claude_desktop_config.json.bak`, preserves other
 servers, and overwrites only the `mcpServers.mesh` entry.
+
+## Editing a project together with Mesh Studio
+
+These tools use **the same operations Mesh Studio uses** (`engine/authoring.py` over
+`engine/project_ops.py`), so a change made by an AI, by a person in the Studio, or with the
+`mesh author` command is validated the same way and produces the same documents. They work the
+same for any MCP client.
+
+| Tool | Purpose |
+| --- | --- |
+| `authoring_operations` | Every operation (`place_prefab`, `rename_entity`, `set_dialogue_text`, `add_line`, `set_choice`, `set_show_when`, `paint_tiles`, `add_room`, `link_rooms`, …) with its settings and what it does. Generated from the engine, so it is never out of date. |
+| `read_project(root)` | Every room with its objects and map. If Mesh Studio has the project open, this is what the person sees now (unsaved edits included), with a `revision_id` to base proposals on (and `revision`, its number in this Studio session). It also includes `last_save`, the person's last save (F3), and `last_reload`, the last hot reload of the room (F7: a refused scene and why, `null` before one; see [debug_diagnostics.md](debug_diagnostics.md#scene-hot-reload-f7)). |
+| `propose_changes(changes, title, base_revision_id, root)` | Send a batch to the Mesh Studio that has the project open. The person reviews it (top bar **AI**) and accepts or rejects it. Invalid batches are refused at once, with the change and the reason. At most 20 proposals wait for the person at once; more are refused (`too_many_pending`) until some are decided (F10, [reviews/f10_proposal_memory.md](reviews/f10_proposal_memory.md)). |
+| `proposal_status(proposal_id, root)` | `pending`, `accepted` (with the ids it created), `rejected` or `conflict`. |
+| `withdraw_proposal(proposal_id, root)` | Take back a proposal that is still waiting. |
+| `request_status(request_id, root)` | What became of a request that answered `outcome_unknown`: `queued`, `started`, `finished` (with its `result`) or `cancelled` (#462 S3, below). |
+| `apply_changes(changes, root, dry_run)` | Change the project files (all or nothing), or preview with `dry_run`. **If Mesh Studio has the project open, the batch is proposed there instead:** files are never written behind the person's back. |
+
+**When it can't be told whether Studio has the project open (F1):** the project has a session record (`.mesh/live_session.json`) that can't be read or verified. For example, Studio didn't answer, timed out, or answered for another session or folder. In that case these tools write and create nothing, and they don't offer the files as current. They answer `reason: "studio_session_uncertain"`, with `problem` (why), `discovery` (the record's path) and what to do:
+
+- **Studio is open:** make sure it's responding, then try again.
+- **Studio isn't running:** open the project in Mesh Studio once, which replaces its leftover record, or remove the record with `mesh author recover --project <the record's project folder>` (it removes only that project's record, and only while nothing has that project open). Then try again.
+
+**One editor owns a project at a time (#462 R2).** Whoever writes a project owns it while it does: Mesh Studio from before it reads the project until it has closed, and a tool writing the files directly for that one write. Ownership is an operating-system lock on `.mesh/owner.lock`, held by the running process, so it works across processes and is gone the moment its process is, however it ended. What follows:
+
+- **A second Mesh Studio on the same project is refused** with a message, before it opens a window. The first one's session record and unsaved work are untouched, and closing the second changes nothing: changes still go to the first for review.
+- **A Studio that crashed** no longer owns the project, but its session record stays. The answer is still `studio_session_uncertain`, and says that no editor has the project open now. Nothing is written until an editor opens the project (that replaces the record) or `mesh author recover` removes it. `recover` owns the project while it does so: if an editor has the project open, it removes nothing.
+- **A Studio that is running but can't be confirmed** (frozen, or its record damaged) still owns the project. The answer says so, and says not to delete its record.
+- **A Studio with its live session turned off** (`MESH_STUDIO_NO_AI_BRIDGE`), or one still starting, owns the project with no record: `problem: "owned_without_session"`. Nothing is written or read as current.
+- **A direct write owns the project** from before it reads the files until they are saved. A Studio opened meanwhile waits a moment for it and then opens on the files as written. If a Studio got there first, the write is refused (`studio_open`); if another tool is writing, `project_busy`.
+
+**When another editor (not Mesh Studio) has the project open:** the file-writing tools (`apply_changes`, `apply_ops`, `create_scene`) and `read_project` refuse with `reason: "other_editor_open"`. That editor's unsaved edits aren't in the files, and it takes no proposals. To go on, close it, or open the project in Mesh Studio.
+
+Only a project with no session record at all, and no owner, is changed directly, and `apply_changes` owns it while it writes. A proposal that fails is never written to the files instead.
+
+**When Studio is busy (#462 S3):** each request waits for Studio's main thread, up to about 5 s. Every change has a `request_id` in its answer. Two answers mean the deadline passed, and they mean different things:
+
+- **`reason: "timeout"`:** Studio hadn't started the change. It was cancelled: it never ran and never will, and nothing changed. It's safe to send again.
+- **`reason: "outcome_unknown"`:** Studio started the change but hadn't finished it, or its answer was lost. It may still change the project. Ask `request_status` with the `request_id` before sending it again. Studio remembers ended requests for 10 minutes (at most 200).
+
+**Retrying safely:** `propose_changes`, `apply_changes`, `withdraw_proposal`, `debug_start_playtest`, `debug_stop_playtest`, `debug_play_action` and the legacy `live_*` tools take an optional `request_id` (1-64 letters, digits, `-` or `_`). Sending the same one again is the same request, so it is done at most once, and the retry gets the first one's answer. Over HTTP the header is `X-Mesh-Request-Id`. A cancelled request stays cancelled, so retry it with a new id. The states and the rules for them are in `engine/editor/live_session_bridge.py`.
+
+On Windows, a refused connection can take about 2 s to report. A client that waits only 2 s (the legacy `live_*` tools) may then answer `outcome_unknown` when no editor is listening. That errs on the safe side: `request_status` answers `request_not_found`.
+
+**When writing the files fails (F3):** the files a batch changes are saved together: every one or none. If writing one fails (a full disk, a locked file), the ones already written are put back. `apply_changes`, `apply_ops` and `mesh author apply` then answer `reason: "save_failed"`, and the batch is not kept anywhere: apply it again. Its `save` report gives:
+
+- `stage` (`validate`, `serialize`, `stage`, `commit` or `rollback`) and `reason`;
+- `documents`, each with its `path`, `kind`, whether it `existed` and its `result` (`saved`, `restored`, `not_written` or `needs_recovery`);
+- `committed`, `restored` and `outside_change_backups`.
+
+If a file couldn't be put back, `recovery_required` is true and `needs_recovery` lists each such file with:
+
+- its `problem`: `put_back_failed`, or `changed_after_save` when another program changed it after Mesh wrote it, in which case it is left as that program wrote it;
+- its previous version's path (`original`);
+- what to do (`action`). The reason codes are listed in [docs/reviews/f3_recoverable_saves.md](reviews/f3_recoverable_saves.md). `read_project` on an open Studio includes `last_save`, the report of the person's last save, so an AI can see that a save failed.
+
+A batch is a list of changes:
+
+```json
+[
+  {"op": "place_prefab", "prefab": "person", "x": 448, "y": 224},
+  {"op": "rename_entity", "entity_id": "@0", "name": "Sexton"},
+  {"op": "set_dialogue_text", "entity_id": "Sexton", "text": "Who goes there?"},
+  {"op": "set_show_when", "entity_id": "Sexton", "require": "lantern_lit", "forbid": ""}
+]
+```
+
+- **`room`**: each change can name a room (room keys come from `read_project`); the default is the current room. A room key names one room for the whole Studio session. A room made again after an undo, with the same name, gets a new key (`cellar_2`), so a proposal for the old room never changes the new one (#462 S4). Read the project again for the new key.
+- **`entity_id`**: takes an object's id or its unique name.
+- **`@N`**: the id of the object made by change `N` of the same batch, counting from 0.
+- **All or nothing:** a batch applies completely or not at all, and is one Undo step in the Studio.
+
+**Revisions and conflicts.** Pass the `revision_id` you read as `base_revision_id`:
+- If the person changed other things since you read, both sets of changes survive (they paint the floor while you add an NPC).
+- If you both changed the same property, Studio reports a conflict, applies nothing, and the person's version stands. Read again and propose anew.
+- **Studio keeps only the last 30 revisions it was read at.** If yours is no longer kept, the proposal is refused with `reason: "base_revision_unavailable"` and the current `revision` number. Nothing is staged, and it is never compared with a newer revision instead (F6), because that would hide the person's changes since. Read again and propose against the new revision.
+- **A `base_revision_id` that isn't one read_project gave** (not a string as given, or naming a revision this session hasn't had) is refused with `reason: "invalid_base_revision"`.
+- **A revision of another Studio session or project is refused** (`reason: "revision_from_another_session"`, #462 R1). Revision numbers start again at 0 each time Studio opens a project, so revision 0 read before Studio was closed and reopened (or crashed) is not today's revision 0. `revision_id` carries the session as well as the number, so it can't pass for another session's. Read again and propose against the new `revision_id`.
+- **A bare `base_revision` number is refused** (`reason: "revision_id_required"`), current or not: it can't say which session it was read in. This is a change for clients written before #462 R1: read `revision_id` and send it as `base_revision_id` (the CLI: `mesh author propose --base-revision-id`). A `base_revision` sent with it must name the same revision.
+- No refusal includes the current `revision_id`: you get it by reading the project, with what the person has changed since.
+- **Without a base,** the batch is checked against the project as it is now. Its `proposal.base_revision_id` is then `null`: no base was verified.
+
+**No MCP?** `mesh author ops | read | apply | propose | status` does the same from a command line, with JSON in and out.
+
+**Older tools.** `apply_ops` still takes its operation types. On a Mesh Studio project, `add_entity_from_prefab`, `delete_entity`, `set_behaviour_params` and `paint_tiles` now go through this same validated path (and become a proposal while Studio is open). The `live_*` tools serve the legacy editor. Against Mesh Studio, `live_accept_proposal` is refused, because only the person accepts.
+
+## Debugging a running play-test
+
+Three tools let an AI see the game running in a Mesh Studio play-test, read from the running game itself rather
+than the files. Details, the refusals and a whole recorded session are in
+[runtime_debugger.md](runtime_debugger.md).
+
+| Tool | Purpose |
+| --- | --- |
+| `debug_runtime_snapshot(events, root)` | The room running, the player's position, flags, counters, quests, this play-test's events in order, and errors the engine caught. While Studio is editing, `status: "not_playing"`. Changes nothing; needs no permission. |
+| `debug_start_playtest(root)` | Play, as Studio's Play (F4) does. It is refused (`playtest_control_off`) until the person allows AI play-test control in Studio's AI panel, for that session. It is also refused (`studio_busy`) while they are typing, dragging or answering a question. Never saves. |
+| `debug_stop_playtest(root)` | Stop, back to editing the project as the person left it. Needs the same permission. |
+| `debug_interaction(entity_id, root)` | Why the player can or can't use one object now: `how` (interact or touch), `available` (usable now), `blocking` (the first condition that fails), every condition `observed` with its values, the flags involved and where the project sets them, a conversation's choices (`conditions_met` apart from `selectable_now`), a touch door's rules (`on_contact`: walking into it would use it), and what is `not_analysed`. Read-only; needs no permission. See [interaction_debugger.md](interaction_debugger.md). |
+| `debug_play_action(action, direction, frames, choice, root)` | Play the running play-test with the player's own controls, one bounded action at a time: `move` (a direction for 1 to 120 frames), `interact`, `advance` (a conversation's next line) or `choose` (one of its choices). Returns where the player went, the conversation, and a snapshot. A separate permission, off until the person allows AI play in the AI panel. See [ai_playtesting.md](ai_playtesting.md). |
 
 ## Other MCP Clients
 
@@ -95,7 +196,7 @@ Action (the AI's hands), wrapping `engine.ai_ops.AIOps`:
 
 | Tool | Purpose |
 | --- | --- |
-| `create_scene` | Create a scene from a template. |
+| `create_scene` | Create a scene from a template. It never replaces anything: a name already taken (a file, folder or link), an unknown template or a failed write answers `ok: false` naming the path, with `data.reason` `already_exists`, `unknown_template` or `write_failed` (F14). |
 | `add_entity_from_prefab` | Place a prefab instance into a scene. |
 | `list_op_types` | List every batch operation with its required/optional fields. |
 | `apply_ops` | Run a batch of operations (the full 23-op surface) in one call, then validate. |
@@ -128,6 +229,10 @@ the player); it also advises when the only chaser uses `ChaseTarget` in a
 tilemap-less scene (no nav grid, so the chase is inert — prefer `EnemyAI`).
 Returns `{ok, scene_path, warnings, summary{has_player, player_has_camera,
 enemies_targeting_player}}` where `ok` is simply "no warnings" (not an error).
+
+Runtime debugging: `debug_runtime_snapshot`, `debug_interaction`, `debug_start_playtest`, `debug_stop_playtest`
+and `debug_play_action`; see
+[Debugging a running play-test](#debugging-a-running-play-test).
 
 ## Resource
 

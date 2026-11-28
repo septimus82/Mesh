@@ -1,0 +1,136 @@
+
+=== lane-gpu-ubuntu-latest-py3.11-shard-1: 238 ran, 0 skipped, 710 s in tests
+  modules:
+     139.8 s  19.7%   14 tests  tests.test_terrain_gpu
+     137.7 s  19.4%   10 tests  tests.test_hd2d_lighting_controls_gpu
+     136.8 s  19.3%    5 tests  tests.test_dialogue_reopen_gpu
+      52.9 s   7.5%   16 tests  tests.test_water_gpu
+      48.3 s   6.8%   24 tests  tests.test_hd2d_bloom_gpu
+      41.9 s   5.9%   33 tests  tests.test_hd2d_haze_gpu
+      29.4 s   4.1%   12 tests  tests.test_weather_collisions_gpu
+      16.4 s   2.3%    3 tests  tests.test_scatter_diagnostics_gpu
+      13.0 s   1.8%    5 tests  tests.test_water_passable_gpu
+      12.5 s   1.8%    8 tests  tests.test_room_file_ownership_gpu
+      12.4 s   1.7%    7 tests  tests.test_hd2d_lighting_gpu
+      10.6 s   1.5%    6 tests  tests.test_soundscape_studio_gpu
+       8.2 s   1.2%   20 tests  tests.test_hd2d_billboard_camera_gpu
+       7.6 s   1.1%   10 tests  tests.test_hd2d_lamp_glow_gpu
+       7.0 s   1.0%    3 tests  tests.test_hd2d_room_expand_gpu
+  tests:
+     137.7 s  test_hd2d_lighting_controls_gpu::test_the_hd2d_panel_shows_only_what_the_renderer_reads
+     136.8 s  test_dialogue_reopen_gpu::test_reopening_shows_the_same_numbers_openings_and_next_line_button
+      53.9 s  test_terrain_gpu::test_studio_paints_live_one_stroke_one_undo_step
+      36.8 s  test_hd2d_bloom_gpu::test_studio_glows_its_view_at_once_and_not_its_lines
+      35.1 s  test_hd2d_haze_gpu::test_studio_hazes_its_view_at_once_and_not_its_lines
+      17.7 s  test_terrain_gpu::test_studio_sculpts_live_one_stroke_one_undo_step
+      16.4 s  test_scatter_diagnostics_gpu::test_trees_over_a_dense_meadow_say_the_meadow_leaves_no_room_and_change_nothing
+      15.5 s  test_terrain_gpu::test_the_terrain_gate_fails_injected_regressions
+      14.9 s  test_water_gpu::test_a_creator_places_shapes_turns_and_banks_water_in_studio
+      12.3 s  test_terrain_gpu::test_studio_sculpts_a_click_at_a_time_with_undo_redo_save_and_reopen
+      11.5 s  test_hd2d_bloom_gpu::test_off_and_strength_zero_are_the_original_picture_with_nothing_made[village]
+      10.6 s  test_soundscape_studio_gpu::test_a_sound_is_placed_chosen_and_set_with_studios_controls
+      10.3 s  test_terrain_gpu::test_qa_s_findings_stay_fixed
+       9.3 s  test_weather_collisions_gpu::test_rain_stops_at_roofs_and_decks_and_splashes_on_what_it_hits[wind1]
+       8.8 s  test_terrain_gpu::test_a_plain_room_s_first_paint_stroke_its_undo_and_esc
+
+=== lane-gpu-ubuntu-latest-py3.11-shard-2: 296 ran, 2 skipped, 692 s in tests
+  modules:
+      73.7 s  10.7%    4 tests  tests.test_mesh_net_gpu
+      64.6 s   9.3%    5 tests  tests.test_fire_gpu
+      57.2 s   8.3%   12 tests  tests.test_studio_workflow_polish_gpu
+      57.0 s   8.2%    9 tests  tests.test_weather_authoring_gpu
+      44.8 s   6.5%    4 tests  tests.test_scatter_gpu
+      43.8 s   6.3%   12 tests  tests.test_hd2d_asset_pipeline_gpu
+      38.5 s   5.6%   29 tests  tests.test_hd2d_post_gpu
+      38.4 s   5.6%   12 tests  tests.test_hd2d_starter_gpu
+      27.3 s   3.9%   11 tests  tests.test_river_falls_gpu
+      25.9 s   3.7%    7 tests  tests.test_hd2d_studio_gpu
+      20.8 s   3.0%   14 tests  tests.test_studio_workspace_gpu
+      19.4 s   2.8%    3 tests  tests.test_river_tool_gpu
+      18.3 s   2.6%    6 tests  tests.test_dof_studio_gpu
+      17.2 s   2.5%    7 tests  tests.test_studio_3d_selection_gpu
+      15.9 s   2.3%    4 tests  tests.test_river_gpu
+  tests:
+      43.1 s  test_hd2d_asset_pipeline_gpu::test_models_import_through_studio_with_their_report
+      40.5 s  test_studio_workflow_polish_gpu::test_the_left_panel_scrolls_to_every_tool_and_nothing_out_of_view_is_clickable[1280x720]
+      39.2 s  test_weather_authoring_gpu::test_the_environment_category_opens_the_weather_panel
+      38.4 s  test_hd2d_starter_gpu::test_the_project_opens_in_studio_as_hd2d
+      35.9 s  test_scatter_gpu::test_studio_scatters_one_stroke_one_undo_step
+      32.4 s  test_hd2d_post_gpu::test_studio_grades_its_view_at_once_and_not_its_lines
+      32.1 s  test_mesh_net_gpu::test_two_windows_meet_party_travel_and_return
+      28.6 s  test_mesh_net_gpu::test_two_characters_persist_through_a_server_restart
+      27.3 s  test_fire_gpu::test_the_flames_lean_downwind_in_gusts_and_stand_in_still_air
+      25.9 s  test_hd2d_studio_gpu::test_the_hd2d_room_opens_in_studio_as_a_lit_3d_view
+      18.3 s  test_dof_studio_gpu::test_it_is_off_until_turned_on_and_then_subtle
+      17.6 s  test_river_falls_gpu::test_studio_makes_joins_carves_and_tunes_a_waterfall
+      17.2 s  test_studio_3d_selection_gpu::test_a_campfire_is_selected_by_clicking_it
+      15.5 s  test_fire_gpu::test_studio_places_edits_saves_reopens_and_plays_a_campfire_silently
+      14.3 s  test_hd2d_room_studio_gpu::test_an_hd2d_room_is_made_in_studio_with_its_size_and_the_kit
+
+=== lane-gpu-windows-latest-py3.11-shard-1: 271 ran, 0 skipped, 1408 s in tests
+  modules:
+     277.0 s  19.7%    5 tests  tests.test_dialogue_reopen_gpu
+     181.8 s  12.9%   16 tests  tests.test_water_gpu
+     148.2 s  10.5%    9 tests  tests.test_weather_authoring_gpu
+     107.9 s   7.7%   24 tests  tests.test_hd2d_bloom_gpu
+     100.3 s   7.1%   12 tests  tests.test_studio_workflow_polish_gpu
+      86.2 s   6.1%   33 tests  tests.test_hd2d_haze_gpu
+      82.2 s   5.8%   29 tests  tests.test_hd2d_post_gpu
+      69.5 s   4.9%   12 tests  tests.test_weather_collisions_gpu
+      52.9 s   3.8%    7 tests  tests.test_studio_3d_selection_gpu
+      39.9 s   2.8%    8 tests  tests.test_room_file_ownership_gpu
+      39.1 s   2.8%    5 tests  tests.test_water_passable_gpu
+      28.7 s   2.0%   10 tests  tests.test_hd2d_lamp_glow_gpu
+      23.2 s   1.7%    3 tests  tests.test_scatter_diagnostics_gpu
+      22.6 s   1.6%    7 tests  tests.test_hd2d_lighting_gpu
+      22.6 s   1.6%   20 tests  tests.test_hd2d_billboard_camera_gpu
+  tests:
+     277.0 s  test_dialogue_reopen_gpu::test_reopening_shows_the_same_numbers_openings_and_next_line_button
+      98.1 s  test_weather_authoring_gpu::test_the_environment_category_opens_the_weather_panel
+      72.1 s  test_hd2d_bloom_gpu::test_studio_glows_its_view_at_once_and_not_its_lines
+      67.4 s  test_studio_workflow_polish_gpu::test_the_left_panel_scrolls_to_every_tool_and_nothing_out_of_view_is_clickable[1280x720]
+      67.1 s  test_hd2d_post_gpu::test_studio_grades_its_view_at_once_and_not_its_lines
+      66.3 s  test_hd2d_haze_gpu::test_studio_hazes_its_view_at_once_and_not_its_lines
+      65.0 s  test_water_gpu::test_a_creator_places_shapes_turns_and_banks_water_in_studio
+      52.9 s  test_studio_3d_selection_gpu::test_a_campfire_is_selected_by_clicking_it
+      36.1 s  test_weather_authoring_gpu::test_none_asks_before_taking_away_more_than_one_effect_and_ordinary_changes_keep_the_rest
+      35.8 s  test_hd2d_bloom_gpu::test_off_and_strength_zero_are_the_original_picture_with_nothing_made[village]
+      32.4 s  test_water_gpu::test_a_creator_adds_and_edits_water_in_studio
+      29.2 s  test_water_passable_gpu::test_studio_sets_walking_into_it_for_a_stream_and_a_pond_one_undo_step_each
+      28.7 s  test_hd2d_lamp_glow_gpu::test_only_the_lamp_heads_change_in_each_investigation_room[village]
+      23.2 s  test_scatter_diagnostics_gpu::test_trees_over_a_dense_meadow_say_the_meadow_leaves_no_room_and_change_nothing
+      19.8 s  test_hd2d_haze_gpu::test_off_and_strength_zero_are_the_original_picture[village]
+
+=== lane-gpu-windows-latest-py3.11-shard-2: 263 ran, 2 skipped, 1225 s in tests
+  modules:
+     215.4 s  17.6%   10 tests  tests.test_hd2d_lighting_controls_gpu
+     198.9 s  16.2%   14 tests  tests.test_terrain_gpu
+     112.7 s   9.2%    5 tests  tests.test_fire_gpu
+      78.7 s   6.4%    4 tests  tests.test_mesh_net_gpu
+      69.5 s   5.7%    4 tests  tests.test_scatter_gpu
+      60.9 s   5.0%   12 tests  tests.test_hd2d_asset_pipeline_gpu
+      54.9 s   4.5%   12 tests  tests.test_hd2d_starter_gpu
+      54.3 s   4.4%   11 tests  tests.test_river_falls_gpu
+      38.3 s   3.1%    7 tests  tests.test_hd2d_studio_gpu
+      31.8 s   2.6%    3 tests  tests.test_river_tool_gpu
+      30.3 s   2.5%    6 tests  tests.test_dof_studio_gpu
+      29.6 s   2.4%    4 tests  tests.test_river_gpu
+      29.4 s   2.4%   14 tests  tests.test_studio_workspace_gpu
+      22.0 s   1.8%    7 tests  tests.test_start_room_music_gpu
+      21.4 s   1.7%    4 tests  tests.test_hd2d_room_studio_gpu
+  tests:
+     215.4 s  test_hd2d_lighting_controls_gpu::test_the_hd2d_panel_shows_only_what_the_renderer_reads
+      68.7 s  test_terrain_gpu::test_studio_paints_live_one_stroke_one_undo_step
+      59.4 s  test_hd2d_asset_pipeline_gpu::test_models_import_through_studio_with_their_report
+      54.9 s  test_hd2d_starter_gpu::test_the_project_opens_in_studio_as_hd2d
+      51.7 s  test_scatter_gpu::test_studio_scatters_one_stroke_one_undo_step
+      40.9 s  test_fire_gpu::test_studio_places_edits_saves_reopens_and_plays_a_campfire_silently
+      38.3 s  test_hd2d_studio_gpu::test_the_hd2d_room_opens_in_studio_as_a_lit_3d_view
+      37.4 s  test_fire_gpu::test_the_flames_lean_downwind_in_gusts_and_stand_in_still_air
+      35.9 s  test_river_falls_gpu::test_studio_makes_joins_carves_and_tunes_a_waterfall
+      33.8 s  test_mesh_net_gpu::test_two_windows_meet_party_travel_and_return
+      30.3 s  test_dof_studio_gpu::test_it_is_off_until_turned_on_and_then_subtle
+      29.9 s  test_mesh_net_gpu::test_two_characters_persist_through_a_server_restart
+      23.2 s  test_terrain_gpu::test_studio_sculpts_live_one_stroke_one_undo_step
+      21.8 s  test_river_tool_gpu::test_a_creator_draws_edits_and_plays_a_river_in_studio
+      21.4 s  test_hd2d_room_studio_gpu::test_an_hd2d_room_is_made_in_studio_with_its_size_and_the_kit

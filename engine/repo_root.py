@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sysconfig
 from pathlib import Path
 from typing import Iterable, Optional, cast
 
@@ -17,6 +18,44 @@ _LAUNCHED_PROJECT_ROOT: Path | None = None
 def engine_source_root() -> Path:
     """Return the Mesh engine source tree root (the directory containing ``engine/``)."""
     return Path(__file__).resolve().parent.parent
+
+
+# Where a pip install puts the engine's own bundled files: <prefix>/share/mesh-engine (pyproject.toml's
+# [tool.setuptools.data-files], an explicit allow-list of redistributable files; docs/packaging.md).
+BUNDLED_SHARE: tuple[str, ...] = ("share", "mesh-engine")
+
+
+def bundled_data_roots() -> list[Path]:
+    """Where the engine's bundled files are: the source tree (a checkout or an editable install), then the same
+    ``share/mesh-engine`` beside it (an exported game's own copy of the engine files it reads, H9.2: before any
+    Mesh the player's Python may hold), then ``<prefix>/share/mesh-engine`` of a pip install (a venv or system
+    Python, or ``--user``)."""
+    roots = [engine_source_root(), engine_source_root().joinpath(*BUNDLED_SHARE)]
+    prefixes = [sysconfig.get_path("data")]
+    try:
+        prefixes.append(sysconfig.get_path("data", sysconfig.get_preferred_scheme("user")))
+    except (KeyError, ValueError):
+        _log_swallow("REPO-010", "engine/repo_root.py: no user install scheme on this platform")
+    roots += [Path(prefix).joinpath(*BUNDLED_SHARE) for prefix in prefixes if prefix]
+    return list(dict.fromkeys(roots))
+
+
+def bundled_file(rel_path: str) -> Optional[Path]:
+    """An engine-bundled file (``config.json``, ``assets/sprites/starter_hero.png``...), or None if no root has it."""
+    for root in bundled_data_roots():
+        candidate = root / rel_path
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def bundled_dir(rel_path: str) -> Path:
+    """An engine-bundled folder (``assets/icons``...): the first root that has it, else where the source tree keeps it
+    (so a caller's missing-file handling reports a sensible path)."""
+    for root in bundled_data_roots():
+        if (root / rel_path).is_dir():
+            return root / rel_path
+    return engine_source_root() / rel_path
 
 
 def pin_launched_project_root(root: Path, *, config: object | None = None) -> Path:
@@ -65,10 +104,19 @@ def launched_project_root_blocks_switch(target: str) -> bool:
     return candidate != _LAUNCHED_PROJECT_ROOT.resolve()
 
 
+# An exported game (``mesh export build``) carries Mesh's engine beside its own files, so its folder is also where the
+# engine's source is; its manifest says it is a game, not Mesh's checkout.
+EXPORTED_GAME_MARKER = "bundle_manifest.json"
+
+
 def is_standalone_project_root(root: Path) -> bool:
-    """Return True when ``root`` is not the engine source checkout."""
+    """Return True when ``root`` is not the engine source checkout (an exported game, with the engine inside it, is a
+    project: it starts its game, not Mesh's project browser)."""
     try:
-        return Path(root).expanduser().resolve() != engine_source_root().resolve()
+        resolved = Path(root).expanduser().resolve()
+        if resolved != engine_source_root().resolve():
+            return True
+        return (resolved / EXPORTED_GAME_MARKER).is_file()
     except Exception:
         _log_swallow("REPO-003", "engine/repo_root.py pass-only blanket swallow")
         return True

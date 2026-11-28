@@ -127,3 +127,27 @@ def test_exception_budget_count_semantics_tuple_includes_exception_baseexception
 
     assert total == 2
     assert per_file[verify_mod._EXCEPTION_BUDGET_FILES[0]] == 2
+
+
+def test_exception_budget_guard_without_its_baseline_is_a_labelled_skip_not_a_pass(tmp_path: Path) -> None:
+    # It used to compare the count with itself and pass (#624). The skip label is one verify-all fails on: it is not in
+    # pipeline.ALLOWED_SKIPS (tests/test_cli_verify_all_tooling_unavailable.py runs it).
+    from mesh_cli.verify_steps.pipeline import ALLOWED_SKIPS
+
+    repo = tmp_path / "repo"
+    _write_file(repo / verify_mod._EXCEPTION_BUDGET_FILES[0], "try:\n    pass\nexcept Exception:\n    pass\n")
+
+    code, error, current, _baseline, _ = verify_mod._evaluate_exception_budget_guard(repo, tmp_path / "missing.txt")
+
+    assert (code, error, current) == (0, "skipped: no tooling/metrics/exception_budget_count.txt", 1)
+    assert ("exception-budget-guard", error) not in ALLOWED_SKIPS
+
+
+@pytest.mark.parametrize("text", ["", "many\n"])
+def test_exception_budget_guard_fails_on_a_baseline_it_cannot_read(tmp_path: Path, text: str) -> None:
+    baseline = tmp_path / "baseline.txt"
+    baseline.write_text(text, encoding="utf-8")
+
+    code, error, *_ = verify_mod._evaluate_exception_budget_guard(tmp_path / "repo", baseline)
+
+    assert code == 2 and error.startswith("invalid exception budget baseline")

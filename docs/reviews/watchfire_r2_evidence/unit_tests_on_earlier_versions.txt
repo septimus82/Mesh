@@ -1,0 +1,8 @@
+== interaction.py at 0f818c1
+FAILED test_a_picture_less_campfire_the_hd2d_renderer_draws_can_be_talked_to_but_logic_only_objects_cannot
+FAILED test_a_campfire_its_show_when_flags_hide_cannot_be_talked_to
+2 failed, 6 passed in 3.52s
+== interaction.py at bcca410
+FAILED test_a_campfire_with_no_renderer_drawing_it_is_not_an_invisible_target
+FAILED test_a_campfire_with_a_picture_hidden_keeps_the_hidden_rule
+2 failed, 6 passed in 3.46s

@@ -1,0 +1,568 @@
+{
+  "renderer": "new",
+  "passed": true,
+  "steps": [
+    {
+      "step": "gpu_pixel_tests",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "pytest": [
+          "26 passed in 6.37s"
+        ]
+      },
+      "seconds": 7.7,
+      "screenshot": null
+    },
+    {
+      "step": "open_the_lab",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "renderer": "new",
+        "lighting": {
+          "shadows_mode": "hard",
+          "ambient": [
+            60,
+            70,
+            110,
+            255
+          ],
+          "occluders": 6,
+          "stats": {
+            "shadows_mode": "hard",
+            "renderer": "per_light",
+            "lights": 2,
+            "lights_drawn": 2,
+            "lights_off_screen": 0,
+            "shadowed_lights": 2,
+            "shadow_light_budget": 16,
+            "lights_over_budget": 0,
+            "occluder_count": 6,
+            "shadow_poly_count": 26,
+            "shadow_triangles": 93,
+            "shadow_softness": "sharp"
+          }
+        }
+      },
+      "seconds": 8.2,
+      "screenshot": "02_open_the_lab.png"
+    },
+    {
+      "step": "1_one_light_no_walls",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "same_distance_all_round": [
+          99.0,
+          99.0,
+          105.2,
+          105.2
+        ],
+        "brightness_by_distance": [
+          109.2,
+          88.7,
+          68.1,
+          51.7,
+          30.6
+        ]
+      },
+      "seconds": 1.8,
+      "screenshot": "03_1_one_light_no_walls.png"
+    },
+    {
+      "step": "2_to_7_two_lamps_two_walls",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "checks": {
+          "2_wall_casts_a_shadow": true,
+          "3_room_light_stays_in_it": true,
+          "4_both_lamps_light_one_place": true,
+          "5_wall_W1_blocks_only_lamp_A": true,
+          "6_wall_W2_blocks_only_lamp_B": true,
+          "7_lamp_A_off_leaves_lamp_B_as_it_was": true
+        },
+        "pixels": {
+          "both": {
+            "R": [
+              72.2,
+              63.6,
+              54.1
+            ],
+            "S": [
+              145.6,
+              105.3,
+              71.3
+            ],
+            "near_A": [
+              152.8,
+              111.7,
+              77.0
+            ],
+            "both": [
+              143.1,
+              116.4,
+              87.6
+            ]
+          },
+          "a_only": {
+            "R": [
+              35.6,
+              29.0,
+              26.2
+            ],
+            "S": [
+              145.6,
+              105.3,
+              71.3
+            ],
+            "near_A": [
+              152.8,
+              111.7,
+              77.0
+            ],
+            "both": [
+              93.7,
+              69.3,
+              50.2
+            ]
+          },
+          "none": {
+            "R": [
+              35.6,
+              29.0,
+              26.2
+            ],
+            "S": [
+              35.8,
+              29.2,
+              26.2
+            ],
+            "near_A": [
+              40.3,
+              33.6,
+              30.8
+            ],
+            "both": [
+              35.8,
+              29.2,
+              26.2
+            ]
+          },
+          "b_only": {
+            "R": [
+              72.2,
+              63.6,
+              54.1
+            ],
+            "S": [
+              35.8,
+              29.2,
+              26.2
+            ],
+            "near_A": [
+              40.3,
+              33.6,
+              30.8
+            ],
+            "both": [
+              85.0,
+              76.1,
+              64.2
+            ]
+          }
+        },
+        "both_lamps_point": [
+          80.0,
+          208.0
+        ]
+      },
+      "seconds": 24.7,
+      "screenshot": "04_2_to_7_two_lamps_two_walls.png"
+    },
+    {
+      "step": "8_move_a_light",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "moved_from": [
+          176.0,
+          336.0
+        ],
+        "to": [
+          272.0,
+          336.0
+        ],
+        "checked": 242,
+        "wrong": 0,
+        "examples": []
+      },
+      "seconds": 31.2,
+      "screenshot": "05_8_move_a_light.png"
+    },
+    {
+      "step": "9_flicker_keeps_the_shadow",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "behind_wall": [
+          [
+            35.6,
+            29.0,
+            26.2
+          ],
+          [
+            35.6,
+            29.0,
+            26.2
+          ],
+          [
+            35.6,
+            29.0,
+            26.2
+          ],
+          [
+            35.6,
+            29.0,
+            26.2
+          ],
+          [
+            35.6,
+            29.0,
+            26.2
+          ],
+          [
+            35.6,
+            29.0,
+            26.2
+          ],
+          [
+            35.6,
+            29.0,
+            26.2
+          ],
+          [
+            35.6,
+            29.0,
+            26.2
+          ]
+        ],
+        "room_light_alone": [
+          35.6,
+          29.0,
+          26.2
+        ],
+        "lit_side_varies_by": 14.599999999999994
+      },
+      "seconds": 19.1,
+      "screenshot": "06_9_flicker_keeps_the_shadow.png"
+    },
+    {
+      "step": "10_to_12_corner_reach_slant",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "checked": 264,
+        "wrong": 0,
+        "examples": [],
+        "points_beyond_reach_checked": 18
+      },
+      "seconds": 21.8,
+      "screenshot": "07_10_to_12_corner_reach_slant.png"
+    },
+    {
+      "step": "14_zoom_in_studio",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "zoom": 1.4225062500000003,
+        "before": {
+          "R": 65.8,
+          "S": 111.8,
+          "near_A": 116.5
+        },
+        "zoomed": {
+          "R": 58.6,
+          "S": 110.9,
+          "near_A": 116.0
+        }
+      },
+      "seconds": 3.5,
+      "screenshot": "08_14_zoom_in_studio.png"
+    },
+    {
+      "step": "16_lighting_off_and_on",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "R_unlit": 106.0,
+        "R_lit": 63.3
+      },
+      "seconds": 7.5,
+      "screenshot": "09_16_lighting_off_and_on.png"
+    },
+    {
+      "step": "19_no_lamps_no_darkening",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "points": 24,
+        "largest_difference": 0.0
+      },
+      "seconds": 8.2,
+      "screenshot": "10_19_no_lamps_no_darkening.png"
+    },
+    {
+      "step": "18_13_play_matches_studio_and_scrolls",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "edit": {
+          "R": 65.8,
+          "S": 111.8,
+          "near_A": 116.5
+        },
+        "play": {
+          "R": 65.9,
+          "S": 111.6,
+          "near_A": 115.5
+        },
+        "scrolled": {
+          "R": 65.9,
+          "S": 111.6,
+          "near_A": 115.5
+        },
+        "player": [
+          [
+            128.0,
+            128.0
+          ],
+          [
+            218.06202500058862,
+            70.17145999973582
+          ]
+        ]
+      },
+      "seconds": 8.6,
+      "screenshot": "11_18_13_play_matches_studio_and_scrolls.png"
+    },
+    {
+      "step": "15_room_change_and_back",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "open_room": {
+          "lamps": 1,
+          "stats": {
+            "shadows_mode": "hard",
+            "renderer": "per_light",
+            "lights": 1,
+            "lights_drawn": 1,
+            "lights_off_screen": 0,
+            "shadowed_lights": 1,
+            "shadow_light_budget": 16,
+            "lights_over_budget": 0,
+            "occluder_count": 4,
+            "shadow_poly_count": 9,
+            "shadow_triangles": 36,
+            "shadow_softness": "sharp"
+          }
+        },
+        "back": {
+          "R": 65.9,
+          "S": 111.6,
+          "near_A": 115.5
+        },
+        "before": {
+          "R": 65.9,
+          "S": 111.6,
+          "near_A": 115.5
+        }
+      },
+      "seconds": 23.2,
+      "screenshot": "12_15_room_change_and_back.png"
+    },
+    {
+      "step": "17_soft_save_and_reopen",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "lights_saved": {
+          "two": [
+            {
+              "color": "#ffffff",
+              "enabled": true,
+              "flicker_amount": 0.2,
+              "flicker_enabled": false,
+              "flicker_speed": 5.0,
+              "mode": "soft",
+              "radius": 260.0,
+              "x": 177.0,
+              "y": 336.0
+            },
+            {
+              "color": "#88bbff",
+              "enabled": true,
+              "mode": "soft",
+              "radius": 260.0,
+              "x": 176.0,
+              "y": 176.0
+            }
+          ],
+          "shapes": [
+            {
+              "color": "#ffffff",
+              "enabled": true,
+              "mode": "soft",
+              "radius": 260.0,
+              "x": 272.0,
+              "y": 240.0
+            }
+          ]
+        },
+        "largest_difference": 0.0
+      },
+      "seconds": 12.7,
+      "screenshot": "13_17_soft_save_and_reopen.png"
+    },
+    {
+      "step": "20_performance",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "renderer": "new",
+        "lighting_pass": {
+          "shapes": {
+            "profile": {
+              "frames": 240,
+              "cpu_ms": 1.889,
+              "gpu_ms": 0.342
+            },
+            "stats": {
+              "shadows_mode": "hard",
+              "renderer": "per_light",
+              "lights": 1,
+              "lights_drawn": 1,
+              "lights_off_screen": 0,
+              "shadowed_lights": 1,
+              "shadow_light_budget": 16,
+              "lights_over_budget": 0,
+              "occluder_count": 9,
+              "shadow_poly_count": 21,
+              "shadow_triangles": 71,
+              "shadow_softness": "sharp"
+            }
+          },
+          "open": {
+            "profile": {
+              "frames": 240,
+              "cpu_ms": 1.932,
+              "gpu_ms": 0.352
+            },
+            "stats": {
+              "shadows_mode": "hard",
+              "renderer": "per_light",
+              "lights": 1,
+              "lights_drawn": 1,
+              "lights_off_screen": 0,
+              "shadowed_lights": 1,
+              "shadow_light_budget": 16,
+              "lights_over_budget": 0,
+              "occluder_count": 4,
+              "shadow_poly_count": 9,
+              "shadow_triangles": 36,
+              "shadow_softness": "sharp"
+            }
+          },
+          "dark": {
+            "profile": {
+              "frames": 240,
+              "cpu_ms": 1.547,
+              "gpu_ms": 0.131
+            },
+            "stats": {
+              "shadows_mode": "hard",
+              "renderer": "per_light",
+              "lights": 0,
+              "lights_drawn": 0,
+              "lights_off_screen": 0,
+              "shadowed_lights": 0,
+              "shadow_light_budget": 16,
+              "lights_over_budget": 0,
+              "occluder_count": 4,
+              "shadow_poly_count": 0,
+              "shadow_triangles": 0,
+              "shadow_softness": "sharp"
+            }
+          },
+          "two_sharp": {
+            "profile": {
+              "frames": 240,
+              "cpu_ms": 2.182,
+              "gpu_ms": 0.568
+            },
+            "stats": {
+              "shadows_mode": "hard",
+              "renderer": "per_light",
+              "lights": 2,
+              "lights_drawn": 2,
+              "lights_off_screen": 0,
+              "shadowed_lights": 2,
+              "shadow_light_budget": 16,
+              "lights_over_budget": 0,
+              "occluder_count": 6,
+              "shadow_poly_count": 26,
+              "shadow_triangles": 93,
+              "shadow_softness": "sharp"
+            }
+          },
+          "two_soft": {
+            "profile": {
+              "frames": 240,
+              "cpu_ms": 2.776,
+              "gpu_ms": 1.063
+            },
+            "stats": {
+              "shadows_mode": "hard",
+              "renderer": "per_light",
+              "lights": 2,
+              "lights_drawn": 2,
+              "lights_off_screen": 0,
+              "shadowed_lights": 2,
+              "shadow_light_budget": 16,
+              "lights_over_budget": 0,
+              "occluder_count": 6,
+              "shadow_poly_count": 312,
+              "shadow_triangles": 1124,
+              "shadow_softness": "soft"
+            }
+          },
+          "two_softer": {
+            "profile": {
+              "frames": 240,
+              "cpu_ms": 2.979,
+              "gpu_ms": 1.421
+            },
+            "stats": {
+              "shadows_mode": "hard",
+              "renderer": "per_light",
+              "lights": 2,
+              "lights_drawn": 2,
+              "lights_off_screen": 0,
+              "shadowed_lights": 2,
+              "shadow_light_budget": 16,
+              "lights_over_budget": 0,
+              "occluder_count": 6,
+              "shadow_poly_count": 454,
+              "shadow_triangles": 1631,
+              "shadow_softness": "softer"
+            }
+          }
+        }
+      },
+      "seconds": 41.6,
+      "screenshot": "14_20_performance.png"
+    }
+  ]
+}

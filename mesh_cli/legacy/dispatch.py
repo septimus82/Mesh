@@ -13,6 +13,7 @@ GETTING_STARTED = (
     ("play", "Play the project in the current folder"),
     ("edit", "Open the project in the current folder in the editor"),
     ("mcp", "Connect an AI assistant to this project:  mesh mcp install"),
+    ("author", "Change a project from a script or AI tool:  mesh author ops"),
     ("validate", "Check a scene file for errors"),
     ("doctor", "Diagnose your install and project"),
 )
@@ -60,6 +61,25 @@ def dispatch(
     parser: argparse.ArgumentParser | None = None,
     impl_module: ModuleType | None = None,
 ) -> int:
+    """Run the command; one that writes a project's files in place owns the project first (#462 A-04)."""
+    from ..write_guard import own_for_write
+
+    proceed, held = own_for_write(args)
+    if not proceed:
+        return 1
+    try:
+        return _dispatch(args, parser=parser, impl_module=impl_module)
+    finally:
+        if held is not None:
+            held.release()
+
+
+def _dispatch(
+    args: argparse.Namespace,
+    *,
+    parser: argparse.ArgumentParser | None = None,
+    impl_module: ModuleType | None = None,
+) -> int:
     impl_candidate = impl_module
     if impl_candidate is None:
         from .. import legacy_impl as impl_candidate  # pragma: no cover - compatibility path
@@ -100,6 +120,10 @@ def dispatch(
         from .. import mcp_setup
 
         return int(mcp_setup.handle(args))
+    if args.command == "author":
+        from .. import author
+
+        return int(author.handle(args))
     if args.command == "wizard":
         return int(impl._handle_wizard(args))
     if args.command == "new-scene":

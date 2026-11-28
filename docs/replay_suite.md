@@ -112,6 +112,12 @@ Excluded report-only keys include:
 These are excluded because they describe runtime/report context, not gameplay state transitions.
 Gameplay-relevant changes (event types/payloads, digest sequence, final state content) still change digests.
 
+### Quest scoping (golden schema 2)
+
+Digested quest state holds only the quests a replay is about: those it declares (campaign `quests` list, the episode's own
+quest) plus any quest that is not pristine in that snapshot. Untouched, undeclared catalogue quests are excluded, so adding
+unrelated quests to `assets/data/quests.json` does not invalidate goldens (`mesh_cli.replay_digest_projection.scope_quest_state`).
+
 ### Digest Projection Policy
 
 Digest projection is policy-gated by a stable config constant:
@@ -144,6 +150,33 @@ Then review:
 
 Finally re-run `replays run` to confirm the ratchet passes before committing.
 
+## Pooled tick timing (T-07)
+
+Episode cases are short (8 to 18 ticks), and nearest-rank p95 of fewer than 20 samples is just the slowest tick, so one
+scheduler stall used to fail `max_tick_ms_p95`. The budget values are unchanged; the measurement is not:
+
+- `replay-check` already runs the episode twice (`run_1`, `run_2`). When a suite case has fewer than
+  `MIN_TICK_SAMPLES` (40) tick samples in those, it runs further fresh, timing-only executions in the same process
+  until it has 40, at most `MAX_TIMING_EXECUTIONS` (10) executions in all. 40 samples is the smallest pool whose p95 (the
+  38th smallest) ignores the two slowest ticks: an isolated stall passes, a sustained slowdown (over 5% of ticks)
+  still fails.
+- `tick_ms_p95` is computed over the pooled samples. `total_ms` and `tick_ms_max` stay the canonical `run_1` values,
+  so `max_total_ms` is still one replay's total and `max_tick_ms_max` is no looser or stricter than before.
+- Digests, events, final state and goldens come from `run_1` only. Every repeat builds a fresh context and must
+  reproduce `run_1`'s digests, events and final state exactly, otherwise the case fails (nondeterminism).
+- No warm-up is excluded: the runner has no such notion, setup happens before the first tick, and pooling dilutes any
+  one-off cost.
+- `performance.json` / `timings.json` carry a `pooled` object: `min_samples`, `min_samples_met`, `executions`,
+  `repeats` (beyond `run_1` and `run_2`), `samples_per_execution`, `total_ms_per_execution`, `pooled_count`,
+  `tick_ms_p50`, `tick_ms_p95`, `tick_ms_max`. `tick_ms_count` / `tick_ms_list` remain the canonical execution's.
+- Campaign cases record placeholder zero timings, so their budgets are not a timing measurement.
+- The timed executions (`run_1`, `run_2`, every repeat) run with the host process's existing heap collected and then
+  frozen (`gc.collect()` + `gc.freeze()`, `gc.unfreeze()` afterwards, even on an exception), so a full collection of an
+  unrelated heap (the pytest process's, #612) can't land inside a timed tick. Collections of what the replay itself
+  allocates still happen inside its ticks and are still timed. A host that already froze objects of its own is left
+  alone (no collect, no freeze), because `gc.unfreeze()` would release those too. This is the replay harness only; the
+  engine's gc policy is unchanged.
+
 ## CI Budget Notes
 
 CI enforces replay budgets on Linux only:
@@ -152,6 +185,8 @@ CI enforces replay budgets on Linux only:
 python -m mesh_cli replays run --suite replays/suite.json --out-dir artifacts/replay_suite --seed 123 --budgets-only-on linux --quiet
 ```
 
-This avoids Windows timing noise while still keeping a deterministic perf gate for release branches.
+This avoids Windows timing noise while still keeping a deterministic perf gate.
+
+The suite runs on every pull request and push as the required `replays (ubuntu-latest, py3.11)` job (R-2), and again in the release `ship` job.
 
 CI policy: CI only runs `mesh_cli replays run` and never updates goldens automatically.

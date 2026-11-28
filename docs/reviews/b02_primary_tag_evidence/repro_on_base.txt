@@ -1,0 +1,1 @@
+{'hero': 'friendly', 'npc': 'alpha'}

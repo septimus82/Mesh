@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import engine.optional_arcade as optional_arcade
+from engine.hd2d.world import same_level
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -95,13 +96,26 @@ class DamageOnTouch(Behaviour):
         if not optional_arcade.arcade.check_for_collision(self.entity, target):
             return
 
+        if not same_level(getattr(self.window, "hd2d_world", None), self.entity, target):
+            return  # an HD-2D room: on another floor (engine.hd2d.world.same_level)
+
         if not self.window.should_collide(self.entity, target):
             return
 
         if self._cooldown_remaining > 0:
             return
 
-        self.window.on_damage(self.entity, target, self.damage)
+        # Health (when present) applies the damage and publishes damage_applied itself; otherwise event only.
+        health = next((b for b in getattr(target, "mesh_behaviours_runtime", []) if hasattr(b, "apply_damage")), None)
+        if health is None:
+            self.window.on_damage(self.entity, target, self.damage)
+        else:
+            self.window.on_damage(self.entity, target, self.damage, emit=False)
+            health.apply_damage(
+                self.damage,
+                source_entity=str(getattr(self.entity, "mesh_name", "") or "") or "DamageOnTouch",
+                source_behaviour="DamageOnTouch",
+            )
         self._cooldown_remaining = self.cooldown
 
         if self.once:

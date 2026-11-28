@@ -1,0 +1,538 @@
+{
+ "rtt_ms": 200.0,
+ "jitter_ms": 10.0,
+ "loss": 0.01,
+ "rto_ms": 200.0,
+ "seed": 7,
+ "hz": 20,
+ "rewind": "on",
+ "queue": {
+  "preset": "drain",
+  "depth": 8,
+  "hold": 1,
+  "drain": 4
+ },
+ "frames": [
+  {
+   "file": "00_A_start.png",
+   "window": "A",
+   "moment": "start",
+   "t_ms": 4887.7,
+   "saved_ms": 4906.2,
+   "client_tick": 137,
+   "server_tick": 139,
+   "room": "start",
+   "marks": []
+  },
+  {
+   "file": "01_B_start.png",
+   "window": "B",
+   "moment": "start",
+   "t_ms": 4906.2,
+   "saved_ms": 4928.6,
+   "client_tick": 137,
+   "room": "start",
+   "marks": []
+  },
+  {
+   "file": "02_A_prediction.png",
+   "window": "A",
+   "moment": "prediction",
+   "t_ms": 5387.0,
+   "saved_ms": 5406.7,
+   "client_tick": 147,
+   "server_tick": 149,
+   "room": "start",
+   "marks": []
+  },
+  {
+   "file": "03_A_local_swing.png",
+   "window": "A",
+   "moment": "local_swing",
+   "t_ms": 7516.0,
+   "saved_ms": 7539.8,
+   "client_tick": 190,
+   "server_tick": 192,
+   "room": "start",
+   "marks": [
+    [
+     "swing_mark",
+     609.5,
+     119.5
+    ]
+   ]
+  },
+  {
+   "file": "04_A_local_swing_100ms.png",
+   "window": "A",
+   "moment": "local_swing_100ms",
+   "t_ms": 7602.8,
+   "saved_ms": 7625.3,
+   "client_tick": 191,
+   "server_tick": 194,
+   "room": "start",
+   "marks": [
+    [
+     "swing_mark",
+     609.5,
+     119.5
+    ]
+   ]
+  },
+  {
+   "file": "05_A_hit_confirmed.png",
+   "window": "A",
+   "moment": "hit_confirmed",
+   "t_ms": 7773.8,
+   "saved_ms": 7795.0,
+   "client_tick": 195,
+   "server_tick": 197,
+   "room": "start",
+   "marks": [
+    [
+     "hit_mark",
+     607.1,
+     120.0
+    ]
+   ]
+  },
+  {
+   "file": "06_B_peer_swing_seen.png",
+   "window": "B",
+   "moment": "peer_swing_seen",
+   "t_ms": 7798.8,
+   "saved_ms": 7821.7,
+   "client_tick": 195,
+   "room": "start",
+   "marks": [
+    [
+     "swing_mark",
+     609.5,
+     119.5
+    ],
+    [
+     "hit_mark",
+     609.3,
+     120.0
+    ]
+   ]
+  },
+  {
+   "file": "07_B_peer_hit_seen.png",
+   "window": "B",
+   "moment": "peer_hit_seen",
+   "t_ms": 7821.8,
+   "saved_ms": 7845.0,
+   "client_tick": 196,
+   "room": "start",
+   "marks": [
+    [
+     "swing_mark",
+     609.5,
+     119.5
+    ],
+    [
+     "hit_mark",
+     610.7,
+     120.0
+    ]
+   ]
+  },
+  {
+   "file": "08_A_ruins_after_transfer.png",
+   "window": "A",
+   "moment": "ruins_after_transfer",
+   "t_ms": 12414.0,
+   "saved_ms": 12438.2,
+   "client_tick": 32,
+   "server_tick": 34,
+   "room": "ancient_ruins_layer_1",
+   "marks": []
+  },
+  {
+   "file": "09_B_ruins_after_transfer.png",
+   "window": "B",
+   "moment": "ruins_after_transfer",
+   "t_ms": 12438.2,
+   "saved_ms": 12474.2,
+   "client_tick": 30,
+   "room": "ancient_ruins_layer_1",
+   "marks": []
+  }
+ ],
+ "events": [
+  {
+   "t_ms": 218.8,
+   "window": "A",
+   "kind": "room_transfer_enter",
+   "client_tick": 43,
+   "server_tick": 46,
+   "room": "start",
+   "to": "start"
+  },
+  {
+   "t_ms": 424.2,
+   "window": "A",
+   "kind": "room_shown",
+   "client_tick": 44,
+   "server_tick": 50,
+   "room": "start",
+   "key": "start"
+  },
+  {
+   "t_ms": 5387.0,
+   "window": "A",
+   "kind": "local_move_shown",
+   "client_tick": 147,
+   "server_tick": 149,
+   "room": "start",
+   "shown_xy": [
+    512.0,
+    121.5
+   ],
+   "server_row_xy": [
+    512.0,
+    114.0
+   ]
+  },
+  {
+   "t_ms": 5670.2,
+   "window": "A",
+   "kind": "server_move_seen",
+   "client_tick": 153,
+   "server_tick": 155,
+   "room": "start",
+   "xy": [
+    512.0,
+    121.5
+   ],
+   "ack": 102
+  },
+  {
+   "t_ms": 7516.0,
+   "window": "A",
+   "kind": "local_swing_shown",
+   "client_tick": 190,
+   "server_tick": 191,
+   "room": "start",
+   "entity": 1,
+   "facing": 3
+  },
+  {
+   "t_ms": 7773.8,
+   "window": "A",
+   "kind": "server_confirmed_hit",
+   "client_tick": 195,
+   "server_tick": 197,
+   "room": "start",
+   "enemy": "bandit_ground",
+   "shown_x": 606.7,
+   "server_x": 616.0
+  },
+  {
+   "t_ms": 8963.2,
+   "window": "A",
+   "kind": "prediction_correction",
+   "client_tick": 219,
+   "server_tick": 220,
+   "room": "start",
+   "px": 7.5,
+   "elevation_px": 0.0,
+   "floor_changed": false
+  },
+  {
+   "t_ms": 9270.8,
+   "window": "A",
+   "kind": "prediction_correction",
+   "client_tick": 225,
+   "server_tick": 227,
+   "room": "start",
+   "px": 7.5,
+   "elevation_px": 0.0,
+   "floor_changed": false
+  },
+  {
+   "t_ms": 9472.4,
+   "window": "A",
+   "kind": "prediction_correction",
+   "client_tick": 229,
+   "server_tick": 231,
+   "room": "start",
+   "px": 7.5,
+   "elevation_px": 0.0,
+   "floor_changed": false
+  },
+  {
+   "t_ms": 9576.8,
+   "window": "A",
+   "kind": "prediction_correction",
+   "client_tick": 231,
+   "server_tick": 233,
+   "room": "start",
+   "px": 7.5,
+   "elevation_px": 0.0,
+   "floor_changed": false
+  },
+  {
+   "t_ms": 9669.9,
+   "window": "A",
+   "kind": "prediction_correction",
+   "client_tick": 233,
+   "server_tick": 235,
+   "room": "start",
+   "px": 7.5,
+   "elevation_px": 0.0,
+   "floor_changed": false
+  },
+  {
+   "t_ms": 10182.6,
+   "window": "A",
+   "kind": "prediction_correction",
+   "client_tick": 237,
+   "server_tick": 245,
+   "room": "start",
+   "px": 7.5,
+   "elevation_px": 0.0,
+   "floor_changed": false
+  },
+  {
+   "t_ms": 10187.3,
+   "window": "A",
+   "kind": "prediction_correction",
+   "client_tick": 241,
+   "server_tick": 245,
+   "room": "start",
+   "px": 7.5,
+   "elevation_px": 0.0,
+   "floor_changed": false
+  },
+  {
+   "t_ms": 10273.1,
+   "window": "A",
+   "kind": "prediction_correction",
+   "client_tick": 245,
+   "server_tick": 247,
+   "room": "start",
+   "px": 7.5,
+   "elevation_px": 0.0,
+   "floor_changed": false
+  },
+  {
+   "t_ms": 10476.1,
+   "window": "A",
+   "kind": "prediction_correction",
+   "client_tick": 249,
+   "server_tick": 251,
+   "room": "start",
+   "px": 7.5,
+   "elevation_px": 0.0,
+   "floor_changed": false
+  },
+  {
+   "t_ms": 11969.6,
+   "window": "A",
+   "kind": "room_transfer_enter",
+   "client_tick": 23,
+   "server_tick": 25,
+   "room": "ancient_ruins_layer_1",
+   "to": "ancient_ruins_layer_1"
+  },
+  {
+   "t_ms": 12105.7,
+   "window": "A",
+   "kind": "room_shown",
+   "client_tick": 23,
+   "server_tick": 27,
+   "room": "ancient_ruins_layer_1",
+   "key": "ancient_ruins_layer_1"
+  }
+ ],
+ "swings": [
+  {
+   "t_ms": 7500.6,
+   "shown_x": 593.0,
+   "view_tick": 187.58,
+   "server_tick": 191,
+   "server_x": 600.0,
+   "hit": true
+  }
+ ],
+ "started_ms": 4887.6,
+ "move_pressed_ms": 5368.1,
+ "attacker": {
+  "server_xy": [
+   609.5,
+   151.5
+  ],
+  "facing": "down"
+ },
+ "finished_ms": 12474.2,
+ "window_b_problems": [],
+ "gl": [
+  "NVIDIA Corporation",
+  "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ ],
+ "proxy": {
+  "up": {
+   "chunks": 398,
+   "bytes": 34812,
+   "held": 68,
+   "held_ms": [
+    507.3,
+    456.5,
+    406.8,
+    355.9,
+    307.0,
+    255.6,
+    206.3,
+    154.5,
+    490.3,
+    442.4,
+    392.0,
+    342.4,
+    291.5,
+    241.6,
+    193.1,
+    142.6,
+    500.4,
+    444.5,
+    400.8,
+    504.4,
+    454.4,
+    403.9,
+    353.7,
+    508.7,
+    304.0,
+    459.3,
+    254.2,
+    409.6,
+    204.1,
+    357.1,
+    153.3,
+    309.9,
+    257.7,
+    507.6,
+    456.5,
+    407.4,
+    356.4,
+    308.0,
+    256.4,
+    208.4,
+    157.7,
+    509.9,
+    459.9,
+    409.1,
+    360.4,
+    308.9,
+    260.0,
+    209.7,
+    159.8,
+    110.0,
+    495.1,
+    444.2,
+    394.7,
+    343.2,
+    294.8,
+    244.2,
+    194.0,
+    144.8,
+    492.5,
+    442.3,
+    392.8,
+    342.4,
+    291.8,
+    242.9,
+    192.8,
+    142.0,
+    496.7,
+    446.3
+   ]
+  },
+  "down": {
+   "chunks": 416,
+   "bytes": 194926,
+   "held": 53,
+   "held_ms": [
+    495.2,
+    445.4,
+    395.6,
+    345.7,
+    295.8,
+    245.6,
+    195.2,
+    145.3,
+    490.2,
+    440.5,
+    389.9,
+    339.7,
+    289.8,
+    240.1,
+    189.9,
+    139.5,
+    504.2,
+    453.8,
+    404.1,
+    353.5,
+    303.8,
+    253.8,
+    204.2,
+    153.7,
+    494.0,
+    442.4,
+    394.1,
+    344.0,
+    293.8,
+    244.2,
+    193.0,
+    143.8,
+    507.3,
+    457.5,
+    408.6,
+    358.6,
+    308.7,
+    257.5,
+    207.6,
+    157.1,
+    499.7,
+    449.3,
+    399.8,
+    492.0,
+    350.0,
+    441.6,
+    299.6,
+    392.2,
+    250.2,
+    341.3,
+    199.3,
+    291.6,
+    241.8
+   ]
+  }
+ },
+ "authority": {
+  "start:1": {
+   "stale_attacks": 0,
+   "refused_attacks": 0,
+   "future_views": 0,
+   "clamped_views": 1,
+   "unseen_views": 0,
+   "drained_moves": 13
+  },
+  "ancient_ruins_layer_1:2": {
+   "stale_attacks": 0,
+   "refused_attacks": 0,
+   "future_views": 0,
+   "clamped_views": 0,
+   "unseen_views": 0,
+   "drained_moves": 0
+  }
+ },
+ "duration_ms": 12695.7,
+ "frames_kept": [
+  "02_A_prediction.png",
+  "03_A_local_swing.png",
+  "05_A_hit_confirmed.png",
+  "06_B_peer_swing_seen.png",
+  "08_A_ruins_after_transfer.png"
+ ]
+}

@@ -1,0 +1,1025 @@
+[
+ {
+  "arguments": {
+   "entity_id": "cellar_door"
+  },
+  "note": "editing",
+  "response": {
+   "authored_in": [
+    {
+     "label": "Start",
+     "room": "start"
+    }
+   ],
+   "entity_id": "cellar_door",
+   "message": "Mesh Studio is editing: nothing runs, so nothing can be used. Start a play-test (Play, or debug_start_playtest if allowed) and ask again.",
+   "mode": "live_studio",
+   "ok": true,
+   "searched": [
+    "dialogue choices' set_flags / clear_flags (every room)",
+    "SetGameStateOnEvent set_flags / clear_flags (every room)",
+    "quest rewards' set_flags"
+   ],
+   "status": "not_playing"
+  },
+  "tool": "debug_interaction"
+ },
+ {
+  "arguments": {
+   "entity_id": "cellar_door"
+  },
+  "note": "playing, no key",
+  "response": {
+   "available": false,
+   "blocking": {
+    "code": "in_room",
+    "message": "It isn't in the running room: its flags keep it out (a room leaves out objects whose flags aren't met when it loads)."
+   },
+   "entity_id": "cellar_door",
+   "flag_sources": {
+    "has_key": [
+     {
+      "choice": "I'll light it.",
+      "entity": "Guide",
+      "entity_id": "start_guide_320_128_0_0",
+      "node": "root",
+      "room": "start",
+      "room_label": "Start",
+      "sets_to": true,
+      "via": "dialogue choice"
+     }
+    ]
+   },
+   "flags": {
+    "has_key": false
+   },
+   "how": "interact",
+   "mode": "live_studio",
+   "not_analysed": [],
+   "observed": [
+    {
+     "code": "in_room",
+     "detail": {
+      "forbid_flags": [],
+      "require_flags": [
+       "has_key"
+      ],
+      "running_room": "start",
+      "unmet": [
+       "has_key"
+      ],
+      "values": {
+       "has_key": false
+      }
+     },
+     "message": "It isn't in the running room: its flags keep it out (a room leaves out objects whose flags aren't met when it loads).",
+     "ok": false
+    }
+   ],
+   "ok": true,
+   "playtest": {
+    "id": "1f58d246e664",
+    "number": 1,
+    "started_at": 1793654474.794,
+    "started_by": "person",
+    "stopped_at": null
+   },
+   "possible_causes": [],
+   "searched": [
+    "dialogue choices' set_flags / clear_flags (every room)",
+    "SetGameStateOnEvent set_flags / clear_flags (every room)",
+    "quest rewards' set_flags"
+   ],
+   "status": "playing"
+  },
+  "tool": "debug_interaction"
+ },
+ {
+  "arguments": {
+   "entity_id": "start_guide_320_128_0_0"
+  },
+  "note": "the Guide's conversation",
+  "response": {
+   "available": false,
+   "blocking": {
+    "code": "distance",
+    "message": "The player is too far: 192 px away, and it can be used within 72 px."
+   },
+   "dialogue": {
+    "choices": [
+     {
+      "choice": "I'll light it.",
+      "conditions_met": true,
+      "id": "help",
+      "node": "root",
+      "selectable_now": false,
+      "used_up": false
+     },
+     {
+      "choice": "Not now.",
+      "conditions_met": true,
+      "id": "later",
+      "node": "root",
+      "selectable_now": false,
+      "used_up": false
+     },
+     {
+      "choice": "Where is the cellar?",
+      "conditions_met": false,
+      "forbid_flags": [],
+      "id": "where",
+      "node": "root",
+      "require_flags": [
+       "agreed_to_help"
+      ],
+      "selectable_now": false,
+      "unmet": [
+       "agreed_to_help"
+      ],
+      "used_up": false
+     }
+    ],
+    "conversation_open": false,
+    "current_node": null
+   },
+   "entity": {
+    "behaviours": [
+     "Dialogue",
+     "Animator"
+    ],
+    "name": "Guide",
+    "x": 320.0,
+    "y": 128.0
+   },
+   "entity_id": "start_guide_320_128_0_0",
+   "flag_sources": {
+    "agreed_to_help": [
+     {
+      "choice": "I'll light it.",
+      "entity": "Guide",
+      "entity_id": "start_guide_320_128_0_0",
+      "node": "root",
+      "room": "start",
+      "room_label": "Start",
+      "sets_to": true,
+      "via": "dialogue choice"
+     }
+    ]
+   },
+   "flags": {
+    "agreed_to_help": false
+   },
+   "how": "interact",
+   "mode": "live_studio",
+   "not_analysed": [],
+   "observed": [
+    {
+     "code": "in_room",
+     "message": "It is in the running room.",
+     "ok": true
+    },
+    {
+     "code": "flag_gate",
+     "detail": {
+      "forbid_flags": [],
+      "require_flags": [],
+      "unmet": [],
+      "values": {}
+     },
+     "message": "Its own flags are met.",
+     "ok": true
+    },
+    {
+     "code": "shown",
+     "detail": {
+      "present": true
+     },
+     "message": "It is there to use.",
+     "ok": true
+    },
+    {
+     "code": "behaviours",
+     "detail": {
+      "behaviours": [
+       {
+        "allows": true,
+        "behaviour": "Dialogue",
+        "rules": [
+         {
+          "code": "conversation_open",
+          "message": "Its conversation isn't on screen.",
+          "ok": false
+         },
+         {
+          "code": "has_lines",
+          "message": "It has lines.",
+          "ok": true
+         },
+         {
+          "code": "flags",
+          "detail": {
+           "forbid_flags": [],
+           "require_flags": [],
+           "unmet": [],
+           "values": {}
+          },
+          "message": "Its conversation's flags are met.",
+          "ok": true
+         },
+         {
+          "code": "not_used_up",
+          "message": "It isn't used up.",
+          "ok": true
+         }
+        ],
+        "takes_interaction": true
+       }
+      ]
+     },
+     "message": "Dialogue would take the interaction.",
+     "ok": true
+    },
+    {
+     "code": "distance",
+     "detail": {
+      "distance": 192.0,
+      "radius": 72.0
+     },
+     "message": "The player is too far: 192 px away, and it can be used within 72 px.",
+     "ok": false
+    }
+   ],
+   "ok": true,
+   "playtest": {
+    "id": "1f58d246e664",
+    "number": 1,
+    "started_at": 1793654474.794,
+    "started_by": "person",
+    "stopped_at": null
+   },
+   "possible_causes": [],
+   "searched": [
+    "dialogue choices' set_flags / clear_flags (every room)",
+    "SetGameStateOnEvent set_flags / clear_flags (every room)",
+    "quest rewards' set_flags"
+   ],
+   "status": "playing"
+  },
+  "tool": "debug_interaction"
+ },
+ {
+  "arguments": {
+   "entity_id": "cellar_door"
+  },
+  "note": "has_key now, the room loaded before",
+  "response": {
+   "available": false,
+   "blocking": {
+    "code": "in_room",
+    "message": "It isn't in the running room, though its flags are met now."
+   },
+   "entity_id": "cellar_door",
+   "flag_sources": {
+    "has_key": [
+     {
+      "choice": "I'll light it.",
+      "entity": "Guide",
+      "entity_id": "start_guide_320_128_0_0",
+      "node": "root",
+      "room": "start",
+      "room_label": "Start",
+      "sets_to": true,
+      "via": "dialogue choice"
+     }
+    ]
+   },
+   "flags": {
+    "has_key": true
+   },
+   "how": "interact",
+   "mode": "live_studio",
+   "not_analysed": [],
+   "observed": [
+    {
+     "code": "in_room",
+     "detail": {
+      "forbid_flags": [],
+      "require_flags": [
+       "has_key"
+      ],
+      "running_room": "start",
+      "unmet": [],
+      "values": {
+       "has_key": true
+      }
+     },
+     "message": "It isn't in the running room, though its flags are met now.",
+     "ok": false
+    }
+   ],
+   "ok": true,
+   "playtest": {
+    "id": "1f58d246e664",
+    "number": 1,
+    "started_at": 1793654474.794,
+    "started_by": "person",
+    "stopped_at": null
+   },
+   "possible_causes": [
+    {
+     "code": "loaded_before_flags_were_met",
+     "message": "The room may have loaded before its flags were met: a room leaves an object out when it loads, and doesn't add it later. It would appear when the room is next loaded."
+    }
+   ],
+   "searched": [
+    "dialogue choices' set_flags / clear_flags (every room)",
+    "SetGameStateOnEvent set_flags / clear_flags (every room)",
+    "quest rewards' set_flags"
+   ],
+   "status": "playing"
+  },
+  "tool": "debug_interaction"
+ },
+ {
+  "arguments": {
+   "entity_id": "start_guide_320_128_0_0"
+  },
+  "note": "the Guide again",
+  "response": {
+   "available": true,
+   "blocking": null,
+   "dialogue": {
+    "choices": [
+     {
+      "choice": "I'll light it.",
+      "conditions_met": true,
+      "id": "help",
+      "node": "root",
+      "selectable_now": false,
+      "used_up": false
+     },
+     {
+      "choice": "Not now.",
+      "conditions_met": true,
+      "id": "later",
+      "node": "root",
+      "selectable_now": false,
+      "used_up": false
+     },
+     {
+      "choice": "Where is the cellar?",
+      "conditions_met": true,
+      "forbid_flags": [],
+      "id": "where",
+      "node": "root",
+      "require_flags": [
+       "agreed_to_help"
+      ],
+      "selectable_now": false,
+      "unmet": [],
+      "used_up": false
+     }
+    ],
+    "conversation_open": false,
+    "current_node": null
+   },
+   "entity": {
+    "behaviours": [
+     "Dialogue",
+     "Animator"
+    ],
+    "name": "Guide",
+    "x": 320.0,
+    "y": 128.0
+   },
+   "entity_id": "start_guide_320_128_0_0",
+   "flag_sources": {
+    "agreed_to_help": [
+     {
+      "choice": "I'll light it.",
+      "entity": "Guide",
+      "entity_id": "start_guide_320_128_0_0",
+      "node": "root",
+      "room": "start",
+      "room_label": "Start",
+      "sets_to": true,
+      "via": "dialogue choice"
+     }
+    ]
+   },
+   "flags": {
+    "agreed_to_help": true
+   },
+   "how": "interact",
+   "mode": "live_studio",
+   "not_analysed": [],
+   "observed": [
+    {
+     "code": "in_room",
+     "message": "It is in the running room.",
+     "ok": true
+    },
+    {
+     "code": "flag_gate",
+     "detail": {
+      "forbid_flags": [],
+      "require_flags": [],
+      "unmet": [],
+      "values": {}
+     },
+     "message": "Its own flags are met.",
+     "ok": true
+    },
+    {
+     "code": "shown",
+     "detail": {
+      "present": true
+     },
+     "message": "It is there to use.",
+     "ok": true
+    },
+    {
+     "code": "behaviours",
+     "detail": {
+      "behaviours": [
+       {
+        "allows": true,
+        "behaviour": "Dialogue",
+        "rules": [
+         {
+          "code": "conversation_open",
+          "message": "Its conversation isn't on screen.",
+          "ok": false
+         },
+         {
+          "code": "has_lines",
+          "message": "It has lines.",
+          "ok": true
+         },
+         {
+          "code": "flags",
+          "detail": {
+           "forbid_flags": [],
+           "require_flags": [],
+           "unmet": [],
+           "values": {}
+          },
+          "message": "Its conversation's flags are met.",
+          "ok": true
+         },
+         {
+          "code": "not_used_up",
+          "message": "It isn't used up.",
+          "ok": true
+         }
+        ],
+        "takes_interaction": true
+       }
+      ]
+     },
+     "message": "Dialogue would take the interaction.",
+     "ok": true
+    },
+    {
+     "code": "distance",
+     "detail": {
+      "distance": 47.0,
+      "radius": 72.0
+     },
+     "message": "The player is 47 px away; it can be used within 72 px.",
+     "ok": true
+    },
+    {
+     "code": "facing",
+     "detail": {
+      "alignment": 1.0,
+      "contact_distance": 48.0
+     },
+     "message": "The player can reach it from where they face.",
+     "ok": true
+    },
+    {
+     "code": "selection",
+     "detail": {
+      "candidates": [
+       {
+        "distance": 47.0,
+        "entity_id": "start_guide_320_128_0_0",
+        "facing_alignment": 1.0,
+        "name": "Guide",
+        "priority": 0
+       }
+      ],
+      "chosen": "start_guide_320_128_0_0",
+      "this": "start_guide_320_128_0_0"
+     },
+     "message": "Pressing interact now uses it.",
+     "ok": true
+    }
+   ],
+   "ok": true,
+   "playtest": {
+    "id": "1f58d246e664",
+    "number": 1,
+    "started_at": 1793654474.794,
+    "started_by": "person",
+    "stopped_at": null
+   },
+   "possible_causes": [],
+   "searched": [
+    "dialogue choices' set_flags / clear_flags (every room)",
+    "SetGameStateOnEvent set_flags / clear_flags (every room)",
+    "quest rewards' set_flags"
+   ],
+   "status": "playing"
+  },
+  "tool": "debug_interaction"
+ },
+ {
+  "arguments": {
+   "entity_id": "cellar_door"
+  },
+  "note": "far away",
+  "response": {
+   "available": false,
+   "blocking": {
+    "code": "distance",
+    "message": "The player is too far: 360 px away, and it can be used within 72 px."
+   },
+   "entity": {
+    "behaviours": [
+     "SceneTransition"
+    ],
+    "name": "Cellar Door",
+    "x": 560.0,
+    "y": 128.0
+   },
+   "entity_id": "cellar_door",
+   "flag_sources": {
+    "has_key": [
+     {
+      "choice": "I'll light it.",
+      "entity": "Guide",
+      "entity_id": "start_guide_320_128_0_0",
+      "node": "root",
+      "room": "start",
+      "room_label": "Start",
+      "sets_to": true,
+      "via": "dialogue choice"
+     }
+    ]
+   },
+   "flags": {
+    "has_key": true
+   },
+   "how": "interact",
+   "mode": "live_studio",
+   "not_analysed": [],
+   "observed": [
+    {
+     "code": "in_room",
+     "message": "It is in the running room.",
+     "ok": true
+    },
+    {
+     "code": "flag_gate",
+     "detail": {
+      "forbid_flags": [],
+      "require_flags": [
+       "has_key"
+      ],
+      "unmet": [],
+      "values": {
+       "has_key": true
+      }
+     },
+     "message": "Its own flags are met.",
+     "ok": true
+    },
+    {
+     "code": "shown",
+     "detail": {
+      "present": true
+     },
+     "message": "It is there to use.",
+     "ok": true
+    },
+    {
+     "code": "behaviours",
+     "detail": {
+      "behaviours": [
+       {
+        "allows": true,
+        "behaviour": "SceneTransition",
+        "rules": [
+         {
+          "code": "interact_allowed",
+          "message": "It is used with the interact key.",
+          "ok": true
+         },
+         {
+          "code": "has_target",
+          "message": "It leads to 'cellar'.",
+          "ok": true
+         },
+         {
+          "code": "not_used_up",
+          "message": "It isn't used up.",
+          "ok": true
+         },
+         {
+          "code": "flags",
+          "detail": {
+           "forbid_flags": [],
+           "require_flags": [
+            "has_key"
+           ],
+           "unmet": [],
+           "values": {
+            "has_key": true
+           }
+          },
+          "message": "Its flags are met.",
+          "ok": true
+         }
+        ],
+        "takes_interaction": true
+       }
+      ]
+     },
+     "message": "SceneTransition would take the interaction.",
+     "ok": true
+    },
+    {
+     "code": "distance",
+     "detail": {
+      "distance": 360.0,
+      "radius": 72.0
+     },
+     "message": "The player is too far: 360 px away, and it can be used within 72 px.",
+     "ok": false
+    }
+   ],
+   "ok": true,
+   "playtest": {
+    "id": "1f58d246e664",
+    "number": 1,
+    "started_at": 1793654474.794,
+    "started_by": "person",
+    "stopped_at": null
+   },
+   "possible_causes": [],
+   "searched": [
+    "dialogue choices' set_flags / clear_flags (every room)",
+    "SetGameStateOnEvent set_flags / clear_flags (every room)",
+    "quest rewards' set_flags"
+   ],
+   "status": "playing"
+  },
+  "tool": "debug_interaction"
+ },
+ {
+  "arguments": {
+   "entity_id": "cellar_door"
+  },
+  "note": "next to the door and the Notice",
+  "response": {
+   "available": false,
+   "blocking": {
+    "code": "selection",
+    "message": "Pressing interact now uses 'Notice' instead: candidates are ranked by priority, then how directly the player faces them, then distance."
+   },
+   "entity": {
+    "behaviours": [
+     "SceneTransition"
+    ],
+    "name": "Cellar Door",
+    "x": 560.0,
+    "y": 128.0
+   },
+   "entity_id": "cellar_door",
+   "flag_sources": {
+    "has_key": [
+     {
+      "choice": "I'll light it.",
+      "entity": "Guide",
+      "entity_id": "start_guide_320_128_0_0",
+      "node": "root",
+      "room": "start",
+      "room_label": "Start",
+      "sets_to": true,
+      "via": "dialogue choice"
+     }
+    ]
+   },
+   "flags": {
+    "has_key": true
+   },
+   "how": "interact",
+   "mode": "live_studio",
+   "not_analysed": [],
+   "observed": [
+    {
+     "code": "in_room",
+     "message": "It is in the running room.",
+     "ok": true
+    },
+    {
+     "code": "flag_gate",
+     "detail": {
+      "forbid_flags": [],
+      "require_flags": [
+       "has_key"
+      ],
+      "unmet": [],
+      "values": {
+       "has_key": true
+      }
+     },
+     "message": "Its own flags are met.",
+     "ok": true
+    },
+    {
+     "code": "shown",
+     "detail": {
+      "present": true
+     },
+     "message": "It is there to use.",
+     "ok": true
+    },
+    {
+     "code": "behaviours",
+     "detail": {
+      "behaviours": [
+       {
+        "allows": true,
+        "behaviour": "SceneTransition",
+        "rules": [
+         {
+          "code": "interact_allowed",
+          "message": "It is used with the interact key.",
+          "ok": true
+         },
+         {
+          "code": "has_target",
+          "message": "It leads to 'cellar'.",
+          "ok": true
+         },
+         {
+          "code": "not_used_up",
+          "message": "It isn't used up.",
+          "ok": true
+         },
+         {
+          "code": "flags",
+          "detail": {
+           "forbid_flags": [],
+           "require_flags": [
+            "has_key"
+           ],
+           "unmet": [],
+           "values": {
+            "has_key": true
+           }
+          },
+          "message": "Its flags are met.",
+          "ok": true
+         }
+        ],
+        "takes_interaction": true
+       }
+      ]
+     },
+     "message": "SceneTransition would take the interaction.",
+     "ok": true
+    },
+    {
+     "code": "distance",
+     "detail": {
+      "distance": 60.0,
+      "radius": 72.0
+     },
+     "message": "The player is 60 px away; it can be used within 72 px.",
+     "ok": true
+    },
+    {
+     "code": "facing",
+     "detail": {
+      "alignment": 1.0,
+      "contact_distance": 40.0
+     },
+     "message": "The player can reach it from where they face.",
+     "ok": true
+    },
+    {
+     "code": "selection",
+     "detail": {
+      "candidates": [
+       {
+        "distance": 20.0,
+        "entity_id": "notice",
+        "facing_alignment": 1.0,
+        "name": "Notice",
+        "priority": 0
+       },
+       {
+        "distance": 60.0,
+        "entity_id": "cellar_door",
+        "facing_alignment": 1.0,
+        "name": "Cellar Door",
+        "priority": 0
+       }
+      ],
+      "chosen": "notice",
+      "this": "cellar_door"
+     },
+     "message": "Pressing interact now uses 'Notice' instead: candidates are ranked by priority, then how directly the player faces them, then distance.",
+     "ok": false
+    }
+   ],
+   "ok": true,
+   "playtest": {
+    "id": "1f58d246e664",
+    "number": 1,
+    "started_at": 1793654474.794,
+    "started_by": "person",
+    "stopped_at": null
+   },
+   "possible_causes": [],
+   "searched": [
+    "dialogue choices' set_flags / clear_flags (every room)",
+    "SetGameStateOnEvent set_flags / clear_flags (every room)",
+    "quest rewards' set_flags"
+   ],
+   "status": "playing"
+  },
+  "tool": "debug_interaction"
+ },
+ {
+  "arguments": {
+   "entity_id": "cellar_door"
+  },
+  "note": "next to the door alone",
+  "response": {
+   "available": true,
+   "blocking": null,
+   "entity": {
+    "behaviours": [
+     "SceneTransition"
+    ],
+    "name": "Cellar Door",
+    "x": 560.0,
+    "y": 128.0
+   },
+   "entity_id": "cellar_door",
+   "flag_sources": {
+    "has_key": [
+     {
+      "choice": "I'll light it.",
+      "entity": "Guide",
+      "entity_id": "start_guide_320_128_0_0",
+      "node": "root",
+      "room": "start",
+      "room_label": "Start",
+      "sets_to": true,
+      "via": "dialogue choice"
+     }
+    ]
+   },
+   "flags": {
+    "has_key": true
+   },
+   "how": "interact",
+   "mode": "live_studio",
+   "not_analysed": [],
+   "observed": [
+    {
+     "code": "in_room",
+     "message": "It is in the running room.",
+     "ok": true
+    },
+    {
+     "code": "flag_gate",
+     "detail": {
+      "forbid_flags": [],
+      "require_flags": [
+       "has_key"
+      ],
+      "unmet": [],
+      "values": {
+       "has_key": true
+      }
+     },
+     "message": "Its own flags are met.",
+     "ok": true
+    },
+    {
+     "code": "shown",
+     "detail": {
+      "present": true
+     },
+     "message": "It is there to use.",
+     "ok": true
+    },
+    {
+     "code": "behaviours",
+     "detail": {
+      "behaviours": [
+       {
+        "allows": true,
+        "behaviour": "SceneTransition",
+        "rules": [
+         {
+          "code": "interact_allowed",
+          "message": "It is used with the interact key.",
+          "ok": true
+         },
+         {
+          "code": "has_target",
+          "message": "It leads to 'cellar'.",
+          "ok": true
+         },
+         {
+          "code": "not_used_up",
+          "message": "It isn't used up.",
+          "ok": true
+         },
+         {
+          "code": "flags",
+          "detail": {
+           "forbid_flags": [],
+           "require_flags": [
+            "has_key"
+           ],
+           "unmet": [],
+           "values": {
+            "has_key": true
+           }
+          },
+          "message": "Its flags are met.",
+          "ok": true
+         }
+        ],
+        "takes_interaction": true
+       }
+      ]
+     },
+     "message": "SceneTransition would take the interaction.",
+     "ok": true
+    },
+    {
+     "code": "distance",
+     "detail": {
+      "distance": 40.0,
+      "radius": 72.0
+     },
+     "message": "The player is 40 px away; it can be used within 72 px.",
+     "ok": true
+    },
+    {
+     "code": "facing",
+     "detail": {
+      "alignment": 1.0,
+      "contact_distance": 40.0
+     },
+     "message": "The player can reach it from where they face.",
+     "ok": true
+    },
+    {
+     "code": "selection",
+     "detail": {
+      "candidates": [
+       {
+        "distance": 40.0,
+        "entity_id": "cellar_door",
+        "facing_alignment": 1.0,
+        "name": "Cellar Door",
+        "priority": 0
+       }
+      ],
+      "chosen": "cellar_door",
+      "this": "cellar_door"
+     },
+     "message": "Pressing interact now uses it.",
+     "ok": true
+    }
+   ],
+   "ok": true,
+   "playtest": {
+    "id": "1f58d246e664",
+    "number": 1,
+    "started_at": 1793654474.794,
+    "started_by": "person",
+    "stopped_at": null
+   },
+   "possible_causes": [],
+   "searched": [
+    "dialogue choices' set_flags / clear_flags (every room)",
+    "SetGameStateOnEvent set_flags / clear_flags (every room)",
+    "quest rewards' set_flags"
+   ],
+   "status": "playing"
+  },
+  "tool": "debug_interaction"
+ }
+]

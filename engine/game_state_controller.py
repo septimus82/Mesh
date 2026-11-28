@@ -106,12 +106,41 @@ class GameStateController:
         return self.state
 
     def _normalize_equipment(self) -> None:
-        """Ensure equipment slots exist."""
+        """Ensure equipment slots exist, each holding an item the inventory owns (#757).
+
+        Every filled slot needs its own owned copy, counted in slot order (weapon, armor, accessory, then any other
+        slot by name): a slot whose item has no copy left is cleared. So removing the last copy of an equipped item,
+        by any path (a Vendor sale, the console, using it, a save that lost it), unequips it, and while another copy
+        is owned the equipped one stays equipped. Loads repair an old save in memory, never on disk.
+
+        It runs on effectively every controller call, through _ensure_game_state (counters, flags, update() every
+        frame, export_state, import_state), not only on equipment reads. Hazard: code that empties the inventory and
+        then refills it (a swap, a rebuild) must not touch the controller in between, or the item is unequipped."""
         if not isinstance(self.state.equipment, dict):
             self.state.equipment = {}
+        equipment = self.state.equipment
         for slot in self._equipment_slots:
-            if slot not in self.state.equipment:
-                self.state.equipment[slot] = None
+            if slot not in equipment:
+                equipment[slot] = None
+        if not any(equipment.values()):
+            return
+        values = self.state.values if isinstance(self.state.values, dict) else {}
+        bucket = values.get("inventory")
+        items = bucket.get("items") if isinstance(bucket, dict) else None
+        owned = dict(items) if isinstance(items, dict) else {}
+        extra = sorted(slot for slot in equipment if slot not in self._equipment_slots)
+        for slot in (*self._equipment_slots, *extra):
+            item_id = equipment[slot]
+            if not item_id:
+                continue
+            try:
+                left = int(owned.get(item_id, 0))
+            except (TypeError, ValueError):
+                left = 0
+            if left <= 0:
+                equipment[slot] = None
+            else:
+                owned[item_id] = left - 1
 
     def add_perk(self, perk_id: str) -> bool:
         """Add a perk to the player's active perks."""
@@ -285,6 +314,10 @@ class GameStateController:
             return result
 
         self._normalize_equipment()
+        # Each slot needs its own copy (#757): the copies other slots hold aren't free to equip here.
+        if inv.get_count(item_id) <= sum(1 for s, v in state.equipment.items() if s != slot_name and v == item_id):
+            result["reason"] = "no_spare_copy"
+            return result
         previous = state.equipment.get(slot_name)
         state.equipment[slot_name] = item_id
         result.update({"ok": True, "slot": slot_name, "item": item_id, "previous": previous})
@@ -596,6 +629,20 @@ class GameStateController:
         """Completely replace the current game state with the provided data."""
         self.state = GameState()  # Reset to clean state
         self.import_state(state_data)
+        # Quests begin as in a fresh game: auto_start quests start, pending stages sync with the new flags.
+        # (The full manager GameWindow installs has this; the windowless lightweight one does not.)
+        resync = getattr(self.quests, "reload_from_state", None)
+        if callable(resync):
+            resync()
+        # ... and isn't over: a game that ended (the player died) ends with it, as the restart key ends it: its screen
+        # gone, unpaused. (It stayed set through New Game and Studio's Play and Stop: every later play-test began over.)
+        window = getattr(self, "window", None)
+        if window is not None and getattr(window, "game_over", False):
+            window.game_over = False
+            screen = getattr(window, "game_over_screen", None)
+            if screen is not None:
+                screen.visible = False
+            window.paused = False
 
     def handle_event(self, event: Any) -> None:
         """Centralized event handler for game state updates."""

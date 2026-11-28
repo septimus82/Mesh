@@ -18,6 +18,7 @@ from .persistence_io import SAVE_FORMAT_VERSION, read_json, write_json_atomic
 from .save_runtime import constants as save_constants
 from .save_runtime import io as save_io
 from .save_runtime import payloads as save_payloads
+from .save_runtime import storage as save_storage
 from .save_runtime.restore_policy import SNAPSHOT_POLICY
 from .save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from .save_runtime.ux_codes import (
@@ -230,13 +231,23 @@ class SaveGameV1:
         )
 
 
-def resolve_savegame_path(path: str | None = None) -> Path:
+def resolve_savegame_path(path: str | None = None, *, reading: bool = False) -> Path:
+    """``path``, else the env override, else ``saves/save_1.json`` in the game project (engine.paths.project_root,
+    #623), never the current folder's. ``reading``: when the project has none, an older one in the current folder
+    (save_storage.cwd_legacy_saves: never written, never another project's)."""
     raw = str(path or "").strip()
     if not raw:
         raw = str(os.environ.get("MESH_SAVEGAME_PATH") or os.environ.get("MESH_SAVE_PATH") or "").strip()
-    if not raw:
-        return DEFAULT_SAVEGAME_PATH
-    return Path(raw)
+    if raw:
+        return Path(raw)
+    from engine.paths import project_root  # noqa: PLC0415
+
+    root = project_root()
+    resolved = root / DEFAULT_SAVEGAME_PATH
+    legacy_dir = save_storage.cwd_legacy_saves(root) if reading and not resolved.is_file() else None
+    if legacy_dir is not None and (legacy_dir / DEFAULT_SAVEGAME_PATH.name).is_file():
+        return legacy_dir / DEFAULT_SAVEGAME_PATH.name
+    return resolved
 
 
 def _resolve_quest_manager(window: Any) -> Any | None:
@@ -336,7 +347,7 @@ def save_savegame(path: str | Path | None, save: SaveGameV1) -> None:
 def load_savegame(path: str | Path | None) -> SaveGameV1 | None:
     if _is_web_runtime():
         return None
-    in_path = Path(path) if path is not None else resolve_savegame_path()
+    in_path = Path(path) if path is not None else resolve_savegame_path(reading=True)
     if not in_path.exists():
         diag_warn(
             LOAD_NOT_FOUND,
@@ -570,8 +581,8 @@ def write_snapshot_file(path: Path, payload: dict[str, Any]) -> None:
     save_io.write_snapshot_atomic(path, payload)
 
 
-def read_snapshot_file(path: Path) -> dict[str, Any] | None:
-    ok, payload_or_error = save_io.load_snapshot_payload(path, policy=SNAPSHOT_POLICY)
+def read_snapshot_file(path: Path, *, sidecars: bool = True) -> dict[str, Any] | None:
+    ok, payload_or_error = save_io.load_snapshot_payload(path, policy=SNAPSHOT_POLICY, sidecars=sidecars)
     if ok:
         return cast(dict[str, Any], payload_or_error)
     msg = str(payload_or_error or "")
@@ -628,7 +639,27 @@ def read_snapshot_file(path: Path) -> dict[str, Any] | None:
     return None
 
 
-def save_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> bool:
+def _quick_snapshot_path(window: object, *, reading: bool = False) -> Path:
+    """quick.json in the game's save folder (H9: an exported game's is per player, never its installation). Reading,
+    as for save slots: the player's copy when it is a valid snapshot, else an older export's copy in its installation
+    when that one is valid, else whichever exists (so the failure names it). Chosen before anything is applied."""
+    manager = getattr(window, "save_manager", None)
+    save_dir = getattr(manager, "save_dir", None)
+    if save_dir is None:
+        return QUICK_SNAPSHOT_PATH
+    path = Path(save_dir) / QUICK_SNAPSHOT_PATH.name
+    legacy_dir = getattr(manager, "legacy_dir", None)
+    legacy = Path(legacy_dir) / path.name if legacy_dir is not None else None
+    if not reading or legacy is None or not legacy.is_file():
+        return path
+    for candidate in (path, legacy):
+        if save_io.is_valid_payload_file(candidate, policy=SNAPSHOT_POLICY):
+            return candidate
+    return path if path.is_file() else legacy
+
+
+def save_quick_snapshot(window: object, path: Path | None = None) -> bool:
+    path = path or _quick_snapshot_path(window)
     controller = getattr(window, "game_state_controller", None)
     if controller is None:
         diag_error(
@@ -669,8 +700,11 @@ def save_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> boo
         return False
 
 
-def load_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> bool:
-    payload = read_snapshot_file(path)
+def load_quick_snapshot(window: object, path: Path | None = None) -> bool:
+    path = path or _quick_snapshot_path(window, reading=True)
+    legacy_dir = getattr(getattr(window, "save_manager", None), "legacy_dir", None)
+    legacy = legacy_dir is not None and path.parent == Path(legacy_dir)  # (an older export's: nothing written by it)
+    payload = read_snapshot_file(path, sidecars=not legacy)
     if payload is None:
         _fallback_to_start_scene(
             window,
@@ -714,7 +748,7 @@ def load_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> boo
     )
     counts = apply_diags.counts()
     should_write_sidecars = (
-        SNAPSHOT_POLICY.write_sidecars_on_failure and (
+        SNAPSHOT_POLICY.write_sidecars_on_failure and not legacy and (
             (not applied) or int(counts.get("warnings", 0)) > 0 or int(counts.get("errors", 0)) > 0
         )
     )

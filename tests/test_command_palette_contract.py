@@ -158,9 +158,8 @@ def test_command_palette_run_executes() -> None:
     assert window.runtime_settings.fog_enabled is True
     assert window.engine_config.fog_enabled is True
 
-    assert run_command("runtime.soft_shadows.toggle", window) is True
-    assert window.runtime_settings.soft_shadows_enabled is True
-    assert window.engine_config.soft_shadows_enabled is True
+    # "Toggle Soft Shadows" was removed after Milestone 15 (it changed nothing since the per-light shadows).
+    assert run_command("runtime.soft_shadows.toggle", window) is False
 
 
 @pytest.mark.fast

@@ -1,0 +1,117 @@
+{
+  "changes": [
+    {
+      "op": "paint_tiles",
+      "layer": "walls",
+      "cells": [
+        [
+          3,
+          2
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          8,
+          2
+        ],
+        [
+          9,
+          2
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          7,
+          3
+        ],
+        [
+          8,
+          3
+        ],
+        [
+          9,
+          3
+        ]
+      ],
+      "tile": 9
+    },
+    {
+      "op": "place_prefab",
+      "prefab": "person",
+      "x": 448,
+      "y": 224
+    },
+    {
+      "op": "rename_entity",
+      "entity_id": "@1",
+      "name": "Sexton"
+    },
+    {
+      "op": "set_dialogue_text",
+      "entity_id": "Sexton",
+      "text": "Who goes there, so late?"
+    },
+    {
+      "op": "add_line",
+      "entity_id": "Sexton",
+      "text": "Mind the open graves."
+    },
+    {
+      "op": "set_conversation",
+      "entity_id": "Sexton",
+      "once": false
+    },
+    {
+      "op": "set_show_when",
+      "entity_id": "Sexton",
+      "require": "lantern_lit",
+      "forbid": ""
+    },
+    {
+      "op": "place_blank",
+      "name": "Lantern",
+      "x": 288,
+      "y": 128
+    },
+    {
+      "op": "set_trigger_zone",
+      "entity_id": "@7",
+      "width": 96,
+      "height": 96,
+      "set_flags": "lantern_lit"
+    },
+    {
+      "op": "rename_entity",
+      "entity_id": "Sexton",
+      "name": "Warden"
+    }
+  ]
+}

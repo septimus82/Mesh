@@ -1,0 +1,120 @@
+......FFFFFFF                                                            [100%]
+================================== FAILURES ===================================
+_ test_two_sprites_sharing_an_id_are_both_kept_with_their_own_transform_and_data _
+
+    @pytest.mark.fast
+    def test_two_sprites_sharing_an_id_are_both_kept_with_their_own_transform_and_data() -> None:
+        one, two = _ent(id="orc", x=10.0, y=10.0, x_hp=30), _ent(id="orc", x=200.0, y=300.0, x_hp=11)
+        snap = _snapshot({"entities": [one, two]}, [_sprite(one, 15.0, 16.0), _sprite(two, 210.0, 310.0)])
+>       assert _xy(snap) == [("orc", 15.0, 16.0, 30), ("orc", 210.0, 310.0, 11)]
+E       AssertionError: assert [('orc', 10.0...0, 310.0, 11)] == [('orc', 15.0...0, 310.0, 11)]
+E         
+E         At index 0 diff: ('orc', 10.0, 10.0, 30) != ('orc', 15.0, 16.0, 30)
+E         Use -v to get more diff
+
+tests\test_scene_snapshot_duplicate_ids.py:79: AssertionError
+_________ test_a_console_style_clone_sharing_the_id_is_its_own_record _________
+
+    @pytest.mark.fast
+    def test_a_console_style_clone_sharing_the_id_is_its_own_record() -> None:
+        orig = _ent(id="orc", name="orc", x=10.0, y=10.0, x_hp=30)
+        clone = {**orig, "name": "orc_clone", "x": 99.0, "y": 98.0, "x_hp": 11}
+        # the clone is listed FIRST: the original must still keep its own authored entry
+        snap = _snapshot({"entities": [orig]}, [_sprite(clone), _sprite(orig, 12.0, 12.0)])
+        by_name = {e["name"]: e for e in snap["entities"]}
+>       assert len(snap["entities"]) == 2
+E       AssertionError: assert 1 == 2
+E        +  where 1 = len([{'id': 'orc', 'layer': 'entities', 'name': 'orc', 'rotation': 0.0, ...}])
+
+tests\test_scene_snapshot_duplicate_ids.py:89: AssertionError
+__________________ test_sprites_sharing_a_name_are_both_kept __________________
+
+    @pytest.mark.fast
+    def test_sprites_sharing_a_name_are_both_kept() -> None:
+        one, two = _ent(name="guard", x=1.0, y=1.0, x_hp=1), _ent(name="guard", x=2.0, y=2.0, x_hp=2)
+        snap = _snapshot({"entities": [one, two]}, [_sprite(one, 5.0, 5.0), _sprite(two, 6.0, 6.0)])
+>       assert _xy(snap) == [("guard", 5.0, 5.0, 1), ("guard", 6.0, 6.0, 2)]
+E       AssertionError: assert [('guard', 1.... 6.0, 6.0, 2)] == [('guard', 5.... 6.0, 6.0, 2)]
+E         
+E         At index 0 diff: ('guard', 1.0, 1.0, 1) != ('guard', 5.0, 5.0, 1)
+E         Use -v to get more diff
+
+tests\test_scene_snapshot_duplicate_ids.py:98: AssertionError
+________ test_three_duplicates_mixed_with_unique_and_runtime_entities _________
+
+    @pytest.mark.fast
+    def test_three_duplicates_mixed_with_unique_and_runtime_entities() -> None:
+        d = [_ent(id="d", x=float(i), y=float(i) * 2, x_hp=i) for i in (1, 2, 3)]
+        u = _ent(id="u", x=7.0, y=7.0)
+        sprites = [_sprite(d[2], 30.0, 31.0), _sprite(u, 8.0, 8.0), _sprite(d[0], 10.0, 11.0), _sprite(d[1], 20.0, 21.0),
+                   _sprite(_ent(id="rt", x=70.0, y=71.0, x_hp=9))]
+        snap = _snapshot({"entities": [d[0], d[1], d[2], u]}, sprites)
+        got = {(e["id"], e["x_hp"] if "x_hp" in e else None): (e["x"], e["y"]) for e in snap["entities"]}
+        assert len(snap["entities"]) == 5
+>       assert got == {("d", 1): (10.0, 11.0), ("d", 2): (20.0, 21.0), ("d", 3): (30.0, 31.0), ("u", None): (8.0, 8.0),
+                       ("rt", 9): (70.0, 71.0)}
+E       AssertionError: assert {('d', 1): (1...): (8.0, 8.0)} == {('d', 1): (1...0, 71.0), ...}
+E         
+E         Omitting 3 identical items, use -vv to show
+E         Differing items:
+E         {('d', 1): (1.0, 2.0)} != {('d', 1): (10.0, 11.0)}
+E         Right contains 1 more item:
+E         {('d', 3): (30.0, 31.0)}
+E         Use -v to get more diff
+
+tests\test_scene_snapshot_duplicate_ids.py:110: AssertionError
+__ test_more_sprites_than_authored_entries_each_extra_is_appended_not_merged __
+
+    @pytest.mark.fast
+    def test_more_sprites_than_authored_entries_each_extra_is_appended_not_merged() -> None:
+        one = _ent(id="orc", x=1.0, y=1.0, x_hp=1)
+        extra = [_ent(id="orc", x=float(i), y=float(i), x_hp=i) for i in (2, 3)]
+        snap = _snapshot({"entities": [one]}, [_sprite(one), *[_sprite(e) for e in extra]])
+>       assert sorted(_xy(snap), key=lambda t: t[3]) == [("orc", 1.0, 1.0, 1), ("orc", 2.0, 2.0, 2), ("orc", 3.0, 3.0, 3)]
+E       AssertionError: assert [('orc', 3.0, 3.0, 3)] == [('orc', 1.0,... 3.0, 3.0, 3)]
+E         
+E         At index 0 diff: ('orc', 3.0, 3.0, 3) != ('orc', 1.0, 1.0, 1)
+E         Right contains 2 more items, first extra item: ('orc', 2.0, 2.0, 2)
+E         Use -v to get more diff
+
+tests\test_scene_snapshot_duplicate_ids.py:119: AssertionError
+_____________ test_the_ambiguous_case_keeps_both_records_and_logs _____________
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x00000202E9355400>
+
+    @pytest.mark.fast
+    def test_the_ambiguous_case_keeps_both_records_and_logs(caplog: pytest.LogCaptureFixture) -> None:
+        one = _ent(id="orc", x=1.0, y=1.0, x_hp=1)
+        clone = _ent(id="orc", x=50.0, y=50.0, x_hp=2)
+        with caplog.at_level("WARNING", logger="engine.scene_runtime.persistence"):
+            snap = _snapshot({"entities": [one]}, [_sprite(one), _sprite(clone)])
+>       assert len(snap["entities"]) == 2
+E       AssertionError: assert 1 == 2
+E        +  where 1 = len([{'id': 'orc', 'layer': 'entities', 'rotation': 0.0, 'scale': 1.0, ...}])
+
+tests\test_scene_snapshot_duplicate_ids.py:128: AssertionError
+_______ test_both_duplicates_come_back_through_the_saved_world_composer _______
+
+    @pytest.mark.fast
+    def test_both_duplicates_come_back_through_the_saved_world_composer() -> None:
+        one, two = _ent(id="orc", x=10.0, y=10.0, x_hp=30), _ent(id="orc", x=200.0, y=300.0, x_hp=11)
+        room = {"entities": [one, two]}
+        snap = _snapshot(room, [_sprite(one, 15.0, 16.0), _sprite(two, 210.0, 310.0)])
+        save = {"entities": json.loads(json.dumps(snap["entities"])), "meta": {saved_world.ROOM_IDS: ["orc"]}}
+        out = saved_world.compose(save, room, "scenes/room.json")
+>       assert [(e["x"], e["y"]) for e in out["entities"]] == [(15.0, 16.0), (210.0, 310.0)]
+E       assert [(10.0, 10.0), (210.0, 310.0)] == [(15.0, 16.0), (210.0, 310.0)]
+E         
+E         At index 0 diff: (10.0, 10.0) != (15.0, 16.0)
+E         Use -v to get more diff
+
+tests\test_scene_snapshot_duplicate_ids.py:140: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_scene_snapshot_duplicate_ids.py::test_two_sprites_sharing_an_id_are_both_kept_with_their_own_transform_and_data
+FAILED tests/test_scene_snapshot_duplicate_ids.py::test_a_console_style_clone_sharing_the_id_is_its_own_record
+FAILED tests/test_scene_snapshot_duplicate_ids.py::test_sprites_sharing_a_name_are_both_kept
+FAILED tests/test_scene_snapshot_duplicate_ids.py::test_three_duplicates_mixed_with_unique_and_runtime_entities
+FAILED tests/test_scene_snapshot_duplicate_ids.py::test_more_sprites_than_authored_entries_each_extra_is_appended_not_merged
+FAILED tests/test_scene_snapshot_duplicate_ids.py::test_the_ambiguous_case_keeps_both_records_and_logs
+FAILED tests/test_scene_snapshot_duplicate_ids.py::test_both_duplicates_come_back_through_the_saved_world_composer
+7 failed, 6 passed in 3.48s

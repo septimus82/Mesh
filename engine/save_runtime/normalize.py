@@ -106,11 +106,12 @@ def _sorted_dict(data: Mapping[str, Any]) -> dict[str, Any]:
     return {key: data[key] for key in sorted(str(k) for k in data.keys())}
 
 
-def _entity_sort_key(item: dict[str, Any], index: int) -> tuple[str, str, int]:
-    entity_id = str(item.get("entity_id", "") or "")
-    legacy_id = str(item.get("id", "") or "")
-    label = entity_id or legacy_id
-    return (label, entity_id, index)
+def _entity_sort_key(item: dict[str, Any], index: int) -> tuple[Any, ...]:
+    # the same total order serialize_entities writes (keying, mesh_id, entity_id, x, y, occurrence), so duplicate
+    # names or ids neither tie nor get reordered by a save or a load; index only breaks identical records
+    from engine.save_runtime.entity_state import record_sort_key
+
+    return (*record_sort_key(item), index)
 
 
 def _normalize_saved_entities(

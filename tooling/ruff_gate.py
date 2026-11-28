@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import subprocess
@@ -45,17 +46,39 @@ def normalize_findings(findings: list[dict[str, object]], repo_root: Path) -> li
     return [normalize_finding(finding, repo_root) for finding in findings]
 
 
-def _run_ruff(repo_root: Path) -> tuple[int, list[str]]:
-    result = subprocess.run([sys.executable, "-m", "ruff", "check", "--output-format=json", "."], cwd=repo_root, capture_output=True, text=True)
-    output = result.stdout or "[]"
+def untracked_game_projects(repo_root: Path) -> list[str]:
+    """Untracked Mesh game projects inside the checkout (folders with their own config.json).
+
+    Someone's game made with ``mesh new`` inside the engine folder is not engine source;
+    linting it made the gate fail for code the engine doesn't own. Tracked files, and
+    new engine files not yet added to git, are still checked.
+    """
     try:
-        findings = json.loads(output)
+        listed = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "--directory", "-z"],
+                                cwd=repo_root, capture_output=True, text=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return []
+    folders = [entry.rstrip("/") for entry in listed.split("\0") if entry.endswith("/")]
+    return sorted(folder for folder in folders if (repo_root / folder / "config.json").is_file())
+
+
+def _run_ruff(repo_root: Path) -> tuple[int, list[str]]:
+    command = [sys.executable, "-m", "ruff", "check", "--output-format=json", "."]
+    for folder in untracked_game_projects(repo_root):
+        command += ["--extend-exclude", folder]
+    result = subprocess.run(command, cwd=repo_root, capture_output=True, text=True)
+    try:
+        findings = json.loads(result.stdout or "")
     except json.JSONDecodeError:
-        print(result.stdout, end="")
+        findings = None
+    # Clean, ruff prints "[]" (exit 0); with findings, a JSON list (exit 1). Exit 1 with nothing on stdout is ruff
+    # not running at all ("No module named ruff", a missing binary), never "no findings" (#624).
+    if result.returncode not in (0, 1) or not isinstance(findings, list):
+        print(f"[ruff-gate] ruff did not report findings (exit {result.returncode}, stdout is not a JSON list):",
+              file=sys.stderr)
+        print(result.stdout, end="", file=sys.stderr)
         print(result.stderr, end="", file=sys.stderr)
         return result.returncode if result.returncode not in (0, 1) else 2, []
-    if not isinstance(findings, list):
-        return 2, []
     return result.returncode, normalize_findings(findings, repo_root)
 
 
@@ -85,6 +108,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Ruff ratchet gate")
     parser.add_argument("--update-baseline", action="store_true", help="Update baseline with current ruff output")
     args = parser.parse_args(argv)
+
+    if importlib.util.find_spec("ruff") is None:  # the interpreter that runs `-m ruff` below (#624)
+        print(f"[ruff-gate] ruff is not available: no ruff module for {sys.executable}; "
+              'install the dev tools (pip install -e ".[dev]")', file=sys.stderr)
+        return 2
 
     repo_root = _repo_root()
     code, current_lines = _run_ruff(repo_root)

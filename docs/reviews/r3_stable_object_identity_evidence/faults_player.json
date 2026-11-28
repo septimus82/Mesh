@@ -1,0 +1,44 @@
+[
+ {
+  "fault": "a new line's id ignores the lines the shared player had",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_player_line_never_lands_on_its_replacement[written in the same room]"
+  ]
+ },
+ {
+  "fault": "a Studio edit doesn't say which objects are the shared player",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_player_line_never_lands_on_its_replacement[written in the same room]"
+  ]
+ },
+ {
+  "fault": "an AI's change doesn't say which objects are the shared player",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_an_ai_batch_on_the_players_lines_gets_new_ids_and_its_preview_names_them"
+  ]
+ },
+ {
+  "fault": "the lines an edit gives the shared player are not remembered",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_the_players_lines_have_one_history_in_every_room_through_undo_and_redo"
+  ]
+ },
+ {
+  "fault": "the shared player's lines before an edit are not remembered",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_saving_and_opening_again_keeps_the_players_lines"
+  ]
+ },
+ {
+  "fault": "the shared player's lines are scoped to a room, not the project",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_object_identity.py::test_a_stale_proposal_about_a_deleted_player_line_never_lands_on_its_replacement[written in the same room]"
+  ]
+ }
+]

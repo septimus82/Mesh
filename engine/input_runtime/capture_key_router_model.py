@@ -646,6 +646,9 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             action_id="capture.project_explorer.rename",
             when=_when_always,
         ),
+        # Del never acts here: the editor's own router runs first and sends it to the safe delete
+        # (editor.project_explorer.refactor_delete_selected). This route only keeps Del, unhandled, from reaching
+        # entity_select.delete while the Project panel has focus (#670).
         RouteSpec(
             scope=SCOPE_PROJECT_EXPLORER,
             combo=KeyCombo(key=key.DELETE, mods=0),
@@ -1332,11 +1335,11 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             action_id="capture.overlay.encounter_debug.toggle",
             when=_when_not_debug,
         ),
-        # F9 - Copy coords (debug/inspector) or pause (normal path)
+        # F9 - Quick load (copies coords instead while debugging/inspecting)
         RouteSpec(
             scope=SCOPE_GLOBAL,
             combo=KeyCombo(key=key.F9, mods=0),
-            action_id="capture.debug.copy_coords_or_pause",
+            action_id="capture.savegame.quickload_or_copy_coords",
             when=_when_always,
         ),
         RouteSpec(

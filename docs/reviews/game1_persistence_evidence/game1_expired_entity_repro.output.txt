@@ -1,0 +1,6 @@
+1. spawned + saved   live: ['Elder', 'Goblin', 'Hero', 'Twin', 'Twin', 'proj_0_0']
+2. loaded, expired   live: ['Elder', 'Goblin', 'Hero', 'Twin', 'Twin']
+   slot top-level entities: ['Elder', 'Goblin', 'Hero', 'Twin', 'Twin', 'proj_0_0']
+   slot saved_entities    : ['Elder', 'Goblin', 'Hero', 'Twin', 'Twin']
+3. fresh load        live: ['Elder', 'Goblin', 'Hero', 'Twin', 'Twin', 'proj_0_0']
+RESURRECTED: True

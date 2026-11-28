@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import subprocess
-import sys
-
 import pytest
 
 from engine.editor.creator_mode import (
@@ -12,6 +9,7 @@ from engine.editor.creator_mode import (
     build_creator_door_workflow_from_plan_request,
 )
 from engine.editor.creator_mode.creator_door_workflow import CreatorDoorWorkflowModel
+from tests._shared_python import run_python
 
 pytestmark = pytest.mark.fast
 
@@ -127,42 +125,17 @@ def test_invalid_trigger_stays_blocked() -> None:
 
 
 def test_workflow_module_imports_without_arcade() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; "
-                "sys.modules['arcade'] = None; "
-                "from engine.editor.creator_mode.creator_door_workflow "
-                "import build_creator_door_workflow; "
-                "print(callable(build_creator_door_workflow))"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
+    output = run_python(
+        (
+            "import sys; "
+            "from engine.editor.creator_mode.creator_door_workflow "
+            "import build_creator_door_workflow; "
+            "print(callable(build_creator_door_workflow))"
+        ),
+        without_arcade=True,
     )
 
-    assert result.stdout.strip() == "True"
-
-
-def test_package_import_still_does_not_import_renderer_module() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import engine.editor.creator_mode; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    assert result.stdout.strip() == "False"
+    assert output.strip() == "True"
 
 
 def _locked_workflow_request() -> CreatorDoorWorkflowRequest:

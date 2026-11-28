@@ -145,6 +145,31 @@ Example configuration snippet:
 }
 ```
 
+## Campfire
+A campfire in an HD-2D room: flames, embers, smoke and a warm light (Studio: the Campfire object).
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| enabled | Burning (off: cold logs) | bool | True |
+| size | The flames' size (0.5-1.5) | float | 1.0 |
+| smoke | Smoke rises from it | bool | True |
+| light | Its light's strength (0-3) | float | 1.0 |
+| light_radius | How far its light reaches (px) | float | 192.0 |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["Campfire"],
+  "behaviour_config": {
+    "Campfire": {
+      "enabled": "<value>"
+    }
+  }
+}
+```
+
 ## ChaseTarget
 Acquires a nearby target and chases it using grid-based pathfinding.
 
@@ -311,6 +336,8 @@ Displays speaker-tagged lines when interacted with or when events fire.
 | role | Role of the speaker (e.g. Merchant, Guard) | string | - |
 | dialogue_lines | Legacy array of dialogue line entries | array | [] |
 | dialogue_nodes | Graph-based dialogue nodes map | object | {} |
+| require_flags | Flags that must all be set before this dialogue can start (by talking, an event or auto_start) | array | [] |
+| forbid_flags | Flags that must all be clear before this dialogue can start | array | [] |
 
 Example configuration snippet:
 ```json
@@ -522,6 +549,29 @@ Example configuration snippet:
   "behaviour_config": {
     "FleeFromTarget": {
       "threat_tags": "<value>"
+    }
+  }
+}
+```
+
+## FloorRoute
+HD-2D: walks between points on different floors, using stairs and bridges.
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| route | Points to visit in turn: [x, y, elevation] in px | array | [] |
+| speed | Walking speed (px per second) | float | 60.0 |
+| wait | Seconds to stand at each point | float | 1.0 |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["FloorRoute"],
+  "behaviour_config": {
+    "FloorRoute": {
+      "route": "<value>"
     }
   }
 }
@@ -749,6 +799,11 @@ Adds a dynamic light that follows the entity.
 | flicker_radius_px | Override radius flicker in pixels (legacy). | float | - |
 | flicker_intensity | Override intensity flicker scale (0..1). | float | - |
 | flicker_speed | Flicker speed in cycles per second (roughly). | float | 5.0 |
+| flicker_preset | How it flickers: candle, torch, fire, faulty or custom (custom: the values below). | string | - |
+| flicker_strength | How noticeable the flicker is (1 = as the preset). | float | 1.0 |
+| flicker_brightness | Custom: how much it brightens and dims (0..1). | float | - |
+| flicker_reach | Custom: how much its lit area grows and shrinks (0..0.5). | float | - |
+| flicker_irregularity | Custom: 0 smooth, 1 restless. | float | - |
 | shafts_enabled | - | bool | False |
 | shafts_length_px | - | float | 220.0 |
 | shafts_width_px | - | float | 140.0 |
@@ -1094,6 +1149,27 @@ Example configuration snippet:
 }
 ```
 
+## PictureByFlags
+Shows a different picture while flags allow it: the first matching rule wins, otherwise the object's own sprite.
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| pictures | Rules: [{sprite, require_flags, forbid_flags}], checked in order | array | [] |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["PictureByFlags"],
+  "behaviour_config": {
+    "PictureByFlags": {
+      "pictures": "<value>"
+    }
+  }
+}
+```
+
 ## PlayerController
 Handles WASD movement and interaction for the player sprite.
 
@@ -1327,6 +1403,11 @@ Requests a new scene when the player interacts or an event fires.
 | event_field | Optional payload field to check before reacting to the event | string | - |
 | event_value | Optional value that event_field must equal | string | - |
 | once | Prevent the transition from firing more than once | bool | False |
+| trigger_on_touch | Trigger transition on collision | bool | False |
+| target_tag | Tag of entity that triggers collision | string | player |
+| area_width | Width of the area walking into triggers (0: the picture) | float | 0.0 |
+| area_height | Height of that area (0: the picture) | float | 0.0 |
+| area_at | Where that area is centred: the picture's centre, or its base (where an HD-2D billboard stands) | string | centre |
 
 Example configuration snippet:
 ```json
@@ -1430,6 +1511,36 @@ Example configuration snippet:
 }
 ```
 
+## SoundEmitter
+A sound in the world, louder near it: water, birds, a humming machine (Studio: the Sound object).
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| sound | The sound file (.wav plays everywhere; .ogg, .mp3) | string | - |
+| volume | Volume at full strength (0-1) | float | 0.8 |
+| radius | Full strength within this distance (px) | float | 64.0 |
+| distance | Heard up to this distance (px) | float | 320.0 |
+| stereo | Heard from its side | bool | True |
+| loop | Plays round (off: once each time the listener comes near) | bool | True |
+| enabled | On | bool | True |
+| fade_in | Fade in (s) | float | 1.0 |
+| fade_out | Fade out (s) | float | 1.0 |
+| occlusion | Quieter while a wall stands between it and the listener | bool | False |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["SoundEmitter"],
+  "behaviour_config": {
+    "SoundEmitter": {
+      "sound": "<value>"
+    }
+  }
+}
+```
+
 ## SwitchInteract
 Emits an event when interacted with.
 
@@ -1513,7 +1624,7 @@ Toggle or force on/off one or more scene lights in response to an event.
 | --- | --- | --- | --- |
 | listen_event | Name of the event to listen for. | string | - |
 | group | Optional group name to match lights by their 'group' field. | string | - |
-| indices | Optional list of indices into scene['lights']. | string | [] |
+| indices | Optional list of indices into scene['lights']. | array | [] |
 | mode | One of 'toggle', 'on', 'off'. | string | toggle |
 
 Example configuration snippet:
@@ -1584,13 +1695,14 @@ Example configuration snippet:
 ```
 
 ## TriggerZone
-Fires once when a target sprite enters a radius.
+Sends entered_zone, and the event it sends (on_trigger) if set, once when a target sprite enters a radius: once each time the room loads, or with Play once (play_once) once per playthrough, kept in room memory and saves. Play once counts as used when the events are sent, so a cutscene they start that is interrupted is not replayed.
 
 | Name | Description | Type | Default |
 | --- | --- | --- | --- |
 | trigger_radius | Distance threshold for triggering | float | 0.0 |
 | trigger_target | Name of the sprite to watch | string | - |
-| on_trigger | Label describing the triggered event | string | - |
+| on_trigger | Event it sends when the target comes within reach (entered_zone is always sent too) | string | - |
+| play_once | On: it fires once per playthrough, never again after leaving the room or loading a save (a cutscene it starts that is interrupted is not replayed). Off: once each time the room loads. | bool | False |
 
 Example configuration snippet:
 ```json
@@ -1607,7 +1719,7 @@ Example configuration snippet:
 ```
 
 ## Vendor
-Handles shop stock and opens the shop UI on events.
+Sells items: E opens its shop (on an object that also talks, once the conversation ends), as does its listen_event.
 
 | Name | Description | Type | Default |
 | --- | --- | --- | --- |
@@ -1615,6 +1727,7 @@ Handles shop stock and opens the shop UI on events.
 | currency_counter | GameState counter used as currency. | string | gold |
 | stock | List of {item_id, price, quantity} entries. | array | [] |
 | listen_event | Mesh event to open this shop. | string | open_shop |
+| open_on | "interact": E opens it; on an object that also talks, after the conversation. "event": only listen_event does (e.g. a conversation choice that sends it). | string | interact |
 | buy_sound | Sound to play on successful purchase. | string | - |
 | fail_sound | Sound to play on failed purchase. | string | - |
 | buy_rate | Multiplier for prices when buying. | float | 1.0 |
@@ -1660,6 +1773,47 @@ Example configuration snippet:
   "behaviour_config": {
     "Wander": {
       "wander_radius": "<value>"
+    }
+  }
+}
+```
+
+## WaterSurface
+A puddle or pond: drawn as water, rippled by rain and footsteps (Studio: the Water object).
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| preset | muddy_puddle, natural_pond, stone_pool, or the simple puddle or pond | string | puddle |
+| width | Width (px) | float | 64.0 |
+| height | Height (px) | float | 40.0 |
+| colour | Colour (#rrggbb; empty: the preset's) | string | - |
+| opacity | Opacity (0.05-1; 0: the preset's) | float | 0.0 |
+| shape | ellipse, rect or natural (empty: the preset's) | string | - |
+| rotation | Turned by this many degrees, anticlockwise | float | 0.0 |
+| seed | Which natural outline (1-9999; 0: the preset's) | int | 0 |
+| shore | The bank: none, mud, grass, stone, or terrain (the sculpted ground; empty: the preset's) | string | - |
+| shore_width | The bank's width (px, 0-64; -1: the preset's) | float | -1.0 |
+| deep_colour | Colour where deep (#rrggbb; empty: the preset's) | string | - |
+| depth | How soon it gets deep, 0-1 (-1: the preset's) | float | -1.0 |
+| ripples | Rain and footstep ripple strength, 0-1 (-1: the preset's) | float | -1.0 |
+| waves | How much it moves (0-1; -1: the preset's) | float | -1.0 |
+| reflection | How much it mirrors (0-1; -1: the preset's) | float | -1.0 |
+| rain_ripples | The room's rain rings it | bool | True |
+| walkable | Characters walk through it (false: it blocks) | bool | True |
+| passable | How characters go into it: auto (by walkable), wade (up to wade_depth), block (empty: auto) | string | - |
+| wade_depth | The deepest it is waded, m (0.1-1.5), if passable is wade (-1: 1 m) | float | -1.0 |
+| step_sound | A sound played on each step through it | string | - |
+| target_tags | Tags of the characters whose steps splash (player) | array | [] |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["WaterSurface"],
+  "behaviour_config": {
+    "WaterSurface": {
+      "preset": "<value>"
     }
   }
 }

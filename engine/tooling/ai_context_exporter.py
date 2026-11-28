@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from engine.paths import resolve_path
+from engine.quest_runtime.normalize import quest_entries
 from engine.scene_loader import SceneLoader
 from engine.swallowed_exceptions import _log_swallow
 
@@ -51,17 +52,14 @@ def _load_quest_definitions() -> Dict[str, str]:
             with core_quests_path.open("r", encoding="utf-8") as f:
                 data = json.load(f)
                 quests = data.get("quests", []) if isinstance(data, dict) else data
-                if isinstance(quests, list):
-                    for q in quests:
-                        if not isinstance(q, dict):
-                            continue
-                        qid = q.get("id")
-                        if not isinstance(qid, str) or not qid:
-                            continue
-                        title = q.get("title")
-                        if not isinstance(title, str) or not title.strip():
-                            title = qid
-                        definitions[qid] = title
+                for q in quest_entries(quests):
+                    qid = q.get("id")
+                    if not isinstance(qid, str) or not qid:
+                        continue
+                    title = q.get("title")
+                    if not isinstance(title, str) or not title.strip():
+                        title = qid
+                    definitions[qid] = title
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             _log_swallow("AICO-001", "engine/tooling/ai_context_exporter.py pass-only blanket swallow")
             pass # Ignore errors in quest loading for context export

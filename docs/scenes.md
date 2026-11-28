@@ -429,8 +429,6 @@ Engine version: 0.5.0
 - Entities: 3
 - Layers: entities
 - Tags: npc, trigger
-- Warnings:
-  - Entity[0] 'Showcase Merchant' behaviour_config[Vendor]: unknown config field 'inventory'
 
 ## scenes/side_room_01.json
 [ok] Valid

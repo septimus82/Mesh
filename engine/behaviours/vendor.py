@@ -3,22 +3,34 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from engine.swallowed_exceptions import _log_swallow
-
-from ..events import MeshEventBus
+from ..events import MeshEvent
 from ..inventory import get_or_create_inventory, load_item_database
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
+# #654 (owner decision D2). "interact": E opens the shop; when the object also talks (Dialogue), E starts the
+# conversation and the shop opens once it completes (an "Only once" conversation already had: E opens the shop). "event":
+# only listen_event opens it, e.g. a conversation choice that sends open_shop ("Let me see your wares").
+OPEN_ON_HELP = ('"interact": E opens it; on an object that also talks, after the conversation. '
+                '"event": only listen_event does (e.g. a conversation choice that sends it).')
+_COMPLETED = frozenset({"advance_complete", "choice_complete"})  # (Dialogue's dialogue_finished reasons)
+
+
+def _entity_id(entity: Any) -> Any:
+    data = getattr(entity, "mesh_entity_data", None)
+    return data.get("id") if isinstance(data, dict) else None
+
 
 @register_behaviour(
     "Vendor",
-    description="Handles shop stock and opens the shop UI on events.",
+    description="Sells items: E opens its shop (on an object that also talks, once the conversation ends), as does "
+    "its listen_event.",
     config_fields=[
         {"name": "shop_id", "type": "string", "default": "", "description": "Logical id of this shop."},
         {"name": "currency_counter", "type": "string", "default": "gold", "description": "GameState counter used as currency."},
         {"name": "stock", "type": "array", "default": [], "description": "List of {item_id, price, quantity} entries."},
         {"name": "listen_event", "type": "string", "default": "open_shop", "description": "Mesh event to open this shop."},
+        {"name": "open_on", "type": "string", "default": "interact", "description": OPEN_ON_HELP},
         {"name": "buy_sound", "type": "string", "default": "", "description": "Sound to play on successful purchase."},
         {"name": "fail_sound", "type": "string", "default": "", "description": "Sound to play on failed purchase."},
         {"name": "buy_rate", "type": "float", "default": 1.0, "description": "Multiplier for prices when buying."},
@@ -34,6 +46,7 @@ class Vendor(Behaviour):
         "currency_counter": ParamDef(str, default="gold", description="GameState counter used as currency."),
         "stock": ParamDef(list, default=[], description="List of {item_id, price, quantity} entries."),
         "listen_event": ParamDef(str, default="open_shop", description="Mesh event to open this shop."),
+        "open_on": ParamDef(str, default="interact", description=OPEN_ON_HELP),
         "buy_sound": ParamDef(str, default="", description="Sound to play on successful purchase."),
         "fail_sound": ParamDef(str, default="", description="Sound to play on failed purchase."),
         "buy_rate": ParamDef(float, default=1.0, description="Multiplier for prices when buying."),
@@ -48,6 +61,8 @@ class Vendor(Behaviour):
         self.shop_id = str(self.config.get("shop_id", "") or "")
         self.currency_counter = str(self.config.get("currency_counter", "gold") or "gold")
         self.listen_event = str(self.config.get("listen_event", "open_shop") or "open_shop")
+        self.open_on = str(self.config.get("open_on", "interact") or "interact").strip().lower()
+        self._after_talk = False  # the conversation E started here: the shop opens when it completes
         self.buy_sound = str(self.config.get("buy_sound", "") or "")
         self.fail_sound = str(self.config.get("fail_sound", "") or "")
         self._buy_rate = float(self.config.get("buy_rate", 1.0) or 1.0)
@@ -55,15 +70,8 @@ class Vendor(Behaviour):
         self._sell_enabled = bool(self.config.get("sell_enabled", True))
         self._sell_whitelist = [str(x) for x in self.config.get("sell_whitelist", []) or []]
         self._sell_blacklist = [str(x) for x in self.config.get("sell_blacklist", []) or []]
-        self._bus = getattr(window, "event_bus", None)
         self._item_db = load_item_database()
         self.stock: list[dict[str, Any]] = [self._normalize_entry(entry) for entry in (self.config.get("stock") or [])]
-        if isinstance(self._bus, MeshEventBus) and self.listen_event:
-            try:
-                self._bus.subscribe(self.listen_event, self._on_event)
-            except Exception:
-                _log_swallow("VEND-001", "engine/behaviours/vendor.py pass-only blanket swallow")
-                pass
 
     def _normalize_entry(self, entry: Any) -> dict[str, Any]:
         if not isinstance(entry, dict):
@@ -77,15 +85,70 @@ class Vendor(Behaviour):
             data["name"] = item_def.name
         return data
 
-    def _on_event(self, event: Any) -> None:
+    def _talk(self) -> Any:
+        """The object's own conversation (its Dialogue), if it has one."""
+        behaviours = getattr(self.entity, "mesh_behaviours_runtime", None) or []
+        return next((b for b in behaviours if type(b).__name__ == "Dialogue"), None)
+
+    def can_interact_with(self, actor: Any) -> bool:
+        if self.open_on != "interact":
+            return False
+        talk = self._talk()
+        # While the object has something to say (or is saying it), E is the conversation's (#654, D2).
+        return talk is None or not talk.can_interact_with(actor)
+
+    def on_interact(self, window: Any, actor: Any) -> None:  # noqa: ARG002
+        self.open()
+
+    def subscribed_event_types(self) -> frozenset[str] | None:
+        if self.open_on != "interact":
+            return frozenset({self.listen_event})
+        return frozenset({self.listen_event, "dialogue_started", "dialogue_finished"})
+
+    def on_event(self, event: MeshEvent) -> None:
+        payload = event.payload or {}
+        talk = self._talk() if self.open_on == "interact" else None
+        if event.type == self.listen_event:
+            if self._for_another_shop(payload):
+                return
+            if talk is not None and talk.talking:
+                self._after_talk = True  # sent during the conversation (#663): the shop waits for its end
+                return
+            self.open()
+        elif talk is not None and payload.get("entity") == talk.entity_name:
+            if event.type == "dialogue_started":
+                self._after_talk = payload.get("trigger") == "interact"
+            elif self._after_talk:
+                self._after_talk = False
+                if payload.get("reason") in _COMPLETED:
+                    self.open()
+
+    def _for_another_shop(self, payload: dict[str, Any]) -> bool:
+        """The event names another shop (its ``shop_id``), or was sent by another shopkeeper (an Interactable's
+        ``target``, a conversation choice's ``entity``): that one opens, not every shop in the room (#654)."""
+        wanted = str(payload.get("shop_id") or "")
+        if wanted:
+            return wanted != self.shop_id
+        sender = payload.get("target") or payload.get("entity")
+        if not sender or sender in (_entity_id(self.entity), getattr(self.entity, "mesh_name", None)):
+            return False
+        sprites = getattr(getattr(self.window, "scene_controller", None), "all_sprites", None) or []
+        return any(sender in (_entity_id(s), getattr(s, "mesh_name", None))
+                   and any(type(b).__name__ == "Vendor" for b in getattr(s, "mesh_behaviours_runtime", None) or [])
+                   for s in sprites)
+
+    def open(self) -> None:
+        """Show this shop's stock (once: a second request while it's showing changes nothing)."""
+        self._after_talk = False
         opener = getattr(self.window, "ui_controller", None)
-        if opener is None:
+        panel = getattr(opener, "shop_panel", None)
+        if opener is None or (panel is not None and panel.visible and panel.vendor is self):
             return
         opener.open_shop(self, self.stock)
 
     # ------------------------------------------------------------------
     def handle_buy_request(self, item: dict[str, Any]) -> "VendorResult":
-        item_id = item.get("item_id")
+        item_id = str(item.get("item_id") or "")  # (one id for the check and the add: items.json ids are strings, #627)
         base_price = int(item.get("price", 0))
         price = int(base_price * self._buy_rate)
         if price < 0:
@@ -97,29 +160,39 @@ class Vendor(Behaviour):
         if gs is None:
             return self._result(False, "Purchase failed")
         if quantity == 0:
-            return self._result(False, "Out of stock", item_id=str(item_id), qty=1)
+            return self._result(False, "Out of stock", item_id=item_id, qty=1)
         current_currency = gs.get_counter(self.currency_counter, 0)
         if current_currency < price:
-            return self._result(False, "Not enough gold", item_id=str(item_id), qty=1)
+            return self._result(False, "Not enough gold", item_id=item_id, qty=1)
+        inv = get_or_create_inventory(gs.state.values)
+        # Check before charging: a purchase the inventory refuses (unknown id, full stack, owned non-stackable)
+        # must cost neither gold nor stock (#619).
+        if not inv.can_add(item_id, 1):
+            if self._item_db.get(item_id) is None:
+                return self._result(False, f"Can't buy {item_id}: unknown item", item_id=item_id, qty=1)
+            name = self._resolve_item_name(item_id, item)
+            return self._result(False, f"Can't carry any more {name}", item_id=item_id, qty=1)
 
         # Deduct currency
         gs.add_counter(self.currency_counter, -price)
         # Add item to inventory
-        inv = get_or_create_inventory(gs.state.values)
         inv.add_item(item_id, 1)
         # Decrement stock if finite
         if quantity > 0:
             item["quantity"] = quantity - 1
-        name = self._resolve_item_name(str(item_id), item)
+        name = self._resolve_item_name(item_id, item)
         return self._result(
             True,
             f"Bought {name} x1 (-{price}g)",
             gold_delta=-price,
-            item_id=str(item_id),
+            item_id=item_id,
             qty=1,
         )
 
     def handle_sell_request(self, item: dict[str, Any]) -> "VendorResult":
+        """Sell one ``item_id`` for its stock price times ``sell_rate``; a refusal changes no item, gold or equipment.
+        Selling the last owned copy of an equipped item unequips it; while another copy is owned the equipped one
+        stays equipped (GameStateController._normalize_equipment, #757)."""
         if not self._sell_enabled:
             return self._result(False, "Cannot sell here")
         item_id = item.get("item_id")
@@ -141,12 +214,14 @@ class Vendor(Behaviour):
         payout = max(0, int(base_price * self._sell_rate))
         if payout <= 0:
             return self._result(False, "Cannot sell that item", item_id=str(item_id), qty=1)
+        held = list(gs.get_equipment().values()).count(item_id)
         inv.remove_item(item_id, 1)
         gs.add_counter(self.currency_counter, payout)
+        unequipped = list(gs.get_equipment().values()).count(item_id) < held
         name = self._resolve_item_name(str(item_id), item)
         return self._result(
             True,
-            f"Sold {name} x1 (+{payout}g)",
+            f"Sold {name} x1 (+{payout}g)" + (" (unequipped)" if unequipped else ""),
             gold_delta=payout,
             item_id=str(item_id),
             qty=1,

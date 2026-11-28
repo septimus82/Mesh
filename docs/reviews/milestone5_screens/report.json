@@ -1,0 +1,242 @@
+{
+  "passed": 17,
+  "total": 17,
+  "steps": [
+    {
+      "step": "character_sprite",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "sprite": "assets/sprites/hero.png",
+        "message": "Imported and assigned."
+      },
+      "seconds": 16.2,
+      "screenshot": "01_character_sprite.png"
+    },
+    {
+      "step": "walking_animation",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "message": "Walking set up: 4 directions, standing and walking."
+      },
+      "seconds": 20.1,
+      "screenshot": "02_walking_animation.png"
+    },
+    {
+      "step": "shovel",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "at": [
+          144.0,
+          304.0
+        ]
+      },
+      "seconds": 10.3,
+      "screenshot": "03_shovel.png"
+    },
+    {
+      "step": "shovel_flag",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "behaviours": [
+          "Dialogue",
+          "ConditionalActivator"
+        ]
+      },
+      "seconds": 25.4,
+      "screenshot": "04_shovel_flag.png"
+    },
+    {
+      "step": "grave",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "solid": true
+      },
+      "seconds": 11.5,
+      "screenshot": "05_grave.png"
+    },
+    {
+      "step": "examine",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "lines": 4
+      },
+      "seconds": 20.6,
+      "screenshot": "06_examine.png"
+    },
+    {
+      "step": "dig_needs_shovel",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "openings": 2
+      },
+      "seconds": 45.4,
+      "screenshot": "07_dig_needs_shovel.png"
+    },
+    {
+      "step": "dig_changes_look",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "behaviours": [
+          "Dialogue",
+          "PictureByFlags"
+        ]
+      },
+      "seconds": 16.0,
+      "screenshot": "08_dig_changes_look.png"
+    },
+    {
+      "step": "count_digging",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "counter": "graves_dug"
+      },
+      "seconds": 7.0,
+      "screenshot": "09_count_digging.png"
+    },
+    {
+      "step": "keeper_appears",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "behaviours": [
+          "Dialogue",
+          "ConditionalActivator"
+        ]
+      },
+      "seconds": 14.4,
+      "screenshot": "10_keeper_appears.png"
+    },
+    {
+      "step": "keeper_conversation",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "lines": 4
+      },
+      "seconds": 33.0,
+      "screenshot": "11_keeper_conversation.png"
+    },
+    {
+      "step": "collider_and_zone",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "collider": {
+          "kind": "box",
+          "offset_x": 1.0,
+          "offset_y": -22.0,
+          "w": 42.0,
+          "h": 24.0
+        },
+        "zone": [
+          132.0,
+          113.0
+        ]
+      },
+      "seconds": 13.0,
+      "screenshot": "12_collider_and_zone.png"
+    },
+    {
+      "step": "save_and_close",
+      "ok": true,
+      "error": null,
+      "detail": null,
+      "seconds": 1.4,
+      "screenshot": null
+    },
+    {
+      "step": "reopen_persisted",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "objects": [
+          "Cemetery gate",
+          "Ezekiel",
+          "Grave",
+          "Gravekeeper",
+          "Shovel"
+        ],
+        "grave_lines": 4,
+        "openings": [
+          {
+            "forbid_flags": [],
+            "node": "line_4",
+            "require_flags": [
+              "grave_open"
+            ]
+          },
+          {
+            "forbid_flags": [],
+            "node": "line_2",
+            "require_flags": [
+              "has_shovel"
+            ]
+          }
+        ],
+        "clips": [
+          "idle_down",
+          "idle_left",
+          "idle_right",
+          "idle_up",
+          "walk_down",
+          "walk_left",
+          "walk_right",
+          "walk_up"
+        ]
+      },
+      "seconds": 9.4,
+      "screenshot": "14_reopen_persisted.png"
+    },
+    {
+      "step": "play_through",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "flags": {
+          "hint_shown_controls": true,
+          "entered_cemetery": true,
+          "has_shovel": true
+        }
+      },
+      "seconds": 24.1,
+      "screenshot": "15_play_through.png"
+    },
+    {
+      "step": "quick_save_and_load",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "after_digging": {
+          "hint_shown_controls": true,
+          "entered_cemetery": true,
+          "has_shovel": true,
+          "grave_open": true
+        },
+        "after_loading": {
+          "entered_cemetery": true,
+          "has_shovel": true,
+          "hint_shown_controls": true
+        }
+      },
+      "seconds": 18.5,
+      "screenshot": "16_quick_save_and_load.png"
+    },
+    {
+      "step": "stop_unchanged",
+      "ok": true,
+      "error": null,
+      "detail": null,
+      "seconds": 0.6,
+      "screenshot": "17_stop_unchanged.png"
+    }
+  ]
+}

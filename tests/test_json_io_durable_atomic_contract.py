@@ -68,7 +68,7 @@ def test_write_json_atomic_durable_replaces_with_final_content(
     json_io.write_json_atomic(target, {"value": 2}, durable=True)
 
     assert json_io.read_json(target) == {"value": 2}
-    assert not target.with_suffix(".json.tmp").exists()
+    assert not list(tmp_path.glob("*.tmp")) + list(tmp_path.glob(".*.tmp"))
 
 
 def test_write_text_atomic_durable_swallow_dir_fsync_open_failure(

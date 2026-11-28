@@ -79,14 +79,8 @@ class RangedAttackAI(Behaviour):
                 self.last_attack_time = current_time
 
     def _find_player(self) -> object | None:
-        # Simple lookup in current scene entities
-        # Assuming window.current_scene.entities is accessible
-        if hasattr(self.window, "current_scene") and self.window.current_scene:
-            for entity in self.window.current_scene.entities:
-                candidate: object = entity
-                if getattr(candidate, "tag", None) == "player":
-                    return candidate
-        return None
+        finder = getattr(getattr(self.window, "scene_controller", None), "_find_player_sprite", None)
+        return finder() if callable(finder) else None
 
     def _sprite_x(self, sprite: object) -> float:
         for attr_name in ("x", "center_x"):

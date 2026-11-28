@@ -66,8 +66,11 @@ See Also:
 from __future__ import annotations
 
 import copy
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, Mapping
+
+from engine.scene_runtime import room_memory
 
 if TYPE_CHECKING:  # pragma: no cover - import guard for typing only
     from arcade import Sprite
@@ -75,6 +78,11 @@ if TYPE_CHECKING:  # pragma: no cover - import guard for typing only
     from engine.game import GameWindow
 
     from ..events import MeshEvent
+
+# The settings the author actually wrote, while engine.behaviours.registry.create_behaviour builds a behaviour from a
+# config with every default filled in (#651). The next Behaviour.__init__ takes it (once): only these count as explicit,
+# so "not set" branches (Health's hp, the player's stats) still see what the author left out. None: every given key.
+AUTHORED_PARAMS: ContextVar[frozenset[str] | None] = ContextVar("mesh_authored_params", default=None)
 
 
 @dataclass(slots=True)
@@ -146,6 +154,10 @@ class Behaviour:
     """
 
     PARAM_DEFS: Dict[str, ParamDef] = {}
+    # Attributes that record what already happened to this object (a door's "unlocked"), kept per room and object in
+    # room memory: see ``record_fact`` and ``apply_facts``. Empty: none.
+    FACT_FIELDS: tuple[str, ...] = ()
+    _mesh_fact_key: tuple[str, str, Any] | None = None  # (room, entity id, game session): set by the factory
 
     def __init__(self, entity: "Sprite", window: "GameWindow", **config: Any) -> None:
         """Initialize a behaviour instance.
@@ -158,6 +170,8 @@ class Behaviour:
         self.entity = entity
         self.window = window
         self._explicit_params: set[str] = set()
+        self._authored = AUTHORED_PARAMS.get()
+        AUTHORED_PARAMS.set(None)  # (a behaviour this one builds is not the author's: create_behaviour restores it)
         self.config: dict[str, Any] = self._merge_param_config(config)
 
     # ------------------------------------------------------------------
@@ -212,7 +226,7 @@ class Behaviour:
         for name, definition in self.param_defs().items():
             raw_value = incoming.pop(name, _PARAM_SENTINEL)
             value = self._coerce_param_value(raw_value, definition)
-            if raw_value is not _PARAM_SENTINEL:
+            if raw_value is not _PARAM_SENTINEL and (self._authored is None or name in self._authored):
                 self._explicit_params.add(name)
             merged[name] = value
             setattr(self, name, value)
@@ -354,6 +368,25 @@ class Behaviour:
                         self.flash_red()
         """
         return
+
+    # ------------------------------------------------------------------
+    # Facts: what already happened, kept per room and object (S1 4.1, D6)
+    # ------------------------------------------------------------------
+    def apply_facts(self, facts: Mapping[str, Any]) -> None:
+        """Take this object's recorded facts (only declared ones, only those recorded), called once as the behaviour is
+        built for a room entry, re-entry or a loaded save, before its first update. Sets each as an attribute; override
+        (calling this) when a fact implies more, e.g. an unlocked door's solidity."""
+        for name, value in facts.items():
+            setattr(self, name, value)
+
+    def record_fact(self, name: str, value: Any) -> None:
+        """Set the declared fact ``name`` (an attribute) and write it into room memory now, so re-entry and any save
+        keep it (``engine.scene_runtime.room_memory``). ``value`` must be JSON data. On an object without its own
+        authored id in the room (spawned at runtime) only the attribute is set."""
+        if name not in self.FACT_FIELDS:
+            raise ValueError(f"{type(self).__name__}: {name!r} is not one of its FACT_FIELDS {self.FACT_FIELDS!r}")
+        room_memory.record_fact(self, name, value)
+        setattr(self, name, value)
 
 
 _PARAM_SENTINEL = object()

@@ -119,6 +119,37 @@ def test_editor_scene_override_sticks_after_enter_dispatch(
     assert window.main_menu_overlay is None
 
 
+def test_editor_launch_keeps_f4_for_the_legacy_editor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    headless_game_window,
+) -> None:
+    """#660: F4 is refused in a game launch, but ``mesh edit``'s launch (its ``_mesh_launch_mode``) keeps it."""
+    monkeypatch.delenv("MESH_LEGACY_EDITOR", raising=False)
+    _write_project(tmp_path)
+    reset_path_caches()
+    windows: list[GameWindow] = []
+
+    def _fake_load_scene(self: GameWindow, scene: str):
+        self.scene_controller.current_scene_path = scene
+        return {}
+
+    with (
+        patch("engine.game_launch.GameWindow.run", lambda self: windows.append(self)),
+        patch("engine.game_launch.GameWindow.load_scene", _fake_load_scene),
+    ):
+        assert launch_editor(project_root=tmp_path, open_tile_paint=False) == 0
+
+    window = windows[0]
+    from engine import arcade_fallback
+
+    assert window.editor_controller.active is True
+    window.on_key_press(arcade_fallback.key.F4, 0)
+    assert window.editor_controller.active is False
+    window.on_key_press(arcade_fallback.key.F4, 0)
+    assert window.editor_controller.active is True
+
+
 def test_play_window_still_constructs_menu_and_enter_reaches_it(headless_game_window) -> None:
     cfg = EngineConfig(width=640, height=360, start_scene="scenes/game.json", world_file=None)
     window = GameWindow(cfg.width, cfg.height, cfg.title, config=cfg)

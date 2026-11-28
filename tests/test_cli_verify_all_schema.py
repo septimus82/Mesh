@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 
 pytestmark = [pytest.mark.slow, pytest.mark.integration]
+
+
+@pytest.fixture(autouse=True)
+def _synthetic_repo_skips(monkeypatch):
+    """These verify-alls run on a synthetic repo without the checkout's step inputs: allow exactly its skips (#624)."""
+    from tests._verify_skips import allow_synthetic_repo_skips
+
+    allow_synthetic_repo_skips(monkeypatch)
 
 
 def _stub_config():
@@ -49,6 +58,14 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
     assert payload["artifacts"]["dir"] == "artifacts"
     written = payload["artifacts"]["written"]
     assert set(written.keys()) == {
+        # Milestone 13: the steps the pipeline gained since this list was written
+        "exception_policy_scan",
+        "runtime_diagnostics_snapshot",
+        "runtime_smoke",
+        "swallow_scan",
+        "verify_summary_json",
+        "verify_summary_txt",
+        "web_smoke",
         "verify_all_summary",
         "verify_step_durations",
         "verify_step_budget_check",
@@ -121,8 +138,11 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
         assert set(step.keys()) == {"artifact", "code", "error", "name", "ok"}
         assert step["ok"] is True
         assert step["code"] == 0
-        if step["name"] in {"pytest-fast", "pytest-fast-duration-guard"}:
+        if step["name"] in {"pytest-fast", "pytest-fast-duration-guard", "web-smoke"}:  # web-smoke: skipped without a web build
             assert step["error"]
+        elif step["name"] in {"runtime-player-smoke", "player-package-gate", "perf-baseline-compare", "content-audit",
+                                  "mypy-baseline-guard", "exception-budget-guard", "exception-policy-scan"}:
+            assert step["error"].startswith("skipped: no ")  # the synthetic repo has no input for it (#624)
         else:
             assert step["error"] == ""
         assert step["artifact"] in {None, *written.values()}
@@ -202,6 +222,8 @@ def test_verify_all_schema_failure_includes_skipped_steps(monkeypatch, tmp_path,
     assert written["artifact_index"] is None
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows path semantics: a backslash separates paths only on Windows (on Linux "
+                    "it is a file-name character, which pathlib keeps); the extended lane runs this on Windows (#422 H6)")
 def test_verify_all_path_normalization_uses_forward_slashes(tmp_path):
     import mesh_cli
 

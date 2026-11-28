@@ -33,6 +33,9 @@ class AssetManager:
 
     def __init__(self) -> None:
         self._textures: Dict[str, optional_arcade.arcade.Texture] = {}
+        # Sliced sprite-sheet frames: every load of a room asks again for each animation's frames, and decoding and
+        # slicing the sheet each time cost ~75 ms a Mesh Studio reload. Cleared with the textures (hot reload).
+        self._sheets: Dict[tuple[str, int, int, int, int], list[optional_arcade.arcade.Texture]] = {}
         self._placeholder: Optional[optional_arcade.arcade.Texture] = None
 
     def _resolve_path(self, path: str) -> str:
@@ -72,6 +75,16 @@ class AssetManager:
     ) -> list[optional_arcade.arcade.Texture]:
         """Load and slice a sprite sheet into a list of textures."""
         resolved_path = self._resolve_path(path)
+        key = (resolved_path, int(frame_width), int(frame_height), int(total_frames), int(start_frame))
+        if key in self._sheets:
+            return list(self._sheets[key])
+        textures = self._slice_sprite_sheet(path, resolved_path, frame_width, frame_height, total_frames, start_frame)
+        if textures:
+            self._sheets[key] = list(textures)
+        return textures
+
+    def _slice_sprite_sheet(self, path: str, resolved_path: str, frame_width: int, frame_height: int,
+                            total_frames: int, start_frame: int) -> list[optional_arcade.arcade.Texture]:
         if not Path(resolved_path).is_file():
             logger.error("Failed to load sprite sheet '%s': file not found", path)
             return []
@@ -153,6 +166,7 @@ class AssetManager:
 
     def clear(self) -> None:
         self._textures.clear()
+        self._sheets.clear()
 
     def get_cache_keys(self) -> list[str]:
         """Return a list of cached texture keys."""

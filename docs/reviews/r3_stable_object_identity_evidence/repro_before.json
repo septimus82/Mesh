@@ -1,0 +1,89 @@
+{
+ "A structures": {
+  "original": "crate",
+  "AI proposal (preview)": [
+   "Village: moves structure 'crate' (12.5 m, 28.1 m) -> (12.5 m, 28.1 m, turned 90 degrees)"
+  ],
+  "based on": "1",
+  "replacement": "crate",
+  "replacement before accept": {
+   "id": "crate",
+   "model": "assets/models/crate.glb",
+   "x": 1200.0,
+   "y": 900.0
+  },
+  "accept": {
+   "ok": true
+  },
+  "replacement after": {
+   "id": "crate",
+   "model": "assets/models/crate.glb",
+   "x": 1200.0,
+   "y": 900.0,
+   "rotation": 90.0
+  }
+ },
+ "B rivers": {
+  "original": "river",
+  "AI proposal (preview)": [
+   "Village: changes river 'river' (passable)"
+  ],
+  "replacement": "river",
+  "replacement before accept": {
+   "id": "river",
+   "points": [
+    [
+     200.0,
+     1300.0,
+     48.0,
+     24.0
+    ],
+    [
+     700.0,
+     1300.0,
+     48.0,
+     24.0
+    ]
+   ]
+  },
+  "accept": {
+   "ok": true
+  },
+  "replacement after": {
+   "id": "river",
+   "points": [
+    [
+     200.0,
+     1300.0,
+     48.0,
+     24.0
+    ],
+    [
+     700.0,
+     1300.0,
+     48.0,
+     24.0
+    ]
+   ],
+   "passable": "block"
+  }
+ },
+ "C dialogue lines": {
+  "talker": "start_elder",
+  "original": "line_2",
+  "AI proposal (preview)": [
+   "Village: 'Elder' conversation line 'line_2' speaker: (none) -> 'Ghost'"
+  ],
+  "replacement": "line_2",
+  "replacement before accept": {
+   "text": "The ferry runs at dawn."
+  },
+  "accept": {
+   "ok": true
+  },
+  "replacement after": {
+   "text": "The ferry runs at dawn.",
+   "speaker": "Ghost"
+  }
+ }
+}

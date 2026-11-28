@@ -35,6 +35,10 @@ def handle(args: argparse.Namespace) -> int:
         from . import mcp_setup
 
         return mcp_setup.handle(args)
+    if args.command == "author":
+        from . import author
+
+        return author.handle(args)
     if args.command == "dump-state":
         return _handle_dump_state(args)
     if args.command == "build-web":
@@ -213,6 +217,11 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     mcp_install_parser.set_defaults(func=_handle_mcp)
 
+    # One authoring API (shared with Mesh Studio and the MCP tools)
+    from . import author
+
+    author.add_parser(subparsers)
+
     # Dump State
     dump_state_parser = subparsers.add_parser("dump-state", help="Print a deterministic debug state snapshot")
     dump_state_parser.add_argument("--out", help="Optional path to write JSON instead of stdout")
@@ -236,6 +245,7 @@ def _handle_play(args: argparse.Namespace) -> int:
     config = load_config()
     if args.scene_path:
         config.start_scene = args.scene_path
+    setattr(config, "_mesh_launch_mode", "play")  # a developer's run: the console and F3 debug stay on (#664)
 
     window = GameWindow(
         width=config.width,

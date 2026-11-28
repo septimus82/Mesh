@@ -246,6 +246,8 @@ def _debug_iter_authoring_payloads(controller: "SceneController") -> list[Dict[s
 
 
 def _debug_remove_sprite(controller: "SceneController", sprite: optional_arcade.arcade.Sprite) -> None:
+    from engine.scene_controller_parts.entity_factory import _end_behaviours  # noqa: PLC0415
+
     for layer in controller.layers.values():
         try:
             if sprite in layer:
@@ -259,6 +261,7 @@ def _debug_remove_sprite(controller: "SceneController", sprite: optional_arcade.
     except Exception:  # noqa: BLE001  # REASON: shared fallback isolation
         from engine.logging_tools import get_logger; get_logger(__name__).debug("SWALLOW[%s] %s", "ENTI-002", "engine/scene_runtime/authoring/entity_ops_impl.py pass-only blanket swallow", exc_info=True)
         pass
+    _end_behaviours(sprite)
 
 
 def _entity_bounds(ent: dict[str, Any]) -> tuple[float, float, float, float] | None:

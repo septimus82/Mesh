@@ -1,0 +1,58 @@
+"""R3 deliberate faults: each removes one protection; each must fail a test. py -3.13 mutate.py REPO OUT.json"""
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO, OUT = Path(sys.argv[1]), Path(sys.argv[2])
+TESTS = ["tests/test_studio_object_identity.py", "tests/test_studio_object_identity_gpu.py"]
+OPS, PROJECT = "engine/project_ops.py", "engine/studio_project.py"
+MUTANTS = [
+    ("a new structure's id ignores the ids structures had", OPS,
+     'taken = {s.get("id") for s in structures(scene) if isinstance(s, dict)} | _retired_here("structure")',
+     'taken = {s.get("id") for s in structures(scene) if isinstance(s, dict)}'),
+    ("a structure id given that one had is taken", OPS,
+     '    if structure_id and sid in _retired_here("structure"):', '    if False:'),
+    ("a structure id given isn't checked", OPS,
+     '        if not isinstance(structure_id, str) or not ID_RE.match(structure_id):', '        if False:'),
+    ("a new river's id ignores the ids rivers had", OPS,
+     'taken = {r.get("id") for r in rivers(scene)} | _retired_here("river")', 'taken = {r.get("id") for r in rivers(scene)}'),
+    ("a river id given that one had is taken", OPS,
+     '        if str(river_id) in _retired_here("river"):  # (#462 R3)', '        if False:'),
+    ("a new line's id ignores the lines its conversation had", OPS,
+     '    had = _retired_here("line", entity_id) if entity_id else set()', '    had: set[str] = set()'),
+    ("a conversation made again gets its old opening line's id", OPS,
+     '    if start not in nodes and start in _retired_here("line", str(entity_id)):', '    if False:'),
+    ("lines are not remembered", OPS,
+     '            found.update(scoped_id("line", room_key, str(entity["id"]), str(node)) for node in nodes)', '            pass'),
+    ("structures, rivers and lines are not remembered at all", PROJECT,
+     ' | ops.scoped_ids(key, room)', ''),
+    ("an AI's change doesn't say which room it makes things in", "engine/authoring.py",
+     'with ops.in_room(room):  # (#462 R3', 'with ops.in_room(None):  # (#462 R3'),
+    ("a Studio edit doesn't say which room it makes things in", PROJECT,
+     'ops.in_room(key):  # (#462 R3: what it makes in this room)', 'ops.in_room(None):  # (mutant)'),
+    ("the river tool picks an id without what rivers had", "engine/studio_river.py",
+     'with ops.retired_ids(project.ids_seen), ops.in_room(project.current):', 'with ops.in_room(project.current):'),
+    ("a preview's copy forgets the ids seen", PROJECT,
+     'copy_.ids_seen = set(self.ids_seen)', 'copy_.ids_seen = set()'),
+]
+results = []
+env = {**os.environ, "MESH_GL_SMOKE": "1"}
+for name, path, old, new in MUTANTS:
+    p = REPO / path
+    original = p.read_bytes()
+    text = original.decode("utf-8")
+    nl = "\r\n" if "\r\n" in text else "\n"
+    body = text.replace("\r\n", "\n")
+    assert body.count(old) == 1, (name, body.count(old))
+    p.write_bytes(body.replace(old, new).replace("\n", nl).encode("utf-8"))
+    try:
+        run = subprocess.run([sys.executable, "-m", "pytest", "-o", "addopts=", "-q", "-p", "no:cacheprovider", "-x",
+                              "-m", "not slow", *TESTS], cwd=REPO, capture_output=True, text=True, timeout=900, env=env)
+    finally:
+        p.write_bytes(original)
+    failed = [line for line in run.stdout.splitlines() if line.startswith("FAILED") or line.startswith("ERROR")]
+    results.append({"fault": name, "caught": run.returncode != 0, "by": failed[:1]})
+    print(name, "CAUGHT" if run.returncode else "SURVIVED", failed[:1], flush=True)
+OUT.write_text(json.dumps(results, indent=1) + "\n", encoding="utf-8")

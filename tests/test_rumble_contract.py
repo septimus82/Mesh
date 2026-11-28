@@ -110,7 +110,7 @@ def test_world_impact_events_trigger_expected_rumble_when_enabled(
     )
     attacker = _make_sprite("Player", tag="player", x=3.0, y=4.0)
     combat = Combat(attacker, combat_window, cooldown=0.0, attack_sound="assets/sounds/attack.wav")
-    monkeypatch.setattr(combat, "_spawn_hitbox", lambda: None)
+    monkeypatch.setattr(combat, "_spawn_hitbox", lambda *_a, **_k: None)
     assert combat.attack() is True
     assert backend.calls[-1] == pytest.approx((0.2, 0.03))
 

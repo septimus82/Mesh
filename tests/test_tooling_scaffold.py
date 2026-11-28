@@ -38,17 +38,19 @@ class TestScaffold(unittest.TestCase):
         self.assertTrue(scaffold.create_quest("My First Quest", str(quest_file)))
         self.assertTrue(quest_file.exists())
 
+        # The form the game loads (#655): {"quests": [...]}, each quest with a stage.
         with open(quest_file, "r") as f:
-            data = json.load(f)
+            data = json.load(f)["quests"]
             self.assertEqual(len(data), 1)
             self.assertEqual(data[0]["id"], "my_first_quest")
             self.assertEqual(data[0]["title"], "My First Quest")
+            self.assertTrue(data[0]["stages"])
 
         # Create second quest
         self.assertTrue(scaffold.create_quest("Another Quest", str(quest_file)))
 
         with open(quest_file, "r") as f:
-            data = json.load(f)
+            data = json.load(f)["quests"]
             self.assertEqual(len(data), 2)
             self.assertEqual(data[1]["id"], "another_quest")
 

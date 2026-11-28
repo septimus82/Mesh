@@ -123,6 +123,7 @@ class EnemyAI(Behaviour):
         self._target: Sprite | None = None
         self._attack_cooldown_timer: float = 0.0
         self._repath_timer: float = 0.0
+        self._chase_dir: tuple[float, float] = (0.0, 0.0)
         self._facing: str = "down"
 
         self.IDLE = "idle"
@@ -225,20 +226,18 @@ class EnemyAI(Behaviour):
     def _update_chase(self, dt: float, dx: float, dy: float, dist: float) -> None:
         if dist == 0:
             return
-        if self._repath_timer > 0:
-            return
-        self._repath_timer = self.repath_interval
-        nx = dx / dist
-        ny = dy / dist
+        # Steer every repath_interval, move every frame. (It used to move only when it steered: one frame's
+        # step per interval, about a twelfth of its speed.)
+        if self._repath_timer <= 0:
+            self._repath_timer = self.repath_interval
+            self._chase_dir = (dx / dist, dy / dist)
+        nx, ny = self._chase_dir
         move_x = nx * self.speed * dt
         move_y = ny * self.speed * dt
         scene_controller = getattr(self.window, "scene_controller", None)
         if scene_controller:
             scene_controller.move_entity_with_collision(self.entity, move_x, move_y)
-        self._update_facing_from_vector(nx, ny)
-        if dx != 0 or dy != 0:
-            angle = math.degrees(math.atan2(dy, dx))
-            self.entity.angle = angle
+        self._update_facing_from_vector(nx, ny)  # (facing, never the sprite's angle: an upright character spun upside down)
 
     def _update_attack(self, dt: float, dx: float, dy: float, dist: float) -> None:  # noqa: ARG002
         self.entity.change_x = 0
@@ -278,11 +277,15 @@ class EnemyAI(Behaviour):
             except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
                 _log_swallow("ENAI-002", "engine/behaviours/enemy_ai.py blanket swallow", once=True)
                 self._log_exception_once("request_state_override", exc)
+        target = self._target  # (swing at it, wherever it now stands: #751)
+        toward = None if target is None else (target.center_x - self.entity.center_x, target.center_y - self.entity.center_y)
+        if toward is not None and (toward[0] or toward[1]):
+            self._update_facing_from_vector(*toward)  # (and shown facing it: a swing west faces west)
         behaviours = getattr(self.entity, "mesh_behaviours_runtime", [])
         for behaviour in behaviours:
             if hasattr(behaviour, "attack"):
                 try:
-                    behaviour.attack()
+                    behaviour.attack(toward=toward)
                 except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
                     _log_swallow("ENAI-003", "engine/behaviours/enemy_ai.py blanket swallow", once=True)
                     self._log_exception_once("combat_attack", exc)

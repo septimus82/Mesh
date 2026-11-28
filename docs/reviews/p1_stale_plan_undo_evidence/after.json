@@ -1,0 +1,31 @@
+{
+  "start": [
+    "None"
+  ],
+  "apply_exit": 0,
+  "after_plan": [
+    "None",
+    "Ferryman"
+  ],
+  "saved": [
+    "packs/core_regions/scenes/start.json"
+  ],
+  "after_human_save": [
+    "None",
+    "Ferryman",
+    "Later human edit"
+  ],
+  "undo_exit": 1,
+  "undo_stdout": [
+    "[Mesh][Undo] Restoring backup: 1795086722_5afebe16",
+    "[Mesh][Undo] Not restored: nothing was changed, because files changed after the plan finished, and undoing it would erase that: packs\\core_regions\\scenes\\start.json (its contents changed). (Something edited, replaced or removed them since, or this plan was undone already.) The files as they were before the plan are in .mesh\\plan_backups\\1795086722_5afebe16\\files, to take back by hand if you want any of them.",
+    "[Mesh][CLI] Undo failed: see above."
+  ],
+  "after_undo": [
+    "None",
+    "Ferryman",
+    "Later human edit"
+  ],
+  "room_unchanged_by_undo": true,
+  "room_sha256_after_undo": "700579dac47b0bfe1f2aab910deadced89d0e52b093217e016e7c7e504207011"
+}

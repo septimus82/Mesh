@@ -1,0 +1,68 @@
+{
+ "what": "sha256 of every file written by three verify-all runs of the same checkout: the audit tests' two old setups (A: scene/world lists stood in; B: not) and the shared run",
+ "files_written": 764,
+ "identical_in_all_three": 753,
+ "differing": [
+  "player_pkg/manifest.json",
+  "player_pkg/package_check.json",
+  "swallowed_exceptions.json",
+  "verify_all_summary.json",
+  "verify_step_budget_check.json",
+  "verify_step_durations.json",
+  "verify_step_speed_advisory.json",
+  "verify_summary.json",
+  "verify_summary.txt",
+  "web_build/_web_build_stage.tar.gz",
+  "web_smoke.json"
+ ],
+ "read_by_the_audit_tests": {
+  "brush_audit.json": {
+   "old_A": "e484939f8c7ea302fba74b517fb90dbfff2504d16d11601f22e55995193a4e33",
+   "old_B": "e484939f8c7ea302fba74b517fb90dbfff2504d16d11601f22e55995193a4e33",
+   "shared": "e484939f8c7ea302fba74b517fb90dbfff2504d16d11601f22e55995193a4e33",
+   "identical": true
+  },
+  "encounter_audit_compact.json": {
+   "old_A": "1982a0425806dccb37f4305bc043989faddd6777e6695d4a3f998dc5987a247b",
+   "old_B": "1982a0425806dccb37f4305bc043989faddd6777e6695d4a3f998dc5987a247b",
+   "shared": "1982a0425806dccb37f4305bc043989faddd6777e6695d4a3f998dc5987a247b",
+   "identical": true
+  },
+  "encounter_audit_summary.json": {
+   "old_A": "2ea1ad00a241464a69f61dbab55702d8ee73e7b5cc91ee9e4949531fd4ffd45f",
+   "old_B": "2ea1ad00a241464a69f61dbab55702d8ee73e7b5cc91ee9e4949531fd4ffd45f",
+   "shared": "2ea1ad00a241464a69f61dbab55702d8ee73e7b5cc91ee9e4949531fd4ffd45f",
+   "identical": true
+  },
+  "encounter_coverage_matrix.json": {
+   "old_A": "5185f652c57d2b6bcae5cb3be3eb61fba07955183c121d8c2c18ed0d13d0dea6",
+   "old_B": "5185f652c57d2b6bcae5cb3be3eb61fba07955183c121d8c2c18ed0d13d0dea6",
+   "shared": "5185f652c57d2b6bcae5cb3be3eb61fba07955183c121d8c2c18ed0d13d0dea6",
+   "identical": true
+  },
+  "encounter_headroom.json": {
+   "old_A": "0a10bab2a562dabfc09a7fa156a49d16cfabdf9ce51450b3df698490c9f84f78",
+   "old_B": "0a10bab2a562dabfc09a7fa156a49d16cfabdf9ce51450b3df698490c9f84f78",
+   "shared": "0a10bab2a562dabfc09a7fa156a49d16cfabdf9ce51450b3df698490c9f84f78",
+   "identical": true
+  },
+  "macro_audit.json": {
+   "old_A": "593a89fec09d5bebbff1e6b1063d5b26511a44377ab441e2b8c6e4f38dca1f6e",
+   "old_B": "593a89fec09d5bebbff1e6b1063d5b26511a44377ab441e2b8c6e4f38dca1f6e",
+   "shared": "593a89fec09d5bebbff1e6b1063d5b26511a44377ab441e2b8c6e4f38dca1f6e",
+   "identical": true
+  },
+  "room_audit.json": {
+   "old_A": "1e8e5b24607c35f5b885c8b8e6557c1f53e5ca317a495ea93c2dbea7b32eb918",
+   "old_B": "1e8e5b24607c35f5b885c8b8e6557c1f53e5ca317a495ea93c2dbea7b32eb918",
+   "shared": "1e8e5b24607c35f5b885c8b8e6557c1f53e5ca317a495ea93c2dbea7b32eb918",
+   "identical": true
+  },
+  "stamp_audit.json": {
+   "old_A": "0bb74055fb3cfd5932aa4829aef05bb9f3dc8ddc523cc1eeffd334f006770f6e",
+   "old_B": "0bb74055fb3cfd5932aa4829aef05bb9f3dc8ddc523cc1eeffd334f006770f6e",
+   "shared": "0bb74055fb3cfd5932aa4829aef05bb9f3dc8ddc523cc1eeffd334f006770f6e",
+   "identical": true
+  }
+ }
+}

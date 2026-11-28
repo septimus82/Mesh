@@ -1,0 +1,22 @@
+E           assert 0 != 0
+E            +  where 0 = CompletedProcess(args=['C:\\Users\\<home>\\AppData\\Local\\Programs\\Python\\Python313\\python.exe', '-m', 'mesh_cli', ...st-4409\\test_force_refuses_a_junction_1\\outer\\victim\nINFO:engine.project_scaffold:Project created successfully.\n").returncode
+
+tests\test_cli_new_force_safety.py:94: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[sibling-via-dotdot-new]
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[sibling-via-dotdot-new_project]
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[dotdot-new]
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[dotdot-new_project]
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[dot-new]
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[dot-new_project]
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[absolute-new]
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[absolute-new_project]
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[forward-separator-new]
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[forward-separator-new_project]
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[backslash-separator-new]
+FAILED tests/test_cli_new_force_safety.py::test_bad_names_are_refused_without_touching_anything[backslash-separator-new_project]
+FAILED tests/test_cli_new_force_safety.py::test_force_refuses_a_non_project_folder[new]
+FAILED tests/test_cli_new_force_safety.py::test_force_refuses_a_non_project_folder[new_project]
+FAILED tests/test_cli_new_force_safety.py::test_force_refuses_a_junction_target[new]
+FAILED tests/test_cli_new_force_safety.py::test_force_refuses_a_junction_target[new_project]
+16 failed, 2 passed, 2 skipped in 66.43s (0:01:06)

@@ -14,7 +14,7 @@ def test_entity_persist_write_atomic_and_noop(tmp_path) -> None:
     assert result1.ok is True
     assert result1.wrote is True
     assert scene_path.exists() is True
-    assert scene_path.with_suffix(scene_path.suffix + ".tmp").exists() is False
+    assert not list(scene_path.parent.glob("*.tmp")) + list(scene_path.parent.glob(".*.tmp"))
 
     saved = json.loads(scene_path.read_text(encoding="utf-8"))
     assert saved == compact_scene_payload(payload)

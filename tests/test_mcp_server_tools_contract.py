@@ -337,6 +337,10 @@ def test_server_build_succeeds_when_mcp_present() -> None:
     from engine.mcp_server import server
 
     if not server.HAS_MCP:
+        # CI's Linux pytest job installs .[mcp] and sets MESH_REQUIRE_MCP=1 (#649): there a failed import guard (an SDK
+        # rename, a broken install) must fail, not skip green.
+        if os.environ.get("MESH_REQUIRE_MCP") == "1":
+            pytest.fail("MESH_REQUIRE_MCP=1 but engine.mcp_server.server.HAS_MCP is False: the mcp SDK didn't import")
         pytest.skip("optional mcp SDK not installed")
     built = server.build_server()
     assert built is not None

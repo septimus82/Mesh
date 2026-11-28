@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import importlib.util
 import re
 import subprocess
 import sys
@@ -25,6 +26,28 @@ def _default_cache_dir(repo_root: Path) -> Path:
     return repo_root / ".mypy_cache" / "mypy_gate"
 
 
+def _untracked_dirs(repo_root: Path) -> list[str]:
+    """Local folders git doesn't track (a game project, scratch work) or ignores (raw generator records and their
+    scripts): not this repository's code.
+
+    A project folder's own main.py made mypy stop with "Duplicate module named 'main'" before checking
+    anything, so the gate (and every verify-all test after it) failed in any checkout holding one.
+    """
+    folders: list[str] = []
+    for extra in ([], ["--ignored"]):
+        try:
+            result = subprocess.run(["git", "ls-files", "--others", *extra, "--directory", "--exclude-standard"],
+                                    cwd=repo_root, capture_output=True, text=True)
+        except OSError:
+            return folders
+        if getattr(result, "returncode", 1) != 0:
+            return folders
+        out = str(getattr(result, "stdout", "") or "")
+        folders += [line.rstrip("/") for line in out.splitlines()
+                    if line.endswith("/") and not line.endswith("__pycache__/")]
+    return folders
+
+
 def _build_mypy_command(repo_root: Path) -> tuple[list[str], Path]:
     cache_dir = _default_cache_dir(repo_root)
     cmd = [
@@ -33,10 +56,14 @@ def _build_mypy_command(repo_root: Path) -> tuple[list[str], Path]:
         "mypy",
         ".",
         "--show-error-codes",
+        "--error-summary",  # the result check below needs the summary line, whatever the config says (#624)
+        "--no-color-output",  # FORCE_COLOR would wrap the lines this gate parses in escape codes
         "--incremental",
         "--cache-dir",
         str(cache_dir),
     ]
+    for folder in _untracked_dirs(repo_root):  # the config's own excludes still apply alongside these
+        cmd += ["--exclude", f"^{re.escape(folder)}/"]
     return cmd, cache_dir
 
 
@@ -114,6 +141,12 @@ def _run_mypy(repo_root: Path) -> tuple[int, list[str], dict[str, object]]:
         "python_version": sys.version.split()[0],
         "return_code": int(result.returncode),
     }
+    # mypy ends every run that checked something with "Success: ..." (exit 0) or "Found N errors ..." (exit 1). Exit 1
+    # without one is mypy not running ("No module named mypy"), never "no errors" (#624).
+    if result.returncode in (0, 1) and summary is None:
+        print(f"[mypy-gate] mypy did not report a result (exit {result.returncode}, no summary line):", file=sys.stderr)
+        print(output, end="", file=sys.stderr)
+        return 2, [], diagnostics
     return result.returncode, _normalize_lines(output, repo_root), diagnostics
 
 
@@ -147,6 +180,11 @@ def main(argv: list[str] | None = None) -> int:
 
     repo_root = _repo_root()
     global _LAST_RUN_DIAGNOSTICS
+    if importlib.util.find_spec("mypy") is None:  # the interpreter that runs `-m mypy` below (#624)
+        _LAST_RUN_DIAGNOSTICS = None
+        print(f"[mypy-gate] mypy is not available: no mypy module for {sys.executable}; "
+              'install the dev tools (pip install -e ".[dev]")', file=sys.stderr)
+        return 2
     code, current_lines, diagnostics = _run_mypy(repo_root)
     _LAST_RUN_DIAGNOSTICS = diagnostics
     if code not in (0, 1):

@@ -296,11 +296,11 @@ class EditorLiveOpsController:
                     continue
 
                 entity_id = _stable_entity_identity(entity)
-                before = _effective_entity_alpha(entity)
+                alpha_before = _effective_entity_alpha(entity)
                 entity["alpha"] = alpha
                 affected_ids.append(entity_id)
                 preview_lines.append(
-                    f"Change '{entity_id}' opacity from {_format_alpha_percent(before)} "
+                    f"Change '{entity_id}' opacity from {_format_alpha_percent(alpha_before)} "
                     f"to {_format_alpha_percent(alpha)}"
                 )
                 continue
@@ -396,13 +396,13 @@ class EditorLiveOpsController:
             child_commands.append(command)
             current[key_text] = copy.deepcopy(after)
 
-        command = _single_or_batch_command(child_commands, f"Set {behaviour_name} Params")
-        if push_undo and command is not None:
-            self._editor._push_command(command)
+        batch = _single_or_batch_command(child_commands, f"Set {behaviour_name} Params")
+        if push_undo and batch is not None:
+            self._editor._push_command(batch)
         self._refresh_editor_surfaces()
         data: dict[str, Any] = {"entity_name": entity_name, "entity_id": entity_ref, "behaviour": behaviour_name}
-        if not push_undo and command is not None:
-            data["command"] = command
+        if not push_undo and batch is not None:
+            data["command"] = batch
         return _result(True, f"Updated {behaviour_name} on '{entity_name}'", data)
 
     def _delete_entity(self, op: dict[str, Any], *, push_undo: bool = True) -> dict[str, Any]:
@@ -428,7 +428,7 @@ class EditorLiveOpsController:
         if push_undo:
             self._editor._push_command(command)
         self._refresh_editor_surfaces()
-        data = {"entity_name": entity_name, "entity_id": entity_ref}
+        data: dict[str, Any] = {"entity_name": entity_name, "entity_id": entity_ref}
         if not push_undo:
             data["command"] = command
         return _result(True, f"Deleted entity '{entity_name}'", data)
@@ -442,8 +442,8 @@ class EditorLiveOpsController:
         if not entity_ref:
             return _result(False, "move_entity requires entity_id")
         try:
-            target_x = float(op.get("x"))
-            target_y = float(op.get("y"))
+            target_x = float(op.get("x", "missing"))
+            target_y = float(op.get("y", "missing"))
         except (TypeError, ValueError):
             return _result(False, "move_entity requires numeric x and y")
 
@@ -634,8 +634,8 @@ class EditorLiveOpsController:
         if entity is None:
             return None, None, None, f"Entity '{entity_ref}' not found"
         try:
-            target_x = float(op.get("x"))
-            target_y = float(op.get("y"))
+            target_x = float(op.get("x", "missing"))
+            target_y = float(op.get("y", "missing"))
         except (TypeError, ValueError):
             return None, None, None, "move_entity requires numeric x and y"
         return entity, target_x, target_y, None
@@ -908,7 +908,7 @@ def _alpha_state_matches_expected(state: dict[str, Any] | None, expected: Any) -
         if "value" not in expected:
             return False
         try:
-            return round(float(state.get("value")), 6) == round(float(expected.get("value")), 6)
+            return round(float(state.get("value", "missing")), 6) == round(float(expected.get("value", "missing")), 6)
         except (TypeError, ValueError):
             return False
     return "value" not in expected

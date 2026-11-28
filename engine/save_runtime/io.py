@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +18,7 @@ from engine.save_runtime.restore_policy import (
     RestorePolicy,
 )
 from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
-from engine.save_runtime.schema import SaveValidationError, migrate_save, validate_save
+from engine.save_runtime.schema import SAVE_SCHEMA_VERSION, SaveValidationError, migrate_save, validate_save
 from engine.swallowed_exceptions import _log_swallow
 
 _LAST_LOAD_ATTEMPT: dict[str, Any] = {
@@ -144,8 +147,82 @@ def _record_sidecar_write_failure(
     )
 
 
-def write_json_pretty_atomic(path: Path, payload: Any) -> None:
+class V2BackupError(RuntimeError):
+    """The v2 save could not be backed up and verified: the slot must not be overwritten."""
+
+
+class NewerSaveError(RuntimeError):
+    """The slot holds a save from a newer build than this one: it must not be overwritten (AS-2)."""
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _slot_schema_version(raw: bytes) -> int:
+    """The schema version a slot file declares (as ``migrate_save`` reads it); 0 when it can't be read at all."""
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return 0
+    if not isinstance(data, dict):
+        return 0
+    value = data.get("save_schema_version")
+    if value is None:
+        value = data.get("save_format_version", 0)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _write_backup_bytes(target: Path, data: bytes) -> None:
+    """Create ``target`` (never replacing a file) holding ``data``, durably."""
+    with open(target, "xb") as handle:
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def ensure_v2_backup(path: Path) -> Path | None:
+    """Before a v3 save overwrites ``path``: when it still holds a pre-v3 save, copy it to ``<slot>.v2.bak`` and verify
+    the copy (SHA-256 of a fresh read). Returns the backup (None: nothing to back up). Raises ``NewerSaveError`` when the slot
+    holds a save from a newer build (never overwritten), ``V2BackupError`` when the
+    copy can't be made or doesn't verify: the caller must then leave the slot untouched.
+
+    An existing backup is never replaced: one with other bytes makes the new one ``<slot>.v2.<sha8>.bak``. A backup
+    already holding exactly these bytes is reused. The game never reads a backup; it is the recovery record."""
+    if not path.exists():
+        return None
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise V2BackupError(f"can't read '{path}' to back it up: {exc}") from exc
+    version = _slot_schema_version(raw)
+    if version > SAVE_SCHEMA_VERSION:
+        raise NewerSaveError(f"'{path}' is a save from a newer game version (schema v{version}; this game supports up to v{SAVE_SCHEMA_VERSION})")
+    if version == SAVE_SCHEMA_VERSION:
+        return None
+    digest = hashlib.sha256(raw).hexdigest()
+    try:
+        for backup in (Path(f"{path.as_posix()}.v2.bak"), Path(f"{path.as_posix()}.v2.{digest[:8]}.bak")):
+            if os.path.lexists(backup):
+                if _sha256_file(backup) == digest:
+                    return backup  # a verified copy of these very bytes is already there
+                continue
+            _write_backup_bytes(backup, raw)
+            if _sha256_file(backup) != digest:
+                backup.unlink()  # (the file this call just created)
+                raise V2BackupError(f"the backup '{backup}' doesn't match '{path}'")
+            return backup
+    except OSError as exc:
+        raise V2BackupError(f"can't back up '{path}': {exc}") from exc
+    raise V2BackupError(f"every backup name for '{path}' is taken by a file with other bytes")
+
+
+def write_json_pretty_atomic(path: Path, payload: Any, extra_diagnostics: Iterable[Diagnostic] = ()) -> None:
     aggregator = SaveDiagnosticsAggregator()
+    aggregator.add(extra_diagnostics)
     try:
         normalized_payload = payload
         if isinstance(payload, dict):
@@ -415,7 +492,9 @@ def load_snapshot_payload(
     path: Path,
     *,
     policy: RestorePolicy = SNAPSHOT_POLICY,
+    sidecars: bool = True,
 ) -> tuple[bool, dict[str, Any] | str]:
+    """``sidecars``: as for load_slot_payload."""
     if not path.exists():
         return False, ""
 
@@ -430,7 +509,7 @@ def load_snapshot_payload(
     _update_last_attempt(slot="load", kind="snapshot", path=path, ok=bool(ok), aggregator=aggregator)
     if ok and payload is not None:
         return True, payload
-    if diagnostics:
+    if diagnostics and sidecars:
         try:
             write_diagnostics_sidecars(path, aggregator)
         except Exception as sidecar_exc:  # noqa: BLE001  # REASON: runtime fallback isolation
@@ -445,11 +524,24 @@ def load_snapshot_payload(
     return False, ""
 
 
+def is_valid_payload_file(path: Path, *, policy: RestorePolicy) -> bool:
+    """Whether ``path`` is a save ``policy`` would load (read and validated only: nothing recorded, nothing written).
+    H9: picks which of a player's save and an older export's copy to load, before either is applied."""
+    if not path.is_file():
+        return False
+    ok, _payload, _diagnostics = load_and_validate_payload(
+        path, source=str(path), strict_schema=policy.strict_schema, aggregator=SaveDiagnosticsAggregator(),
+        policy=policy)
+    return bool(ok)
+
+
 def load_slot_payload(
     path: Path,
     *,
     policy: RestorePolicy = SLOT_POLICY,
+    sidecars: bool = True,
 ) -> tuple[bool, dict[str, Any] | str]:
+    """``sidecars``: on failure, write the diagnostics next to the save (False for a save in a game's installation)."""
     if not path.exists():
         return False, f"[Mesh][Save] Save file '{path}' not found"
 
@@ -464,6 +556,8 @@ def load_slot_payload(
     _update_last_attempt(slot="load", kind="slot", path=path, ok=bool(ok), aggregator=aggregator)
     if ok and payload is not None:
         return True, payload
+    if not sidecars:
+        return False, _diagnostic_message("[Mesh][Save]", aggregator)
     try:
         write_diagnostics_sidecars(path, aggregator)
     except Exception as sidecar_exc:  # noqa: BLE001  # REASON: runtime fallback isolation

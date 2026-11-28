@@ -1,0 +1,148 @@
+"""R4 reproduction: the console's `ai_job` inside Mesh Studio (real hidden window) with unsaved work, and in a game
+window with Studio closed.
+
+    py -3.13 repro_console.py REPO OUT_JSON
+
+Disposable projects only. Input goes through the window's own events: F4 (Play), ` (console), the command typed as
+text, Enter; Ctrl+S saves. Never shown on screen; no audio (the runtime settings file is a temp one, master 0)."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tooling"))
+TMP = Path(tempfile.mkdtemp(prefix="mesh-r4c-"))
+(TMP / "settings.json").write_text(json.dumps({"audio": {"master_volume": 0.0}}), encoding="utf-8")
+os.environ["MESH_RUNTIME_SETTINGS_PATH"] = str(TMP / "settings.json")
+os.environ["MESH_STUDIO_NO_AI_BRIDGE"] = "1"
+
+from engine import authoring  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+
+ROOM = "packs/core_regions/scenes/start.json"
+JOB = {"operations": [{"type": "add_light", "scene_path": ROOM, "light": {"x": 200, "y": 120, "radius": 90}},
+                      {"type": "add_quest_definition", "quest_id": "ai_quest", "quest": {"title": "From the AI"}}]}
+
+
+def files(root: Path) -> dict[str, str]:
+    skip = {".mesh/owner.lock", ".mesh/live_session.json"}
+    return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()[:16]
+            for p in sorted(root.rglob("*")) if p.is_file() and p.relative_to(root).as_posix() not in skip}
+
+
+def diff(a: dict[str, str], b: dict[str, str]) -> dict[str, list[str]]:
+    return {"changed": sorted(k for k in a if k in b and a[k] != b[k]), "created": sorted(set(b) - set(a)),
+            "deleted": sorted(set(a) - set(b))}
+
+
+def room(root: Path) -> dict:
+    scene = json.loads((root / ROOM).read_text(encoding="utf-8"))
+    return {"names": [str(e.get("name")) for e in scene.get("entities", [])], "lights": len(scene.get("lights") or [])}
+
+
+def type_command(window, arcade, line: str, step) -> None:
+    for ch in line:
+        window.dispatch_event("on_text", ch)
+    window.dispatch_event("on_key_press", arcade.key.ENTER, 0)
+    window.dispatch_event("on_key_release", arcade.key.ENTER, 0)
+    step()
+
+
+def project(label: str) -> tuple[Path, Path]:
+    root = TMP / label / "game"
+    create_project(root, "Game", template_id="blank")
+    (root / "assets/data").mkdir(parents=True, exist_ok=True)
+    (root / "assets/data/quests.json").write_text('{"quests": []}\n', encoding="utf-8")
+    job = TMP / label / "job.json"
+    job.write_text(json.dumps(JOB), encoding="utf-8")
+    return root, job
+
+
+def in_studio() -> dict:
+    from hd2d_studio_demo import StudioDriver
+
+    root, job = project("studio")
+    out: dict = {}
+    driver = StudioDriver(root)
+    studio, window, arcade = driver.studio, driver.window, driver.arcade
+    console = window.console_controller
+    try:
+        authoring.apply(studio.project, [{"op": "place_prefab", "prefab": "person", "x": 64, "y": 64},
+                                         {"op": "rename_entity", "entity_id": "@0", "name": "Unsaved Warden"}])
+        studio._reload()
+        studio._rebuild()
+        driver.advance()
+        before = files(root)
+        driver.key(arcade.key.F4)
+        out["mode_after_F4"] = studio.mode
+        driver.key(arcade.key.GRAVE)
+        out["console_open_in_play"] = bool(console.active)
+        start = len(console.lines)
+        type_command(window, arcade, f"ai_job {job}", driver.advance)
+        out["console_said"] = console.lines[start:]
+        out["files_after_ai_job"] = diff(before, files(root))
+        out["room_on_disk"] = room(root)
+        out["quests_on_disk"] = (root / "assets/data/quests.json").read_text(encoding="utf-8") if (root / "assets/data/quests.json").is_file() else None
+        lights = getattr(getattr(window, "scene_controller", None), "lights", None)
+        out["play_scene_lights_after"] = len(lights) if lights is not None else None
+        out["play_scene_entities"] = sorted(str(getattr(s, "mesh_name", "")) for s in window.scene_controller.all_sprites if getattr(s, "mesh_name", None))
+        driver.key(arcade.key.GRAVE)  # console closed
+        driver.key(arcade.key.F4)  # Stop
+        doc = studio.project.scene(studio.project.current)
+        out["studio_after_stop"] = {"mode": studio.mode, "unsaved": bool(studio.project.is_dirty),
+                                    "names": [str(e.get("name")) for e in doc["entities"]],
+                                    "lights": len(doc.get("lights") or [])}
+        driver.key(arcade.key.S, arcade.key.MOD_CTRL)  # the person's next Save
+        out["after_studio_save"] = {"unsaved": bool(studio.project.is_dirty), "room_on_disk": room(root),
+                                    "files": diff(before, files(root)),
+                                    "outside_change_backups": sorted(p.relative_to(root).as_posix() for p in root.rglob("*.outside-change*"))}
+    finally:
+        studio.release_project()
+        driver.close()
+    return out
+
+
+def in_game() -> dict:
+    from hd2d_demo import HiddenGame
+
+    root, job = project("game")
+    game = HiddenGame(root)
+    window, arcade = game.window, game.arcade
+    try:
+        game.load(ROOM)
+        game.step(2)
+        before = files(root)
+        window.dispatch_event("on_key_press", arcade.key.GRAVE, 0)
+        window.dispatch_event("on_key_release", arcade.key.GRAVE, 0)
+        game.step()
+        console = window.console_controller
+        start = len(console.lines)
+        out = {"console_open": bool(console.active)}
+        type_command(window, arcade, f"ai_job {job}", game.step)
+        out["console_said"] = console.lines[start:]
+        out["files_after_ai_job"] = diff(before, files(root))
+        out["room_on_disk"] = room(root)
+    finally:
+        game.close()
+    return out
+
+
+def main() -> None:
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip()
+    result = {"head": head, "studio_open_unsaved_play_mode": in_studio(), "studio_closed_game_window": in_game()}
+    text = json.dumps(result, indent=2).replace(str(TMP), "<tmp>").replace(str(TMP).replace("\\", "\\\\"), "<tmp>")
+    OUT.write_text(text + "\n", encoding="utf-8")
+    print(text)
+
+
+if __name__ == "__main__":
+    main()

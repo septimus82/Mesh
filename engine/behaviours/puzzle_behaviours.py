@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+import engine.optional_arcade as optional_arcade
+from engine.inventory import get_or_create_inventory
+from engine.log_utils import get_logger
+from engine.paths import resolve_path
 
 if TYPE_CHECKING:
     from arcade import Sprite
@@ -11,6 +18,22 @@ from ..event_emit import emit_gameplay_event
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
+
+logger = get_logger(__name__)
+
+
+def _show_picture(behaviour: Behaviour, path: str) -> None:
+    """Swap the object's picture through the asset manager, as PictureByFlags does. A missing file keeps the current
+    picture (the asset manager would show its placeholder)."""
+    if not path:
+        return
+    assets = getattr(behaviour.window, "assets", None)
+    if assets is None or not Path(resolve_path(path)).is_file():
+        logger.warning("Picture '%s' not found; '%s' keeps its picture", path, getattr(behaviour.entity, "mesh_name", ""))
+        return
+    texture = assets.get_texture(path)
+    if texture is not None:
+        behaviour.entity.texture = texture
 
 
 def _explicit_attr(ctx: object, name: str) -> Any:
@@ -80,7 +103,13 @@ def _emit_puzzle_event(
     ],
 )
 class SwitchInteract(Behaviour):
-    """Emits an event when interacted with."""
+    """Emits an event when interacted with (Studio's "Button").
+
+    An "Only once" button's press (``activated``) is a fact in room memory (#639, D6): after re-entry or a load it
+    still refuses a second press and shows "Picture once used". A save from before facts has none: the button is
+    unpressed, so it can open what it opens once more (its event doesn't fire again by itself)."""
+
+    FACT_FIELDS = ("activated",)
 
     PARAM_DEFS = {
         "event_id": ParamDef(str, default="", description="Event ID to emit"),
@@ -102,7 +131,10 @@ class SwitchInteract(Behaviour):
         if not self.event_id:
             return
 
-        self.activated = True
+        if self.one_shot:
+            self.record_fact("activated", True)
+        else:
+            self.activated = True
         _emit_puzzle_event(
             self.window,
             self.event_id,
@@ -111,14 +143,13 @@ class SwitchInteract(Behaviour):
             source_behaviour="SwitchInteract",
         )
 
-        # Visual feedback
-        if self.active_sprite:
-            # In a real engine we'd swap the texture.
-            # For now, let's just log or maybe change color if possible.
-            # self.entity.texture = load_texture(self.active_sprite)
-            pass
-
+        _show_picture(self, self.active_sprite)  # "Picture once used"
         print(f"[Puzzle] Switch {self.entity} activated, emitted '{self.event_id}'")
+
+    def apply_facts(self, facts: Mapping[str, Any]) -> None:
+        super().apply_facts(facts)
+        if self.activated:
+            _show_picture(self, self.active_sprite)
 
     def can_interact_with(self, _actor: Sprite) -> bool:
         if self.activated and self.one_shot:
@@ -154,7 +185,14 @@ class SwitchInteract(Behaviour):
     ],
 )
 class DoorLock(Behaviour):
-    """Unlocks when a specific event is received."""
+    """Unlocks when a specific event is received (Studio's "Locked until an event").
+
+    The unlock (``locked`` False) is a fact in room memory (#639, D6). A door restored unlocked opens as one that
+    starts unlocked does: ``pre_update`` takes it out of the solid list and shows "Picture when open" before the
+    player's first movement (the loader adds it to the list after building its behaviours). A save from before facts
+    has none: the door is locked again, until its event fires again."""
+
+    FACT_FIELDS = ("locked",)
 
     PARAM_DEFS = {
         "unlock_event": ParamDef(str, default="", description="Event ID that unlocks this door"),
@@ -167,43 +205,44 @@ class DoorLock(Behaviour):
         self.unlock_event = config.get("unlock_event", "")
         self.locked = config.get("starts_locked", True)
         self.open_sprite = config.get("open_sprite", "")
+        self._picture_open = False
 
         self._unsubscribe = None
         if self.unlock_event:
             self._unsubscribe = self.window.event_bus.subscribe(self.unlock_event, self._on_unlock_event)
+        # A door that starts unlocked opens on the first frame: the loader adds a solid sprite to the solid list after
+        # this constructor (as ConditionalActivator notes).
 
-        self._update_collision()
+    def pre_update(self, dt: float) -> None:  # noqa: ARG002
+        if not self.locked:
+            self._open()
+
+    def _open(self) -> None:
+        """Let the player through and show "Picture when open". Solidity is membership of the scene controller's
+        solid list (what the movers collide with); the door never relocks."""
+        solids = getattr(getattr(self.window, "scene_controller", None), "solid_sprites", None)
+        if isinstance(solids, optional_arcade.arcade.SpriteList) and self.entity in solids:
+            solids.remove(self.entity)
+        if not self._picture_open:
+            self._picture_open = True
+            _show_picture(self, self.open_sprite)
 
     def _on_unlock_event(self, event: MeshEvent) -> None:
         if not self.locked:
             return
 
         print(f"[Puzzle] Door {self.entity} unlocked by event '{event.type}'")
-        self.locked = False
-        self._update_collision()
+        self.record_fact("locked", False)
+        self._open()
 
         # Emit door_unlocked event for chaining.
         _emit_puzzle_event(
             self.window,
             "door_unlocked",
-            {"door_id": getattr(self.entity, "id", "unknown")},
+            {"door_id": getattr(self.entity, "mesh_id", None) or getattr(self.entity, "id", "unknown")},
             source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
             source_behaviour="DoorLock",
         )
-
-    def _update_collision(self) -> None:
-        # If locked, it should be solid. If unlocked, pass-through.
-        # This depends on how the physics engine handles tags or properties.
-        # Assuming 'solid' tag or property.
-        if self.locked:
-            # Ensure it blocks
-            pass
-        else:
-            # Disable collision
-            # In arcade, we might remove from wall list or change properties
-            if hasattr(self.entity, "properties"):
-                self.entity.properties["solid"] = False
-                self.entity.properties["walkable"] = True
 
     def destroy(self) -> None:
         """Unsubscribe from event bus on teardown."""
@@ -237,7 +276,15 @@ class DoorLock(Behaviour):
     ],
 )
 class RewardChest(Behaviour):
-    """Spawns or enables a reward when unlocked."""
+    """Gives its item and gold once, when unlocked (Studio's "Treasure chest").
+
+    The reward goes into the game-state inventory and the ``gold`` counter, all or nothing (#636, owner decision D7):
+    a chest whose item the inventory can't take (full stack, owned non-stackable, unknown id) stays closed, gold
+    included, and says why, as a pickup does. ``looted`` and ``enabled`` (unlocked) are facts in room memory (D6), so a
+    looted chest stays looted, and a refused one stays unlocked, across re-entry and saves. A save from before facts
+    has none: its chests are as authored (not yet looted)."""
+
+    FACT_FIELDS = ("looted", "enabled")
 
     PARAM_DEFS = {
         "unlock_event": ParamDef(str, default="", description="Event ID that reveals the reward"),
@@ -265,7 +312,7 @@ class RewardChest(Behaviour):
             self.enabled = True
 
     def _on_unlock_event(self, event: MeshEvent) -> None:
-        self.enabled = True
+        self.record_fact("enabled", True)
         print(f"[Puzzle] RewardChest {self.entity} enabled by '{event.type}'")
 
     def destroy(self) -> None:
@@ -274,20 +321,25 @@ class RewardChest(Behaviour):
             self._unsubscribe()
             self._unsubscribe = None
 
-    def on_interact(self, interactor: Sprite) -> None:
+    def on_interact(self, interactor: Sprite) -> None:  # noqa: ARG002
         if not self.enabled or self.looted:
             return
-
-        self.looted = True
+        gs = self.window.game_state_controller
+        inventory = get_or_create_inventory(gs.state.values)
+        refusal = inventory.refusal(self.item_id) if self.item_id else None
+        if refusal is not None:  # stays closed: nothing granted, nothing recorded, no event
+            logger.warning("RewardChest '%s' refused: %s", getattr(self.entity, "mesh_name", ""), refusal)
+            hud = getattr(self.window, "player_hud", None)
+            enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
+            if callable(enqueue):
+                enqueue(refusal, seconds=2.0)
+            return
+        if self.item_id:
+            inventory.add_item(self.item_id)
+        if self.gold:
+            gs.add_counter("gold", self.gold)
+        self.record_fact("looted", True)  # (only after the grant)
         print(f"[Puzzle] RewardChest looted! Item: {self.item_id}, Gold: {self.gold}")
-
-        # Grant rewards
-        # Assuming interactor has inventory
-        if hasattr(interactor, "inventory"):
-            if self.item_id:
-                interactor.inventory.add_item(self.item_id)
-            if self.gold:
-                interactor.inventory.add_gold(self.gold)
 
         emit_gameplay_event(
             self.window,

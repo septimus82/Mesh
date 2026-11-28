@@ -1,0 +1,6070 @@
+[
+ {
+  "arguments": {
+   "action": "interact"
+  },
+  "response": {
+   "message": "Mesh Studio hasn't allowed an AI to play (move, talk, choose), so nothing was pressed. The person can allow it in Studio (top bar: AI, then \"Let an AI play\"), for this session. Starting play-tests is a separate permission and doesn't include this.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "gameplay_control_off"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "ok": true,
+   "playtest": {
+    "id": "785a7c4b7171",
+    "number": 1,
+    "started_at": 1793622013.12,
+    "started_by": "ai",
+    "stopped_at": null
+   },
+   "room": "start",
+   "status": "playing"
+  },
+  "tool": "debug_start_playtest"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "right",
+   "frames": 10
+  },
+  "response": {
+   "message": "Mesh Studio hasn't allowed an AI to play (move, talk, choose), so nothing was pressed. The person can allow it in Studio (top bar: AI, then \"Let an AI play\"), for this session. Starting play-tests is a separate permission and doesn't include this.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "gameplay_control_off"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "editing": {
+    "revision": 1,
+    "room": "start",
+    "unsaved_changes": true
+   },
+   "ok": true,
+   "playtest": {
+    "id": "785a7c4b7171",
+    "number": 1,
+    "started_at": 1793622013.12,
+    "started_by": "ai",
+    "stopped_at": 1793622014.245
+   },
+   "status": "stopped"
+  },
+  "tool": "debug_stop_playtest"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "ok": true,
+   "playtest": {
+    "id": "c4338600662c",
+    "number": 2,
+    "started_at": 1793622014.779,
+    "started_by": "ai",
+    "stopped_at": null
+   },
+   "room": "start",
+   "status": "playing"
+  },
+  "tool": "debug_start_playtest"
+ },
+ {
+  "arguments": {
+   "action": "jump"
+  },
+  "response": {
+   "message": "action must be one of move, interact, advance, choose, not 'jump'.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "invalid_action"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "north",
+   "frames": 10
+  },
+  "response": {
+   "message": "direction must be one of up, down, left, right, not 'north'.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "invalid_action"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "right",
+   "frames": 500
+  },
+  "response": {
+   "message": "frames must be a whole number from 1 to 120, not 500.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "invalid_action"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "advance"
+  },
+  "response": {
+   "message": "There's no conversation on screen to advance.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "no_dialogue"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "choose",
+   "choice": 0
+  },
+  "response": {
+   "dialogue": {
+    "available": true,
+    "open": false
+   },
+   "message": "There's no choice on screen to make.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "no_choices"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "right",
+   "frames": 1
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "right",
+     "frames": 1
+    },
+    "action_id": "a1",
+    "after": {
+     "player": [
+      130.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      128.0,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 6,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      }
+     ],
+     "last_seq": 4,
+     "limit": 10,
+     "made_this_playtest": 1,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 0.317,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "agree"
+       }
+      },
+      "monster_egg_walk_accumulator": 2.5,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 128.0,
+       "dx": -2.5,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 189.5,
+       "dx": 189.5,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 224.0,
+       "dx": -2.5,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 3
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 130.5,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [],
+       "completed_stages_total": 0,
+       "current_stage": "agree",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 1,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622015.078
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "right",
+   "frames": 30
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "right",
+     "frames": 30
+    },
+    "action_id": "a2",
+    "after": {
+     "player": [
+      205.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      130.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 35,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      }
+     ],
+     "last_seq": 4,
+     "limit": 10,
+     "made_this_playtest": 1,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 0.967,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "agree"
+       }
+      },
+      "monster_egg_walk_accumulator": 29.5,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 114.5,
+       "dx": 114.5,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 149.6,
+       "dx": -77.5,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 237.0,
+       "dx": -77.5,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      },
+      {
+       "distance": 276.4,
+       "dx": 274.5,
+       "dy": 32.0,
+       "id": "start_sign_480_160_0_0",
+       "name": "Sign",
+       "tag": "sign",
+       "x": 480.0,
+       "y": 160.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 4
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 205.5,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [],
+       "completed_stages_total": 0,
+       "current_stage": "agree",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 2,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622015.45
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "right",
+   "frames": 17
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "right",
+     "frames": 17
+    },
+    "action_id": "a3",
+    "after": {
+     "player": [
+      248.0,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      205.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 22,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      }
+     ],
+     "last_seq": 4,
+     "limit": 10,
+     "made_this_playtest": 1,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 1.4,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "agree"
+       }
+      },
+      "monster_egg_walk_accumulator": 24.0,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 72.0,
+       "dx": 72.0,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 175.5,
+       "dx": -120.0,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 234.2,
+       "dx": 232.0,
+       "dy": 32.0,
+       "id": "start_sign_480_160_0_0",
+       "name": "Sign",
+       "tag": "sign",
+       "x": 480.0,
+       "y": 160.0
+      },
+      {
+       "distance": 254.1,
+       "dx": -120.0,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 4
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 248.0,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [],
+       "completed_stages_total": 0,
+       "current_stage": "agree",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 3,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622015.775
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "right",
+   "frames": 7
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "right",
+     "frames": 7
+    },
+    "action_id": "a4",
+    "after": {
+     "player": [
+      265.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      248.0,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 12,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      }
+     ],
+     "last_seq": 4,
+     "limit": 10,
+     "made_this_playtest": 1,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 1.65,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "agree"
+       }
+      },
+      "monster_egg_walk_accumulator": 41.5,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 54.5,
+       "dx": 54.5,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 187.9,
+       "dx": -137.5,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 216.9,
+       "dx": 214.5,
+       "dy": 32.0,
+       "id": "start_sign_480_160_0_0",
+       "name": "Sign",
+       "tag": "sign",
+       "x": 480.0,
+       "y": 160.0
+      },
+      {
+       "distance": 262.8,
+       "dx": -137.5,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 4
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 265.5,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [],
+       "completed_stages_total": 0,
+       "current_stage": "agree",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 4,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622015.928
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "right",
+   "frames": 2
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "right",
+     "frames": 2
+    },
+    "action_id": "a5",
+    "after": {
+     "player": [
+      270.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      265.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 7,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      }
+     ],
+     "last_seq": 4,
+     "limit": 10,
+     "made_this_playtest": 1,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 1.9,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "agree"
+       }
+      },
+      "monster_egg_walk_accumulator": 46.5,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 49.5,
+       "dx": 49.5,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 191.5,
+       "dx": -142.5,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 211.9,
+       "dx": 209.5,
+       "dy": 32.0,
+       "id": "start_sign_480_160_0_0",
+       "name": "Sign",
+       "tag": "sign",
+       "x": 480.0,
+       "y": 160.0
+      },
+      {
+       "distance": 265.5,
+       "dx": -142.5,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 4
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 270.5,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [],
+       "completed_stages_total": 0,
+       "current_stage": "agree",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 5,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622016.077
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "right",
+   "frames": 2
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "right",
+     "frames": 2
+    },
+    "action_id": "a6",
+    "after": {
+     "player": [
+      275.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      270.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 7,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      }
+     ],
+     "last_seq": 4,
+     "limit": 10,
+     "made_this_playtest": 1,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 2.15,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "agree"
+       }
+      },
+      "monster_egg_walk_accumulator": 3.5,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 44.5,
+       "dx": 44.5,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 195.3,
+       "dx": -147.5,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 207.0,
+       "dx": 204.5,
+       "dy": 32.0,
+       "id": "start_sign_480_160_0_0",
+       "name": "Sign",
+       "tag": "sign",
+       "x": 480.0,
+       "y": 160.0
+      },
+      {
+       "distance": 268.2,
+       "dx": -147.5,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 4
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 275.5,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [],
+       "completed_stages_total": 0,
+       "current_stage": "agree",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 6,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622016.228
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "right",
+   "frames": 2
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "right",
+     "frames": 2
+    },
+    "action_id": "a7",
+    "after": {
+     "player": [
+      280.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      275.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 7,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      }
+     ],
+     "last_seq": 4,
+     "limit": 10,
+     "made_this_playtest": 1,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 2.383,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "agree"
+       }
+      },
+      "monster_egg_walk_accumulator": 8.5,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 39.5,
+       "dx": 39.5,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 199.1,
+       "dx": -152.5,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 202.1,
+       "dx": 199.5,
+       "dy": 32.0,
+       "id": "start_sign_480_160_0_0",
+       "name": "Sign",
+       "tag": "sign",
+       "x": 480.0,
+       "y": 160.0
+      },
+      {
+       "distance": 271.0,
+       "dx": -152.5,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 4
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 280.5,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [],
+       "completed_stages_total": 0,
+       "current_stage": "agree",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 7,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622016.372
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "interact"
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "interact"
+    },
+    "action_id": "a8",
+    "after": {
+     "player": [
+      280.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      280.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "choices": [
+      {
+       "available": true,
+       "index": 0,
+       "text": "I'll light it."
+      },
+      {
+       "available": true,
+       "index": 1,
+       "text": "Not now."
+      }
+     ],
+     "open": true,
+     "selected": 0,
+     "speaker": "Guide",
+     "text": "The cellar lantern has gone out. Will you light it?"
+    },
+    "frames": 7,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "choices": [
+      {
+       "available": true,
+       "index": 0,
+       "text": "I'll light it."
+      },
+      {
+       "available": true,
+       "index": 1,
+       "text": "Not now."
+      }
+     ],
+     "open": true,
+     "selected": 0,
+     "speaker": "Guide",
+     "text": "The cellar lantern has gone out. Will you light it?"
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      }
+     ],
+     "last_seq": 6,
+     "limit": 10,
+     "made_this_playtest": 3,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 2.617,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "agree"
+       }
+      },
+      "monster_egg_walk_accumulator": 8.5,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 39.5,
+       "dx": 39.5,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 199.1,
+       "dx": -152.5,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 202.1,
+       "dx": 199.5,
+       "dy": 32.0,
+       "id": "start_sign_480_160_0_0",
+       "name": "Sign",
+       "tag": "sign",
+       "x": 480.0,
+       "y": 160.0
+      },
+      {
+       "distance": 271.0,
+       "dx": -152.5,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 4
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 280.5,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [],
+       "completed_stages_total": 0,
+       "current_stage": "agree",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 8,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622016.661
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "left",
+   "frames": 5
+  },
+  "response": {
+   "dialogue": {
+    "available": true,
+    "choices": [
+     {
+      "available": true,
+      "index": 0,
+      "text": "I'll light it."
+     },
+     {
+      "available": true,
+      "index": 1,
+      "text": "Not now."
+     }
+    ],
+    "open": true,
+    "selected": 0,
+    "speaker": "Guide",
+    "text": "The cellar lantern has gone out. Will you light it?"
+   },
+   "message": "A conversation is on screen, so the player can't move: advance or choose first.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "dialogue_open"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "advance"
+  },
+  "response": {
+   "dialogue": {
+    "available": true,
+    "choices": [
+     {
+      "available": true,
+      "index": 0,
+      "text": "I'll light it."
+     },
+     {
+      "available": true,
+      "index": 1,
+      "text": "Not now."
+     }
+    ],
+    "open": true,
+    "selected": 0,
+    "speaker": "Guide",
+    "text": "The cellar lantern has gone out. Will you light it?"
+   },
+   "message": "This line waits for a choice: choose one.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "choice_needed"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "choose",
+   "choice": "Maybe later?"
+  },
+  "response": {
+   "dialogue": {
+    "available": true,
+    "choices": [
+     {
+      "available": true,
+      "index": 0,
+      "text": "I'll light it."
+     },
+     {
+      "available": true,
+      "index": 1,
+      "text": "Not now."
+     }
+    ],
+    "open": true,
+    "selected": 0,
+    "speaker": "Guide",
+    "text": "The cellar lantern has gone out. Will you light it?"
+   },
+   "message": "'Maybe later?' isn't one of the choices that can be made now.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "choice_not_available"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "interact"
+  },
+  "response": {
+   "dialogue": {
+    "available": true,
+    "choices": [
+     {
+      "available": true,
+      "index": 0,
+      "text": "I'll light it."
+     },
+     {
+      "available": true,
+      "index": 1,
+      "text": "Not now."
+     }
+    ],
+    "open": true,
+    "selected": 0,
+    "speaker": "Guide",
+    "text": "The cellar lantern has gone out. Will you light it?"
+   },
+   "message": "A conversation is on screen: advance or choose instead.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "dialogue_open"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "choose",
+   "choice": "I'll light it."
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "choose",
+     "choice": 0,
+     "text": "I'll light it."
+    },
+    "action_id": "a9",
+    "after": {
+     "player": [
+      280.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      280.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "choices": [],
+     "open": true,
+     "selected": null,
+     "speaker": "Guide",
+     "text": "Thank you! The cellar door is just north of here."
+    },
+    "frames": 7,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "choices": [],
+     "open": true,
+     "selected": null,
+     "speaker": "Guide",
+     "text": "Thank you! The cellar door is just north of here."
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      }
+     ],
+     "last_seq": 10,
+     "limit": 10,
+     "made_this_playtest": 7,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 2.95,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 8.5,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 39.5,
+       "dx": 39.5,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 199.1,
+       "dx": -152.5,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 202.1,
+       "dx": 199.5,
+       "dy": 32.0,
+       "id": "start_sign_480_160_0_0",
+       "name": "Sign",
+       "tag": "sign",
+       "x": 480.0,
+       "y": 160.0
+      },
+      {
+       "distance": 271.0,
+       "dx": -152.5,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 4
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 280.5,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 9,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622016.906
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "advance"
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "advance"
+    },
+    "action_id": "a10",
+    "after": {
+     "player": [
+      280.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      280.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 7,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "reason": "advance_complete"
+       },
+       "scene": null,
+       "seq": 11,
+       "time": 1793622016.932,
+       "type": "dialogue_finished"
+      }
+     ],
+     "last_seq": 11,
+     "limit": 10,
+     "made_this_playtest": 8,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 3.2,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 8.5,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 39.5,
+       "dx": 39.5,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 199.1,
+       "dx": -152.5,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 202.1,
+       "dx": 199.5,
+       "dy": 32.0,
+       "id": "start_sign_480_160_0_0",
+       "name": "Sign",
+       "tag": "sign",
+       "x": 480.0,
+       "y": 160.0
+      },
+      {
+       "distance": 271.0,
+       "dx": -152.5,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 4
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 280.5,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 10,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622017.063
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "events": 12
+  },
+  "response": {
+   "diagnostics": {
+    "available": true,
+    "items": [],
+    "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+    "sites": 0
+   },
+   "dialogue": {
+    "available": true,
+    "open": false
+   },
+   "events": {
+    "available": true,
+    "items": [
+     {
+      "entity": null,
+      "payload": {
+       "quest_id": "light_the_lantern",
+       "quest_title": "Light the cellar lantern",
+       "source": "auto",
+       "stage_id": "agree",
+       "stage_title": "Talk to the Guide",
+       "text": "Talk to the Guide"
+      },
+      "scene": null,
+      "seq": 4,
+      "time": 1793622014.779,
+      "type": "quest_stage_started"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "owner": "dialogue::Guide",
+       "trigger": "interact"
+      },
+      "scene": null,
+      "seq": 5,
+      "time": 1793622016.435,
+      "type": "dialogue_started"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "has_choices": true,
+       "node": "root",
+       "owner": "dialogue::Guide",
+       "speaker": "Guide",
+       "stage": "start",
+       "text": "The cellar lantern has gone out. Will you light it?"
+      },
+      "scene": null,
+      "seq": 6,
+      "time": 1793622016.435,
+      "type": "dialogue_line"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "choice_id": "help",
+       "choice_text": "I'll light it.",
+       "entity": "Guide",
+       "next": "thanks",
+       "node": "root",
+       "owner": "dialogue::Guide"
+      },
+      "scene": null,
+      "seq": 7,
+      "time": 1793622016.788,
+      "type": "dialogue_choice"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "has_choices": false,
+       "node": "thanks",
+       "owner": "dialogue::Guide",
+       "speaker": "Guide",
+       "stage": "choice",
+       "text": "Thank you! The cellar door is just north of here."
+      },
+      "scene": null,
+      "seq": 8,
+      "time": 1793622016.788,
+      "type": "dialogue_line"
+     },
+     {
+      "entity": null,
+      "payload": {
+       "quest_id": "light_the_lantern",
+       "quest_title": "Light the cellar lantern",
+       "source": "requirements",
+       "stage_id": "agree",
+       "stage_title": "Talk to the Guide",
+       "text": "Talk to the Guide"
+      },
+      "scene": null,
+      "seq": 9,
+      "time": 1793622016.788,
+      "type": "quest_stage_completed"
+     },
+     {
+      "entity": null,
+      "payload": {
+       "quest_id": "light_the_lantern",
+       "quest_title": "Light the cellar lantern",
+       "source": "auto",
+       "stage_id": "cellar",
+       "stage_title": "Go down to the cellar",
+       "text": "Go down to the cellar"
+      },
+      "scene": null,
+      "seq": 10,
+      "time": 1793622016.788,
+      "type": "quest_stage_started"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "owner": "dialogue::Guide",
+       "reason": "advance_complete"
+      },
+      "scene": null,
+      "seq": 11,
+      "time": 1793622016.932,
+      "type": "dialogue_finished"
+     }
+    ],
+    "last_seq": 11,
+    "limit": 12,
+    "made_this_playtest": 8,
+    "no_longer_kept": 0
+   },
+   "game_state": {
+    "available": true,
+    "chapter": 1,
+    "counters": {},
+    "flags": {
+     "agreed_to_help": true,
+     "hint_shown_quest_log": true
+    },
+    "playtime_seconds": 3.233,
+    "values": {
+     "hud_last_quest_progress": {
+      "light_the_lantern": {
+       "completed": false,
+       "stage_id": "cellar"
+      }
+     },
+     "monster_egg_walk_accumulator": 8.5,
+     "time_of_day_hours": 21.0
+    }
+   },
+   "mode": "live_studio",
+   "nearby": {
+    "available": true,
+    "entities": [
+     {
+      "distance": 39.5,
+      "dx": 39.5,
+      "dy": 0.0,
+      "id": "start_guide_320_128_0_0",
+      "name": "Guide",
+      "tag": "npc",
+      "x": 320.0,
+      "y": 128.0
+     },
+     {
+      "distance": 199.1,
+      "dx": -152.5,
+      "dy": 128.0,
+      "id": "start_arrival_cellar_128_256_0_0",
+      "name": "Arrival from Cellar",
+      "tag": "spawn_point",
+      "x": 128.0,
+      "y": 256.0
+     },
+     {
+      "distance": 202.1,
+      "dx": 199.5,
+      "dy": 32.0,
+      "id": "start_sign_480_160_0_0",
+      "name": "Sign",
+      "tag": "sign",
+      "x": 480.0,
+      "y": 160.0
+     },
+     {
+      "distance": 271.0,
+      "dx": -152.5,
+      "dy": 224.0,
+      "id": "start_door_to_cellar_128_352_0_0",
+      "name": "Door to Cellar",
+      "tag": "door",
+      "x": 128.0,
+      "y": 352.0
+     }
+    ],
+    "radius": 320.0,
+    "within": 4
+   },
+   "ok": true,
+   "player": {
+    "available": true,
+    "id": "start_player_128_128_0_0",
+    "name": "Player",
+    "tag": "player",
+    "units": "pixels",
+    "x": 280.5,
+    "y": 128.0
+   },
+   "playtest": {
+    "id": "c4338600662c",
+    "number": 2,
+    "started_at": 1793622014.779,
+    "started_by": "ai",
+    "stopped_at": null
+   },
+   "quests": {
+    "available": true,
+    "defined": 1,
+    "listed": 1,
+    "quests": [
+     {
+      "auto_start": true,
+      "awaiting_stage": null,
+      "completed_stages": [
+       "agree"
+      ],
+      "completed_stages_total": 1,
+      "current_stage": "cellar",
+      "id": "light_the_lantern",
+      "status": "active",
+      "title": "Light the cellar lantern",
+      "total_stages": 2
+     }
+    ]
+   },
+   "scene": {
+    "available": true,
+    "path": "packs/core_regions/scenes/start.json",
+    "room": {
+     "key": "start",
+     "label": "Start"
+    }
+   },
+   "sequence": 11,
+   "status": "playing",
+   "studio": {
+    "ai_gameplay_control": true,
+    "ai_playtest_control": true,
+    "edited_room": "start",
+    "mode": "playing",
+    "revision": 1,
+    "unsaved_changes": true
+   },
+   "time": 1793622017.086
+  },
+  "tool": "debug_runtime_snapshot"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "left",
+   "frames": 1
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "left",
+     "frames": 1
+    },
+    "action_id": "a11",
+    "after": {
+     "player": [
+      278.0,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      280.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 6,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "reason": "advance_complete"
+       },
+       "scene": null,
+       "seq": 11,
+       "time": 1793622016.932,
+       "type": "dialogue_finished"
+      }
+     ],
+     "last_seq": 11,
+     "limit": 10,
+     "made_this_playtest": 8,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 3.383,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 11.0,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 42.0,
+       "dx": 42.0,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 197.2,
+       "dx": -150.0,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 204.5,
+       "dx": 202.0,
+       "dy": 32.0,
+       "id": "start_sign_480_160_0_0",
+       "name": "Sign",
+       "tag": "sign",
+       "x": 480.0,
+       "y": 160.0
+      },
+      {
+       "distance": 269.6,
+       "dx": -150.0,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 4
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 278.0,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 12,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622017.183
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "left",
+   "frames": 37
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "left",
+     "frames": 37
+    },
+    "action_id": "a12",
+    "after": {
+     "player": [
+      185.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      278.0,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 42,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "reason": "advance_complete"
+       },
+       "scene": null,
+       "seq": 11,
+       "time": 1793622016.932,
+       "type": "dialogue_finished"
+      }
+     ],
+     "last_seq": 11,
+     "limit": 10,
+     "made_this_playtest": 8,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 4.233,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 7.5,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 134.5,
+       "dx": 134.5,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 140.3,
+       "dx": -57.5,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 231.3,
+       "dx": -57.5,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      },
+      {
+       "distance": 296.2,
+       "dx": 294.5,
+       "dy": 32.0,
+       "id": "start_sign_480_160_0_0",
+       "name": "Sign",
+       "tag": "sign",
+       "x": 480.0,
+       "y": 160.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 4
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 185.5,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 13,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622017.795
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "left",
+   "frames": 14
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "left",
+     "frames": 14
+    },
+    "action_id": "a13",
+    "after": {
+     "player": [
+      150.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      185.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 19,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "reason": "advance_complete"
+       },
+       "scene": null,
+       "seq": 11,
+       "time": 1793622016.932,
+       "type": "dialogue_finished"
+      }
+     ],
+     "last_seq": 11,
+     "limit": 10,
+     "made_this_playtest": 8,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 4.633,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 42.5,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 130.0,
+       "dx": -22.5,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 169.5,
+       "dx": 169.5,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 225.1,
+       "dx": -22.5,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 3
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 150.5,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 14,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622017.988
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "left",
+   "frames": 5
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "left",
+     "frames": 5
+    },
+    "action_id": "a14",
+    "after": {
+     "player": [
+      138.0,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      150.5,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 10,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "reason": "advance_complete"
+       },
+       "scene": null,
+       "seq": 11,
+       "time": 1793622016.932,
+       "type": "dialogue_finished"
+      }
+     ],
+     "last_seq": 11,
+     "limit": 10,
+     "made_this_playtest": 8,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 4.917,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 7.0,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 128.4,
+       "dx": -10.0,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 182.0,
+       "dx": 182.0,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 224.2,
+       "dx": -10.0,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 3
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 138.0,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 15,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622018.124
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "left",
+   "frames": 2
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "left",
+     "frames": 2
+    },
+    "action_id": "a15",
+    "after": {
+     "player": [
+      133.0,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      138.0,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 7,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "reason": "advance_complete"
+       },
+       "scene": null,
+       "seq": 11,
+       "time": 1793622016.932,
+       "type": "dialogue_finished"
+      }
+     ],
+     "last_seq": 11,
+     "limit": 10,
+     "made_this_playtest": 8,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 5.083,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 12.0,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 128.1,
+       "dx": -5.0,
+       "dy": 128.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 187.0,
+       "dx": 187.0,
+       "dy": 0.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      },
+      {
+       "distance": 224.1,
+       "dx": -5.0,
+       "dy": 224.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 3
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 133.0,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 16,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622018.206
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "up",
+   "frames": 20
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "up",
+     "frames": 20
+    },
+    "action_id": "a16",
+    "after": {
+     "player": [
+      133.0,
+      178.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      133.0,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 25,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "reason": "advance_complete"
+       },
+       "scene": null,
+       "seq": 11,
+       "time": 1793622016.932,
+       "type": "dialogue_finished"
+      }
+     ],
+     "last_seq": 11,
+     "limit": 10,
+     "made_this_playtest": 8,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 5.6,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 14.0,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 78.2,
+       "dx": -5.0,
+       "dy": 78.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 174.1,
+       "dx": -5.0,
+       "dy": 174.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      },
+      {
+       "distance": 193.6,
+       "dx": 187.0,
+       "dy": -50.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 3
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 133.0,
+     "y": 178.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 17,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622018.456
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "up",
+   "frames": 20
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "up",
+     "frames": 20
+    },
+    "action_id": "a17",
+    "after": {
+     "player": [
+      133.0,
+      228.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      133.0,
+      178.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 25,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "reason": "advance_complete"
+       },
+       "scene": null,
+       "seq": 11,
+       "time": 1793622016.932,
+       "type": "dialogue_finished"
+      }
+     ],
+     "last_seq": 11,
+     "limit": 10,
+     "made_this_playtest": 8,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 6.117,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 16.0,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 28.4,
+       "dx": -5.0,
+       "dy": 28.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 124.1,
+       "dx": -5.0,
+       "dy": 124.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      },
+      {
+       "distance": 212.1,
+       "dx": 187.0,
+       "dy": -100.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 3
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 133.0,
+     "y": 228.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 18,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622018.706
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "up",
+   "frames": 20
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "up",
+     "frames": 20
+    },
+    "action_id": "a18",
+    "after": {
+     "player": [
+      133.0,
+      278.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "before": {
+     "player": [
+      133.0,
+      228.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 25,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "reason": "advance_complete"
+       },
+       "scene": null,
+       "seq": 11,
+       "time": 1793622016.932,
+       "type": "dialogue_finished"
+      }
+     ],
+     "last_seq": 11,
+     "limit": 10,
+     "made_this_playtest": 8,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 6.583,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 18.0,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 22.6,
+       "dx": -5.0,
+       "dy": -22.0,
+       "id": "start_arrival_cellar_128_256_0_0",
+       "name": "Arrival from Cellar",
+       "tag": "spawn_point",
+       "x": 128.0,
+       "y": 256.0
+      },
+      {
+       "distance": 74.2,
+       "dx": -5.0,
+       "dy": 74.0,
+       "id": "start_door_to_cellar_128_352_0_0",
+       "name": "Door to Cellar",
+       "tag": "door",
+       "x": 128.0,
+       "y": 352.0
+      },
+      {
+       "distance": 239.7,
+       "dx": 187.0,
+       "dy": -150.0,
+       "id": "start_guide_320_128_0_0",
+       "name": "Guide",
+       "tag": "npc",
+       "x": 320.0,
+       "y": 128.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 3
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "start_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 133.0,
+     "y": 278.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/start.json",
+     "room": {
+      "key": "start",
+      "label": "Start"
+     }
+    },
+    "sequence": 19,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622018.958
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "up",
+   "frames": 20
+  },
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "up",
+     "frames": 20
+    },
+    "action_id": "a19",
+    "after": {
+     "player": [
+      256.0,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/cellar.json"
+    },
+    "before": {
+     "player": [
+      133.0,
+      278.0
+     ],
+     "scene": "packs/core_regions/scenes/start.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 25,
+    "mode": "live_studio",
+    "ok": true,
+    "status": "done"
+   },
+   "mode": "live_studio",
+   "ok": true,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "reason": "advance_complete"
+       },
+       "scene": null,
+       "seq": 11,
+       "time": 1793622016.932,
+       "type": "dialogue_finished"
+      },
+      {
+       "entity": "Door to Cellar",
+       "payload": {
+        "actor": "Player",
+        "entity": "Door to Cellar",
+        "reason": "collision",
+        "spawn_id": "from_start",
+        "target_scene": "cellar"
+       },
+       "scene": null,
+       "seq": 12,
+       "time": 1793622019.074,
+       "type": "scene_transition"
+      }
+     ],
+     "last_seq": 12,
+     "limit": 10,
+     "made_this_playtest": 9,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 7.15,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 43.0,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 0.0,
+       "dx": 0.0,
+       "dy": 0.0,
+       "id": "cellar_arrival_start_256_128_0_0",
+       "name": "Arrival from Start",
+       "tag": "spawn_point",
+       "x": 256.0,
+       "y": 128.0
+      },
+      {
+       "distance": 96.0,
+       "dx": 0.0,
+       "dy": 96.0,
+       "id": "cellar_door_to_start_256_224_0_0",
+       "name": "Door to Start",
+       "tag": "door",
+       "x": 256.0,
+       "y": 224.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 2
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "cellar_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 256.0,
+     "y": 128.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/cellar.json",
+     "room": {
+      "key": "cellar",
+      "label": "Cellar"
+     }
+    },
+    "sequence": 20,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": true,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622019.267
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "events": 6
+  },
+  "response": {
+   "diagnostics": {
+    "available": true,
+    "items": [],
+    "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+    "sites": 0
+   },
+   "dialogue": {
+    "available": true,
+    "open": false
+   },
+   "events": {
+    "available": true,
+    "items": [
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "choice_id": "help",
+       "choice_text": "I'll light it.",
+       "entity": "Guide",
+       "next": "thanks",
+       "node": "root",
+       "owner": "dialogue::Guide"
+      },
+      "scene": null,
+      "seq": 7,
+      "time": 1793622016.788,
+      "type": "dialogue_choice"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "has_choices": false,
+       "node": "thanks",
+       "owner": "dialogue::Guide",
+       "speaker": "Guide",
+       "stage": "choice",
+       "text": "Thank you! The cellar door is just north of here."
+      },
+      "scene": null,
+      "seq": 8,
+      "time": 1793622016.788,
+      "type": "dialogue_line"
+     },
+     {
+      "entity": null,
+      "payload": {
+       "quest_id": "light_the_lantern",
+       "quest_title": "Light the cellar lantern",
+       "source": "requirements",
+       "stage_id": "agree",
+       "stage_title": "Talk to the Guide",
+       "text": "Talk to the Guide"
+      },
+      "scene": null,
+      "seq": 9,
+      "time": 1793622016.788,
+      "type": "quest_stage_completed"
+     },
+     {
+      "entity": null,
+      "payload": {
+       "quest_id": "light_the_lantern",
+       "quest_title": "Light the cellar lantern",
+       "source": "auto",
+       "stage_id": "cellar",
+       "stage_title": "Go down to the cellar",
+       "text": "Go down to the cellar"
+      },
+      "scene": null,
+      "seq": 10,
+      "time": 1793622016.788,
+      "type": "quest_stage_started"
+     },
+     {
+      "entity": "Guide",
+      "payload": {
+       "actor": "Player",
+       "entity": "Guide",
+       "owner": "dialogue::Guide",
+       "reason": "advance_complete"
+      },
+      "scene": null,
+      "seq": 11,
+      "time": 1793622016.932,
+      "type": "dialogue_finished"
+     },
+     {
+      "entity": "Door to Cellar",
+      "payload": {
+       "actor": "Player",
+       "entity": "Door to Cellar",
+       "reason": "collision",
+       "spawn_id": "from_start",
+       "target_scene": "cellar"
+      },
+      "scene": null,
+      "seq": 12,
+      "time": 1793622019.074,
+      "type": "scene_transition"
+     }
+    ],
+    "last_seq": 12,
+    "limit": 6,
+    "made_this_playtest": 9,
+    "no_longer_kept": 0
+   },
+   "game_state": {
+    "available": true,
+    "chapter": 1,
+    "counters": {},
+    "flags": {
+     "agreed_to_help": true,
+     "hint_shown_quest_log": true
+    },
+    "playtime_seconds": 7.183,
+    "values": {
+     "hud_last_quest_progress": {
+      "light_the_lantern": {
+       "completed": false,
+       "stage_id": "cellar"
+      }
+     },
+     "monster_egg_walk_accumulator": 43.0,
+     "time_of_day_hours": 21.0
+    }
+   },
+   "mode": "live_studio",
+   "nearby": {
+    "available": true,
+    "entities": [
+     {
+      "distance": 0.0,
+      "dx": 0.0,
+      "dy": 0.0,
+      "id": "cellar_arrival_start_256_128_0_0",
+      "name": "Arrival from Start",
+      "tag": "spawn_point",
+      "x": 256.0,
+      "y": 128.0
+     },
+     {
+      "distance": 96.0,
+      "dx": 0.0,
+      "dy": 96.0,
+      "id": "cellar_door_to_start_256_224_0_0",
+      "name": "Door to Start",
+      "tag": "door",
+      "x": 256.0,
+      "y": 224.0
+     }
+    ],
+    "radius": 320.0,
+    "within": 2
+   },
+   "ok": true,
+   "player": {
+    "available": true,
+    "id": "cellar_player_128_128_0_0",
+    "name": "Player",
+    "tag": "player",
+    "units": "pixels",
+    "x": 256.0,
+    "y": 128.0
+   },
+   "playtest": {
+    "id": "c4338600662c",
+    "number": 2,
+    "started_at": 1793622014.779,
+    "started_by": "ai",
+    "stopped_at": null
+   },
+   "quests": {
+    "available": true,
+    "defined": 1,
+    "listed": 1,
+    "quests": [
+     {
+      "auto_start": true,
+      "awaiting_stage": null,
+      "completed_stages": [
+       "agree"
+      ],
+      "completed_stages_total": 1,
+      "current_stage": "cellar",
+      "id": "light_the_lantern",
+      "status": "active",
+      "title": "Light the cellar lantern",
+      "total_stages": 2
+     }
+    ]
+   },
+   "scene": {
+    "available": true,
+    "path": "packs/core_regions/scenes/cellar.json",
+    "room": {
+     "key": "cellar",
+     "label": "Cellar"
+    }
+   },
+   "sequence": 21,
+   "status": "playing",
+   "studio": {
+    "ai_gameplay_control": true,
+    "ai_playtest_control": true,
+    "edited_room": "start",
+    "mode": "playing",
+    "revision": 1,
+    "unsaved_changes": true
+   },
+   "time": 1793622019.281
+  },
+  "tool": "debug_runtime_snapshot"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "down",
+   "frames": 120
+  },
+  "note": "the person took back the permission while it ran",
+  "response": {
+   "action": {
+    "action": {
+     "action": "move",
+     "direction": "down",
+     "frames": 120
+    },
+    "action_id": "a20",
+    "after": {
+     "player": [
+      256.0,
+      103.0
+     ],
+     "scene": "packs/core_regions/scenes/cellar.json"
+    },
+    "before": {
+     "player": [
+      256.0,
+      128.0
+     ],
+     "scene": "packs/core_regions/scenes/cellar.json"
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "frames": 10,
+    "message": "Cancelled: the person took back the permission to play.",
+    "mode": "live_studio",
+    "ok": false,
+    "reason": "cancelled",
+    "status": "cancelled"
+   },
+   "mode": "live_studio",
+   "ok": false,
+   "snapshot": {
+    "diagnostics": {
+     "available": true,
+     "items": [],
+     "note": "Errors the engine caught and carried on from (each place that catches one counts it), since the play-test started; the log has their details.",
+     "sites": 0
+    },
+    "dialogue": {
+     "available": true,
+     "open": false
+    },
+    "events": {
+     "available": true,
+     "items": [
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 4,
+       "time": 1793622014.779,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "trigger": "interact"
+       },
+       "scene": null,
+       "seq": 5,
+       "time": 1793622016.435,
+       "type": "dialogue_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": true,
+        "node": "root",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "start",
+        "text": "The cellar lantern has gone out. Will you light it?"
+       },
+       "scene": null,
+       "seq": 6,
+       "time": 1793622016.435,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "choice_id": "help",
+        "choice_text": "I'll light it.",
+        "entity": "Guide",
+        "next": "thanks",
+        "node": "root",
+        "owner": "dialogue::Guide"
+       },
+       "scene": null,
+       "seq": 7,
+       "time": 1793622016.788,
+       "type": "dialogue_choice"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "has_choices": false,
+        "node": "thanks",
+        "owner": "dialogue::Guide",
+        "speaker": "Guide",
+        "stage": "choice",
+        "text": "Thank you! The cellar door is just north of here."
+       },
+       "scene": null,
+       "seq": 8,
+       "time": 1793622016.788,
+       "type": "dialogue_line"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "requirements",
+        "stage_id": "agree",
+        "stage_title": "Talk to the Guide",
+        "text": "Talk to the Guide"
+       },
+       "scene": null,
+       "seq": 9,
+       "time": 1793622016.788,
+       "type": "quest_stage_completed"
+      },
+      {
+       "entity": null,
+       "payload": {
+        "quest_id": "light_the_lantern",
+        "quest_title": "Light the cellar lantern",
+        "source": "auto",
+        "stage_id": "cellar",
+        "stage_title": "Go down to the cellar",
+        "text": "Go down to the cellar"
+       },
+       "scene": null,
+       "seq": 10,
+       "time": 1793622016.788,
+       "type": "quest_stage_started"
+      },
+      {
+       "entity": "Guide",
+       "payload": {
+        "actor": "Player",
+        "entity": "Guide",
+        "owner": "dialogue::Guide",
+        "reason": "advance_complete"
+       },
+       "scene": null,
+       "seq": 11,
+       "time": 1793622016.932,
+       "type": "dialogue_finished"
+      },
+      {
+       "entity": "Door to Cellar",
+       "payload": {
+        "actor": "Player",
+        "entity": "Door to Cellar",
+        "reason": "collision",
+        "spawn_id": "from_start",
+        "target_scene": "cellar"
+       },
+       "scene": null,
+       "seq": 12,
+       "time": 1793622019.074,
+       "type": "scene_transition"
+      }
+     ],
+     "last_seq": 12,
+     "limit": 10,
+     "made_this_playtest": 9,
+     "no_longer_kept": 0
+    },
+    "game_state": {
+     "available": true,
+     "chapter": 1,
+     "counters": {},
+     "flags": {
+      "agreed_to_help": true,
+      "hint_shown_quest_log": true
+     },
+     "playtime_seconds": 7.4,
+     "values": {
+      "hud_last_quest_progress": {
+       "light_the_lantern": {
+        "completed": false,
+        "stage_id": "cellar"
+       }
+      },
+      "monster_egg_walk_accumulator": 20.0,
+      "time_of_day_hours": 21.0
+     }
+    },
+    "mode": "live_studio",
+    "nearby": {
+     "available": true,
+     "entities": [
+      {
+       "distance": 25.0,
+       "dx": 0.0,
+       "dy": 25.0,
+       "id": "cellar_arrival_start_256_128_0_0",
+       "name": "Arrival from Start",
+       "tag": "spawn_point",
+       "x": 256.0,
+       "y": 128.0
+      },
+      {
+       "distance": 121.0,
+       "dx": 0.0,
+       "dy": 121.0,
+       "id": "cellar_door_to_start_256_224_0_0",
+       "name": "Door to Start",
+       "tag": "door",
+       "x": 256.0,
+       "y": 224.0
+      }
+     ],
+     "radius": 320.0,
+     "within": 2
+    },
+    "ok": true,
+    "player": {
+     "available": true,
+     "id": "cellar_player_128_128_0_0",
+     "name": "Player",
+     "tag": "player",
+     "units": "pixels",
+     "x": 256.0,
+     "y": 103.0
+    },
+    "playtest": {
+     "id": "c4338600662c",
+     "number": 2,
+     "started_at": 1793622014.779,
+     "started_by": "ai",
+     "stopped_at": null
+    },
+    "quests": {
+     "available": true,
+     "defined": 1,
+     "listed": 1,
+     "quests": [
+      {
+       "auto_start": true,
+       "awaiting_stage": null,
+       "completed_stages": [
+        "agree"
+       ],
+       "completed_stages_total": 1,
+       "current_stage": "cellar",
+       "id": "light_the_lantern",
+       "status": "active",
+       "title": "Light the cellar lantern",
+       "total_stages": 2
+      }
+     ]
+    },
+    "scene": {
+     "available": true,
+     "path": "packs/core_regions/scenes/cellar.json",
+     "room": {
+      "key": "cellar",
+      "label": "Cellar"
+     }
+    },
+    "sequence": 22,
+    "status": "playing",
+    "studio": {
+     "ai_gameplay_control": false,
+     "ai_playtest_control": true,
+     "edited_room": "start",
+     "mode": "playing",
+     "revision": 1,
+     "unsaved_changes": true
+    },
+    "time": 1793622019.384
+   }
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {
+   "action": "move",
+   "direction": "down",
+   "frames": 5
+  },
+  "response": {
+   "message": "Mesh Studio hasn't allowed an AI to play (move, talk, choose), so nothing was pressed. The person can allow it in Studio (top bar: AI, then \"Let an AI play\"), for this session. Starting play-tests is a separate permission and doesn't include this.",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "gameplay_control_off"
+  },
+  "tool": "debug_play_action"
+ },
+ {
+  "arguments": {},
+  "response": {
+   "editing": {
+    "revision": 1,
+    "room": "start",
+    "unsaved_changes": true
+   },
+   "ok": true,
+   "playtest": {
+    "id": "c4338600662c",
+    "number": 2,
+    "started_at": 1793622014.779,
+    "started_by": "ai",
+    "stopped_at": 1793622019.412
+   },
+   "status": "stopped"
+  },
+  "tool": "debug_stop_playtest"
+ },
+ {
+  "arguments": {
+   "action": "interact"
+  },
+  "response": {
+   "message": "Mesh Studio isn't play-testing, so there's no game to play. debug_start_playtest starts one (if the person allowed it).",
+   "mode": "live_studio",
+   "ok": false,
+   "reason": "not_playing"
+  },
+  "tool": "debug_play_action"
+ }
+]

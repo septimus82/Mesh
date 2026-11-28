@@ -1,0 +1,325 @@
+{
+ "at_astar": {
+  "objects": 1077152,
+  "counts": [
+   1720,
+   7,
+   35
+  ],
+  "threshold": [
+   2000,
+   10,
+   10
+  ],
+  "enabled": true
+ },
+ "over_50ms": [
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 64.4
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 58.8
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 50.3
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 56.4
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 56.9
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 70.6
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 69.1
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 83.4
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 73.6
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 93.3
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 87.2
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 90.5
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 87.8
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 89.1
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 99.6
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 121.8
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 111.1
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 113.5
+  },
+  {
+   "test": "",
+   "generation": 2,
+   "ms": 122.8
+  },
+  {
+   "test": "tests/test_act1_chapter1_slice.py::test_act1_chapter1_clearing_choice_b_blocks_a_and_depart_idempotent",
+   "generation": 2,
+   "ms": 125.9
+  },
+  {
+   "test": "tests/test_authoring.py::test_the_operation_list_comes_from_project_ops_and_every_op_says_what_it_does",
+   "generation": 2,
+   "ms": 146.1
+  },
+  {
+   "test": "tests/test_cli_episode_replay_check_command.py::test_episode_replay_check_identical_seed_produces_identical_digests_and_events",
+   "generation": 2,
+   "ms": 174.4
+  },
+  {
+   "test": "tests/test_cli_new_project_command_contract.py::test_help_all_lists_every_command",
+   "generation": 2,
+   "ms": 177.3
+  },
+  {
+   "test": "tests/test_cli_replays_run_command.py::test_cli_replays_run_mismatch_fails_with_actionable_report",
+   "generation": 2,
+   "ms": 179.9
+  },
+  {
+   "test": "tests/test_cli_scene_add_dialogue_choice_flag.py::test_cli_scene_add_dialogue_choice_flag_errors_on_missing_speaker",
+   "generation": 2,
+   "ms": 198.2
+  },
+  {
+   "test": "tests/test_cli_scene_tilemap_init_idempotent.py::test_cli_scene_tilemap_init_creates_layers_and_is_idempotent",
+   "generation": 2,
+   "ms": 196.9
+  },
+  {
+   "test": "tests/test_cocreative_chatbox_local_provider.py::test_provider_selection_defaults_to_anthropic_and_honors_openai_compatible_env",
+   "generation": 2,
+   "ms": 212.7
+  },
+  {
+   "test": "tests/test_draw_text_cached_policy.py::test_draw_text_cached_call_signature_policy",
+   "generation": 2,
+   "ms": 220.1
+  },
+  {
+   "test": "tests/test_draw_text_cached_policy.py::test_draw_text_cached_call_signature_policy",
+   "generation": 2,
+   "ms": 181.8
+  },
+  {
+   "test": "tests/test_duplicate_test_names_contract.py::test_no_duplicate_test_names_in_module_or_class_scope",
+   "generation": 2,
+   "ms": 181.0
+  },
+  {
+   "test": "tests/test_durable_write_usage_policy.py::test_durable_true_usage_is_allowlisted",
+   "generation": 2,
+   "ms": 188.9
+  },
+  {
+   "test": "tests/test_durable_write_usage_policy.py::test_durable_true_usage_is_allowlisted",
+   "generation": 2,
+   "ms": 178.0
+  },
+  {
+   "test": "tests/test_episode_04_ep04_integration.py::TestEpisode04Integration::test_episode_04_save_restore_mid_dialogue_and_mid_combat_hp",
+   "generation": 2,
+   "ms": 203.3
+  },
+  {
+   "test": "tests/test_episode_06_ep06_integration.py::test_episode_06_save_restore_mid_combat",
+   "generation": 2,
+   "ms": 213.2
+  },
+  {
+   "test": "tests/test_episode_06_ep06_integration.py::test_episode_06_determinism_digest_and_event_sequences",
+   "generation": 2,
+   "ms": 218.1
+  },
+  {
+   "test": "tests/test_exception_policy_scan_missing_reason_contract.py::test_missing_ble001_reason_scan_ratchet",
+   "generation": 2,
+   "ms": 195.2
+  },
+  {
+   "test": "tests/test_gpu_fixture_env_isolation.py::test_no_gpu_module_writes_these_variables_raw_beyond_the_phase_2_list",
+   "generation": 2,
+   "ms": 258.1
+  },
+  {
+   "test": "tests/test_hot_reload_preflight.py::test_reloading_again_and_again_keeps_one_of_everything[queued]",
+   "generation": 2,
+   "ms": 268.7
+  },
+  {
+   "test": "tests/test_import_boundaries.py::test_engine_runtime_import_boundaries",
+   "generation": 2,
+   "ms": 344.6
+  },
+  {
+   "test": "tests/test_logging_policy_contract.py::test_no_new_bare_logging_getlogger_outside_allowlist",
+   "generation": 2,
+   "ms": 294.1
+  },
+  {
+   "test": "tests/test_logging_policy_contract.py::test_no_new_module_level_warned_once_sets",
+   "generation": 2,
+   "ms": 333.9
+  },
+  {
+   "test": "tests/test_logging_policy_contract.py::test_no_new_module_level_warned_once_sets",
+   "generation": 2,
+   "ms": 298.1
+  },
+  {
+   "test": "tests/test_mini_campaign_05_integration.py::TestMiniCampaign05Integration::test_determinism_digest_and_event_sequences",
+   "generation": 2,
+   "ms": 345.4
+  },
+  {
+   "test": "tests/test_no_direct_singleton_imports_policy.py::test_no_direct_rng_singleton_imports_outside_registry",
+   "generation": 2,
+   "ms": 339.7
+  },
+  {
+   "test": "tests/test_no_direct_singleton_imports_policy.py::test_no_new_tracked_singleton_assignments_outside_allowlist",
+   "generation": 2,
+   "ms": 333.2
+  },
+  {
+   "test": "tests/test_no_legacy_event_bus_gameplay_emits_policy.py::test_no_new_legacy_event_bus_emits_in_gameplay_scopes",
+   "generation": 2,
+   "ms": 346.9
+  },
+  {
+   "test": "tests/test_no_legacy_event_bus_gameplay_emits_policy.py::test_no_new_legacy_event_bus_emits_in_gameplay_scopes",
+   "generation": 2,
+   "ms": 340.3
+  },
+  {
+   "test": "tests/test_play_from_here_contract.py::test_stop_requests_scene_restore_when_changed",
+   "generation": 2,
+   "ms": 378.1
+  },
+  {
+   "test": "tests/test_runtime_diagnose.py::test_a_touch_door_hidden_by_show_when_isnt_set_off_until_it_shows",
+   "generation": 2,
+   "ms": 416.1
+  },
+  {
+   "test": "tests/test_scan_exception_policies_contract.py::test_determinism",
+   "generation": 2,
+   "ms": 433.2
+  },
+  {
+   "test": "tests/test_state_lifecycle.py::test_rebuilding_an_objects_behaviours_replaces_its_listeners",
+   "generation": 2,
+   "ms": 444.7
+  },
+  {
+   "test": "tests/test_version_single_source_policy.py::test_semver_string_literals_are_allowlisted",
+   "generation": 2,
+   "ms": 461.7
+  },
+  {
+   "test": "tests/test_version_single_source_policy.py::test_no_new_engine_or_dunder_version_definitions",
+   "generation": 2,
+   "ms": 473.8
+  }
+ ],
+ "gen0": {
+  "n": 14860,
+  "max_ms": 5.9,
+  "p50_ms": 0.16,
+  "over_100ms": 0,
+  "over_250ms": 0,
+  "top5_ms": [
+   4.6,
+   5.0,
+   5.2,
+   5.8,
+   5.9
+  ]
+ },
+ "gen1": {
+  "n": 1351,
+  "max_ms": 6.2,
+  "p50_ms": 0.68,
+  "over_100ms": 0,
+  "over_250ms": 0,
+  "top5_ms": [
+   5.3,
+   5.5,
+   5.6,
+   6.0,
+   6.2
+  ]
+ },
+ "gen2": {
+  "n": 63,
+  "max_ms": 473.8,
+  "p50_ms": 174.35,
+  "over_100ms": 38,
+  "over_250ms": 17,
+  "top5_ms": [
+   416.1,
+   433.2,
+   444.7,
+   461.7,
+   473.8
+  ]
+ }
+}

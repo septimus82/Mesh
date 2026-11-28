@@ -22,6 +22,7 @@ from engine.save_runtime.normalize import normalize_save_payload
 from . import episode as episode_commands
 from .replay_digest_projection import (
     DIGEST_PROJECTION_POLICY,
+    scope_quest_state,
 )
 from .replay_digest_projection import (
     project_event_for_digest as _project_event_for_golden_digest,
@@ -37,11 +38,15 @@ from .replay_digest_projection import (
 )
 
 SCHEMA_VERSION = 1
-GOLDEN_SCHEMA_VERSION = 1
+GOLDEN_SCHEMA_VERSION = 2  # 2: digests scope quest state to each replay's relevant quests (R-1)
 PERF_SCHEMA_VERSION = 1
 UPDATE_GOLDEN_SCHEMA_VERSION = 2
 DEFAULT_SEED = 123
 _PREVIEW_ITEMS = 3
+# Episode cases pool tick timings over at least this many samples (T-07). Nearest-rank p95 of 40 samples is the
+# 38th smallest, so it ignores the 2 slowest ticks: an isolated stall cannot fail the budget, while a sustained
+# slowdown (more than 5% of ticks over budget) still does. Below 20 samples p95 is simply the max.
+MIN_TICK_SAMPLES = 40
 
 
 @dataclass(frozen=True, slots=True)
@@ -244,6 +249,8 @@ def _handle_replays_run(args: argparse.Namespace) -> int:
             sys.stdout.write("\n")
         elif not quiet:
             print(_format_suite_report_text(report), end="")
+        elif not ok:  # (quiet still says which cases failed and why: CI's log showed only "exit 1", #649)
+            print(_format_suite_report_text({**report, "cases": [c for c in case_reports if not c.get("ok")]}), end="")
 
         return 0 if ok else 1
     except ValueError as exc:
@@ -449,8 +456,20 @@ def _run_episode_case(*, case: ReplaySuiteCase, case_out_dir: Path, seed: int) -
             seed=seed,
             quiet=True,
             episode_json=False,
+            timing_min_samples=MIN_TICK_SAMPLES,
         )
     )
+
+
+def _scope_checkpoint_quests(checkpoints: dict[str, Any], declared: Any) -> dict[str, Any]:
+    """Digest view of campaign checkpoints: quest state limited to the replay's relevant quests (R-1)."""
+    declared_ids = tuple(str(q) for q in declared) if isinstance(declared, list) else ()
+    return {
+        label: {**cp, "quest_state": scope_quest_state(cp["quest_state"], declared_ids)}
+        if isinstance(cp.get("quest_state"), dict)
+        else cp
+        for label, cp in checkpoints.items()
+    }
 
 
 def _run_campaign_case(*, case: ReplaySuiteCase, case_out_dir: Path, seed: int) -> int:
@@ -536,7 +555,7 @@ def _run_campaign_case(*, case: ReplaySuiteCase, case_out_dir: Path, seed: int) 
             "final_state": {
                 "campaign_id": str(script_payload.get("campaign_id", "")),
                 "final_flags": dict(trace_1.get("final_flags", {})) if isinstance(trace_1.get("final_flags"), dict) else {},
-                "checkpoints": run_1.checkpoints,
+                "checkpoints": _scope_checkpoint_quests(run_1.checkpoints, script_payload.get("quests", [])),
                 "milestones": run_1.milestone_log,
             },
             "snapshots": list(run_1.milestone_log),
@@ -1013,7 +1032,7 @@ def _extract_performance_metrics(timing_payload: dict[str, Any]) -> dict[str, An
     if tick_ms_count <= 0:
         tick_ms_count = len(tick_ms_list)
 
-    return {
+    metrics: dict[str, Any] = {
         "total_ms": total_ms,
         "tick_ms_count": tick_ms_count,
         "tick_ms_list": tick_ms_list,
@@ -1021,6 +1040,27 @@ def _extract_performance_metrics(timing_payload: dict[str, Any]) -> dict[str, An
         "tick_ms_p95": tick_ms_p95,
         "tick_ms_max": tick_ms_max,
     }
+    pooled = timing_payload.get("pooled")
+    if isinstance(pooled, dict):
+        metrics["pooled"] = pooled
+    return metrics
+
+
+def _ticks_over_threshold(performance: Any, threshold: float) -> list[dict[str, Any]]:
+    """#612 (report-only): which execution (1 = canonical, whose max is the judged ``tick_ms_max``) and tick went over.
+
+    Drawn from each execution's 3 slowest ticks, so it lists at most 3 per execution.
+    """
+    pooled = performance.get("pooled") if isinstance(performance, dict) else None
+    slowest = pooled.get("slowest_ticks_per_execution") if isinstance(pooled, dict) else None
+    if not isinstance(slowest, list):
+        return []
+    return [
+        {"execution": execution, **tick}
+        for execution, ticks in enumerate(slowest, start=1)
+        for tick in (ticks if isinstance(ticks, list) else [])
+        if isinstance(tick, dict) and float(tick.get("ms", 0.0)) > threshold
+    ]
 
 
 def _evaluate_case_budget(
@@ -1082,14 +1122,15 @@ def _evaluate_case_budget(
             )
             continue
         if observed_value > limit_value:
-            violations.append(
-                {
-                    "metric": metric_name,
-                    "threshold": limit_value,
-                    "observed": observed_value,
-                    "reason": f"{metric_name} exceeds {limit_name}",
-                }
-            )
+            violation: dict[str, Any] = {
+                "metric": metric_name,
+                "threshold": limit_value,
+                "observed": observed_value,
+                "reason": f"{metric_name} exceeds {limit_name}",
+            }
+            if metric_name.startswith("tick_ms_"):
+                violation["ticks_over_threshold"] = _ticks_over_threshold(performance, limit_value)
+            violations.append(violation)
 
     return {
         "ok": not violations,
@@ -1457,6 +1498,12 @@ def _format_suite_report_text(report: dict[str, Any]) -> str:
                         f"  * budget {violation.get('metric')}: "
                         f"threshold={violation.get('threshold')} observed={violation.get('observed')}"
                     )
+                    for tick in violation.get("ticks_over_threshold") or []:
+                        lines.append(
+                            f"    - execution {tick.get('execution')} tick {tick.get('tick')}: {tick.get('ms')} ms "
+                            f"at +{tick.get('start_ms')} ms (cpu {tick.get('cpu_ms')} ms, gc {tick.get('gc_ms')} ms, "
+                            f"imports {tick.get('modules_imported')}, phases {tick.get('phases_ms')})"
+                        )
     lines.append("")
     return "\n".join(lines) + "\n"
 

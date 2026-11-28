@@ -26,7 +26,7 @@ def test_scene_save_as_atomic_write_and_validation_blocks_write(tmp_path) -> Non
     result_ok = GameWindow.save_scene_as(valid_window, str(out_ok))
     assert bool(getattr(result_ok, "ok", False)) is True
     assert out_ok.exists()
-    assert not (tmp_path / "out_ok.json.tmp").exists()
+    assert not list(tmp_path.glob("*.tmp")) + list(tmp_path.glob(".*.tmp"))
 
     # Invalid payload blocks write.
     invalid_window = type(

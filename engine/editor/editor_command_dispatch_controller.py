@@ -623,7 +623,7 @@ class EditorCommandDispatchController:
             return
         if bool(state.get("present")):
             try:
-                alpha = float(state.get("value"))
+                alpha = float(state.get("value", "missing"))  # missing: as invalid as a non-number
             except (TypeError, ValueError):
                 return
             data["alpha"] = alpha

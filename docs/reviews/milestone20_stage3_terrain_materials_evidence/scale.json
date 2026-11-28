@@ -1,0 +1,314 @@
+{
+  "32x24_unpainted": {
+    "stored_chars": 84962,
+    "materials_chars": 0,
+    "materials_chunks": 0,
+    "heights_chars": 10260,
+    "game_room_load_ms": 341.8,
+    "frame_ms_playing": {
+      "median": 5.59,
+      "p95": 5.94,
+      "max": 8.96,
+      "n": 60
+    },
+    "frame_gpu_ms": 0.516,
+    "draw_calls": 34,
+    "terrain_draws": 18,
+    "terrain_mesh_gpu_bytes": 1060032,
+    "paint_texture_bytes": 0,
+    "material_tiles_bytes": 32768,
+    "particles": 4000,
+    "shadows": true,
+    "studio_room_reload_ms": 348.4,
+    "studio_paint_frame_ms": {
+      "median": 15.91,
+      "p95": 19.14,
+      "max": 56.5,
+      "n": 126
+    },
+    "studio_paint_upload_ms": {
+      "median": 0.06,
+      "p95": 0.1,
+      "max": 0.27,
+      "n": 127
+    },
+    "studio_commit_ms": 7.2,
+    "studio_release_to_next_frame_ms": 117.8,
+    "studio_idle_frame_ms": {
+      "median": 15.33,
+      "p95": 20.99,
+      "max": 51.49,
+      "n": 20
+    },
+    "studio_wide_brush_held_frame_ms": {
+      "median": 21.23,
+      "p95": 26.68,
+      "max": 61.15,
+      "n": 151
+    },
+    "studio_wide_brush_release_to_next_frame_ms": 99.8,
+    "studio_mismatch_reloads": 0,
+    "studio_undo_ms": 535.5,
+    "save_ms": 168.0
+  },
+  "32x24_painted": {
+    "stored_chars": 107255,
+    "materials_chars": 21888,
+    "materials_chunks": 16,
+    "heights_chars": 10260,
+    "game_room_load_ms": 320.9,
+    "frame_ms_playing": {
+      "median": 7.16,
+      "p95": 10.57,
+      "max": 28.88,
+      "n": 60
+    },
+    "frame_gpu_ms": 1.372,
+    "draw_calls": 34,
+    "terrain_draws": 18,
+    "terrain_mesh_gpu_bytes": 1060032,
+    "paint_texture_bytes": 12740,
+    "material_tiles_bytes": 32768,
+    "particles": 4000,
+    "shadows": true,
+    "studio_room_reload_ms": 226.6,
+    "studio_paint_frame_ms": {
+      "median": 16.18,
+      "p95": 20.57,
+      "max": 52.28,
+      "n": 126
+    },
+    "studio_paint_upload_ms": {
+      "median": 0.06,
+      "p95": 0.1,
+      "max": 0.13,
+      "n": 127
+    },
+    "studio_commit_ms": 7.6,
+    "studio_release_to_next_frame_ms": 105.4,
+    "studio_idle_frame_ms": {
+      "median": 15.75,
+      "p95": 20.16,
+      "max": 50.35,
+      "n": 20
+    },
+    "studio_wide_brush_held_frame_ms": {
+      "median": 20.49,
+      "p95": 25.76,
+      "max": 61.83,
+      "n": 155
+    },
+    "studio_wide_brush_release_to_next_frame_ms": 98.1,
+    "studio_mismatch_reloads": 0,
+    "studio_undo_ms": 504.3,
+    "save_ms": 166.4
+  },
+  "64x64_unpainted": {
+    "stored_chars": 125264,
+    "materials_chars": 0,
+    "materials_chunks": 0,
+    "heights_chars": 49248,
+    "game_room_load_ms": 441.1,
+    "frame_ms_playing": {
+      "median": 4.75,
+      "p95": 8.44,
+      "max": 20.37,
+      "n": 60
+    },
+    "frame_gpu_ms": 0.948,
+    "draw_calls": 41,
+    "terrain_draws": 96,
+    "terrain_mesh_gpu_bytes": 5042688,
+    "paint_texture_bytes": 0,
+    "material_tiles_bytes": 32768,
+    "particles": 4000,
+    "shadows": true,
+    "studio_room_reload_ms": 340.5,
+    "studio_paint_frame_ms": {
+      "median": 10.74,
+      "p95": 11.58,
+      "max": 28.72,
+      "n": 126
+    },
+    "studio_paint_upload_ms": {
+      "median": 0.03,
+      "p95": 0.08,
+      "max": 0.18,
+      "n": 127
+    },
+    "studio_commit_ms": 10.1,
+    "studio_release_to_next_frame_ms": 70.8,
+    "studio_idle_frame_ms": {
+      "median": 10.32,
+      "p95": 12.27,
+      "max": 26.88,
+      "n": 20
+    },
+    "studio_wide_brush_held_frame_ms": {
+      "median": 12.31,
+      "p95": 21.62,
+      "max": 37.13,
+      "n": 200
+    },
+    "studio_wide_brush_release_to_next_frame_ms": 75.5,
+    "studio_mismatch_reloads": 0,
+    "studio_undo_ms": 833.0,
+    "save_ms": 141.2
+  },
+  "64x64_painted": {
+    "stored_chars": 232408,
+    "materials_chars": 105336,
+    "materials_chunks": 77,
+    "heights_chars": 49248,
+    "game_room_load_ms": 461.1,
+    "frame_ms_playing": {
+      "median": 3.94,
+      "p95": 6.97,
+      "max": 13.07,
+      "n": 60
+    },
+    "frame_gpu_ms": 0.723,
+    "draw_calls": 41,
+    "terrain_draws": 96,
+    "terrain_mesh_gpu_bytes": 5042688,
+    "paint_texture_bytes": 66564,
+    "material_tiles_bytes": 32768,
+    "particles": 4000,
+    "shadows": true,
+    "studio_room_reload_ms": 344.9,
+    "studio_paint_frame_ms": {
+      "median": 13.53,
+      "p95": 19.62,
+      "max": 30.03,
+      "n": 126
+    },
+    "studio_paint_upload_ms": {
+      "median": 0.03,
+      "p95": 0.08,
+      "max": 0.12,
+      "n": 127
+    },
+    "studio_commit_ms": 12.7,
+    "studio_release_to_next_frame_ms": 80.1,
+    "studio_idle_frame_ms": {
+      "median": 12.32,
+      "p95": 21.21,
+      "max": 28.57,
+      "n": 20
+    },
+    "studio_wide_brush_held_frame_ms": {
+      "median": 15.74,
+      "p95": 22.41,
+      "max": 43.81,
+      "n": 177
+    },
+    "studio_wide_brush_release_to_next_frame_ms": 83.9,
+    "studio_mismatch_reloads": 0,
+    "studio_undo_ms": 693.0,
+    "save_ms": 132.4
+  },
+  "128x128_unpainted": {
+    "stored_chars": 264043,
+    "materials_chars": 0,
+    "materials_chunks": 0,
+    "heights_chars": 183312,
+    "game_room_load_ms": 890.2,
+    "frame_ms_playing": {
+      "median": 5.12,
+      "p95": 8.09,
+      "max": 21.57,
+      "n": 60
+    },
+    "frame_gpu_ms": 0.856,
+    "draw_calls": 67,
+    "terrain_draws": 357,
+    "terrain_mesh_gpu_bytes": 19321152,
+    "paint_texture_bytes": 0,
+    "material_tiles_bytes": 32768,
+    "particles": 4000,
+    "shadows": true,
+    "studio_room_reload_ms": 824.3,
+    "studio_paint_frame_ms": {
+      "median": 16.5,
+      "p95": 20.89,
+      "max": 33.77,
+      "n": 126
+    },
+    "studio_paint_upload_ms": {
+      "median": 0.03,
+      "p95": 0.08,
+      "max": 0.3,
+      "n": 127
+    },
+    "studio_commit_ms": 21.3,
+    "studio_release_to_next_frame_ms": 87.4,
+    "studio_idle_frame_ms": {
+      "median": 16.32,
+      "p95": 24.0,
+      "max": 29.51,
+      "n": 20
+    },
+    "studio_wide_brush_held_frame_ms": {
+      "median": 22.83,
+      "p95": 29.07,
+      "max": 40.65,
+      "n": 142
+    },
+    "studio_wide_brush_release_to_next_frame_ms": 83.9,
+    "studio_mismatch_reloads": 0,
+    "studio_undo_ms": 1203.8,
+    "save_ms": 135.2
+  },
+  "128x128_painted": {
+    "stored_chars": 657962,
+    "materials_chars": 387144,
+    "materials_chunks": 283,
+    "heights_chars": 183312,
+    "game_room_load_ms": 957.2,
+    "frame_ms_playing": {
+      "median": 3.79,
+      "p95": 4.23,
+      "max": 4.75,
+      "n": 60
+    },
+    "frame_gpu_ms": 0.199,
+    "draw_calls": 67,
+    "terrain_draws": 357,
+    "terrain_mesh_gpu_bytes": 19321152,
+    "paint_texture_bytes": 264196,
+    "material_tiles_bytes": 32768,
+    "particles": 4000,
+    "shadows": true,
+    "studio_room_reload_ms": 831.8,
+    "studio_paint_frame_ms": {
+      "median": 16.52,
+      "p95": 21.54,
+      "max": 34.67,
+      "n": 126
+    },
+    "studio_paint_upload_ms": {
+      "median": 0.03,
+      "p95": 0.07,
+      "max": 0.09,
+      "n": 127
+    },
+    "studio_commit_ms": 30.3,
+    "studio_release_to_next_frame_ms": 101.4,
+    "studio_idle_frame_ms": {
+      "median": 16.09,
+      "p95": 22.26,
+      "max": 29.32,
+      "n": 20
+    },
+    "studio_wide_brush_held_frame_ms": {
+      "median": 22.95,
+      "p95": 30.23,
+      "max": 40.46,
+      "n": 139
+    },
+    "studio_wide_brush_release_to_next_frame_ms": 92.4,
+    "studio_mismatch_reloads": 0,
+    "studio_undo_ms": 1268.1,
+    "save_ms": 135.0
+  }
+}

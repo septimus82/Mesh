@@ -1,0 +1,15 @@
+M1 backup verification skipped: CAUGHT by ['FAILED tests/test_b01_save_recovery.py::test_T31_a_backup_that_does_not_verify_refuses_the_save']; restored byte-identical: True
+M2 unresolved records not carried into saves: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T16_dup_authored_ids_count_mismatch_refused']; restored byte-identical: True
+M3 position binding without the uniqueness proof: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T11_idless_same_name_same_xy_not_applied_and_reported']; restored byte-identical: True
+M4 id-less sprites dropped from saves: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T9_idless_unique_name_roundtrip']; restored byte-identical: True
+M5 a load rewrites the v2 slot: CAUGHT by ['FAILED tests/test_b01_save_recovery.py::test_T20_loading_a_v2_save_never_rewrites_it']; restored byte-identical: True
+M6b existing backups are not looked at: CAUGHT by ['FAILED tests/test_b01_save_recovery.py::test_T32_an_existing_different_backup_is_never_replaced']; restored byte-identical: True
+M7 a failed backup no longer refuses the save: CAUGHT by ['FAILED tests/test_b01_save_recovery.py::test_T23_a_backup_that_cannot_be_written_refuses_the_save']; restored byte-identical: True
+M8 wrong-room guard off: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T19_wrong_room_guard']; restored byte-identical: True
+M9 duplicate-id count mismatch applied anyway: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T16_dup_authored_ids_count_mismatch_refused']; restored byte-identical: True
+M10 a legacy record binds by name alone when several share it: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T10_idless_same_name_distinct_xy_both_restored']; restored byte-identical: True
+M11 id-less records may land on id sprites: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T12_idless_record_never_lands_on_an_id_sprite']; restored byte-identical: True
+M13 records whose entity is absent are dropped again: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T13_an_expired_projectile_is_missing_and_carried_never_applied_elsewhere']; restored byte-identical: True
+M14 twins of one id paired by order again: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_twins_at_identical_places_are_never_told_apart_by_order[False]']; restored byte-identical: True
+M12 retried records may overwrite resolved sprites: CAUGHT by ['FAILED tests/test_b01_save_identity.py::test_T35_unresolved_never_overwrite_resolved_state']; restored byte-identical: True
+ALL CAUGHT AND RESTORED

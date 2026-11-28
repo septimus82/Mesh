@@ -1,0 +1,133 @@
+{
+  "caught": 8,
+  "of": 8,
+  "mutations": [
+    {
+      "mutation": "the conflict check disabled (every file taken as unchanged)",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "9 failed, 14 passed in 117.90s (0:01:57)"
+      ],
+      "failed": [
+        "tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[deleted]",
+        "tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[edited]",
+        "tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[replaced]",
+        "tests/test_stale_plan_undo.py::test_a_file_the_plan_left_absent_that_exists_now_refuses_the_undo",
+        "tests/test_stale_plan_undo.py::test_a_later_human_edit_refuses_the_undo_and_both_npcs_stay",
+        "tests/test_stale_plan_undo.py::test_a_modified_file_edited_by_hand_refuses_the_undo",
+        "tests/test_stale_plan_undo.py::test_a_plan_that_stopped_is_undone_only_while_what_it_left_is_unchanged",
+        "tests/test_stale_plan_undo.py::test_an_undo_already_done_or_followed_by_an_edit_never_runs_again",
+        "tests/test_stale_plan_undo.py::test_one_changed_file_in_a_multi_file_plan_refuses_every_file"
+      ]
+    },
+    {
+      "mutation": "only existence compared, not the bytes' hash",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "6 failed, 17 passed in 119.80s (0:01:59)"
+      ],
+      "failed": [
+        "tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[edited]",
+        "tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[replaced]",
+        "tests/test_stale_plan_undo.py::test_a_later_human_edit_refuses_the_undo_and_both_npcs_stay",
+        "tests/test_stale_plan_undo.py::test_a_modified_file_edited_by_hand_refuses_the_undo",
+        "tests/test_stale_plan_undo.py::test_a_plan_that_stopped_is_undone_only_while_what_it_left_is_unchanged",
+        "tests/test_stale_plan_undo.py::test_one_changed_file_in_a_multi_file_plan_refuses_every_file"
+      ]
+    },
+    {
+      "mutation": "the expected state taken from the file at undo time",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "9 failed, 14 passed in 117.72s (0:01:57)"
+      ],
+      "failed": [
+        "tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[deleted]",
+        "tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[edited]",
+        "tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[replaced]",
+        "tests/test_stale_plan_undo.py::test_a_file_the_plan_left_absent_that_exists_now_refuses_the_undo",
+        "tests/test_stale_plan_undo.py::test_a_later_human_edit_refuses_the_undo_and_both_npcs_stay",
+        "tests/test_stale_plan_undo.py::test_a_modified_file_edited_by_hand_refuses_the_undo",
+        "tests/test_stale_plan_undo.py::test_a_plan_that_stopped_is_undone_only_while_what_it_left_is_unchanged",
+        "tests/test_stale_plan_undo.py::test_an_undo_already_done_or_followed_by_an_edit_never_runs_again",
+        "tests/test_stale_plan_undo.py::test_one_changed_file_in_a_multi_file_plan_refuses_every_file"
+      ]
+    },
+    {
+      "mutation": "legacy backups no longer refused as such",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 22 passed in 122.18s (0:02:02)"
+      ],
+      "failed": [
+        "tests/test_stale_plan_undo.py::test_a_backup_from_before_the_record_is_never_restored"
+      ]
+    },
+    {
+      "mutation": "records not validated (malformed or incomplete accepted)",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "5 failed, 18 passed in 122.72s (0:02:02)"
+      ],
+      "failed": [
+        "tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[after_not_an_object]",
+        "tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[an_entry_missing]",
+        "tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[no_after]",
+        "tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[no_completed]",
+        "tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[unknown_version]"
+      ]
+    },
+    {
+      "mutation": "the plan records no final state",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "15 failed, 8 passed in 98.16s (0:01:38)"
+      ],
+      "failed": [
+        "tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[deleted]",
+        "tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[edited]",
+        "tests/test_stale_plan_undo.py::test_a_created_file_changed_since_refuses_the_undo[replaced]",
+        "tests/test_stale_plan_undo.py::test_a_later_human_edit_refuses_the_undo_and_both_npcs_stay",
+        "tests/test_stale_plan_undo.py::test_a_modified_file_edited_by_hand_refuses_the_undo",
+        "tests/test_stale_plan_undo.py::test_a_plan_that_stopped_is_undone_only_while_what_it_left_is_unchanged",
+        "tests/test_stale_plan_undo.py::test_an_unchanged_multi_file_plan_restores_every_file",
+        "tests/test_stale_plan_undo.py::test_an_undo_already_done_or_followed_by_an_edit_never_runs_again",
+        "tests/test_stale_plan_undo.py::test_an_undo_right_after_the_plan_restores_it",
+        "tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[an_entry_missing]",
+        "tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[bad_sha256]",
+        "tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[exists_not_a_bool]",
+        "tests/test_stale_plan_undo.py::test_missing_malformed_or_incomplete_records_refuse_the_undo[extra_key]",
+        "tests/test_stale_plan_undo.py::test_one_changed_file_in_a_multi_file_plan_refuses_every_file",
+        "tests/test_stale_plan_undo.py::test_two_actions_changing_one_file_restore_it_to_before_the_plan"
+      ]
+    },
+    {
+      "mutation": "a file touched twice backed up twice (its in-plan state as 'before')",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 22 passed in 119.65s (0:01:59)"
+      ],
+      "failed": [
+        "tests/test_stale_plan_undo.py::test_an_unchanged_multi_file_plan_restores_every_file"
+      ]
+    },
+    {
+      "mutation": "a plan that stopped recorded as completed",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 22 passed in 117.70s (0:01:57)"
+      ],
+      "failed": [
+        "tests/test_stale_plan_undo.py::test_a_plan_that_stopped_is_undone_only_while_what_it_left_is_unchanged"
+      ]
+    }
+  ]
+}

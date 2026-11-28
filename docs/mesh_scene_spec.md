@@ -49,7 +49,7 @@ Any additional top-level keys are ignored but reported as warnings by the valida
 
 | Field | Type | Default | Notes |
 | ----- | ---- | ------- | ----- |
-| `background_color` | string | `dark_blue_gray` | Must match a name from `arcade.color`. |
+| `background_color` | string | `black` | Must match a name from `arcade.color`. Shown around a room smaller than the window. |
 | `world_width` | number | unset | Optional virtual bounds for the world. When omitted and a tilemap is present, the loader derives it from `tilemap.width * tilemap.tilewidth`. |
 | `world_height` | number | unset | Optional virtual bounds for the world. When omitted and a tilemap is present, the loader derives it from `tilemap.height * tilemap.tileheight`. |
 | `render_sort_mode` | string | `"y_sort"` | Controls entity draw ordering: `"y_sort"` (default) or `"explicit_z"`. See _HD-2D Render Sorting_ below. |
@@ -89,7 +89,7 @@ Candidate-level `variant_id` entries inside the encounter set take precedence ov
 | ----- | ---- | ------- | ----- |
 | `lerp_factor` | number | 5.0 | Base smoothing speed when following targets. |
 | `padding` | number | 0.0 | Extra inset applied before clamping to bounds. |
-| `bounds.left/right/top/bottom` | numbers | unset | Explicit world-space rectangle that constrains the camera center. |
+| `bounds.left/right/top/bottom` | numbers | unset | The room's world-space rectangle: the camera keeps its visible area inside it, and in a 2D room every mover (the player, enemies, patrols, followers, cutscene moves) stops flush at its edges as at walls. Unset: the tilemap's size, else `settings.world_width`/`world_height`; a room with none of these has no edge. (HD-2D rooms are bounded by their floors.) |
 | `zoom.initial` | number | 1.0 | Starting zoom value when the scene loads. |
 | `zoom.target` | number | matches `initial` | Default zoom target before behaviours override it. |
 | `zoom.speed` | number | 5.0 | How quickly zoom eases toward the target. |

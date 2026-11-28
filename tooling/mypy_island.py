@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
@@ -56,8 +57,7 @@ ISLAND_ANIMATION: list[str] = [
 ]
 
 # Sprite animator (runtime, well-typed)
-ISLAND_SPRITE = [
-    "engine/sprite_animator.py",
+ISLAND_SPRITE: list[str] = [
 ]
 
 # Pathfinding models
@@ -124,40 +124,32 @@ def _filter_island_errors(errors: list[str]) -> list[str]:
 
 
 def _run_mypy_on_island(repo_root: Path) -> tuple[int, list[str]]:
-    """Run mypy on island modules with strict settings."""
-    # Filter to only existing files
-    existing_modules = [
-        m for m in TYPED_ISLAND_MODULES
-        if (repo_root / m).exists()
-    ]
-
-    if not existing_modules:
-        return 0, []
+    """Run mypy on island modules with strict settings: (0, []) clean, (1, errors) type errors, (2, output) mypy
+    didn't check them (#624: a missing mypy or a fatal exit used to read as "clean")."""
+    missing = [m for m in TYPED_ISLAND_MODULES if not (repo_root / m).exists()]
+    if missing:  # a moved or deleted module would silently leave the island
+        return 2, [f"island module not found: {m}" for m in missing]
 
     cmd = [
         sys.executable, "-m", "mypy",
         "--ignore-missing-imports",
         "--follow-imports=skip",  # Only check island modules, not their dependencies
         "--no-error-summary",
+        "--no-color-output",  # FORCE_COLOR would hide " error: " in escape codes
         "--show-error-codes",
         "--warn-return-any",
         "--warn-unused-ignores",
         "--no-implicit-optional",
-        *existing_modules,
+        *TYPED_ISLAND_MODULES,
     ]
 
     result = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True)
     output = (result.stdout or "") + (result.stderr or "")
-
-    errors = []
-    for line in output.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        if " error: " in line:
-            errors.append(line)
-
-    return result.returncode, errors
+    errors = [line.strip() for line in output.splitlines() if " error: " in line]
+    # mypy: 0 clean, 1 type errors (listed), anything else (2 fatal, a crash) checked nothing
+    if result.returncode == 0 or (result.returncode == 1 and errors):
+        return result.returncode, errors
+    return 2, [line for line in output.splitlines() if line.strip()]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -192,7 +184,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     print("[mypy-island] checking typed island modules...")
+    if importlib.util.find_spec("mypy") is None:  # the interpreter that runs `-m mypy` (#624)
+        print(f"[mypy-island] mypy is not available: no mypy module for {sys.executable}; "
+              'install the dev tools (pip install -e ".[dev]")', file=sys.stderr)
+        return 2
     code, errors = _run_mypy_on_island(repo_root)
+    if code == 2:
+        print("[mypy-island] mypy did not check the island:", file=sys.stderr)
+        print("\n".join(errors), file=sys.stderr)
+        return 2
 
     # Filter allowed errors
     filtered_errors = _filter_island_errors(errors)

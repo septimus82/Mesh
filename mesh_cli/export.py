@@ -138,7 +138,7 @@ def handle(args: argparse.Namespace) -> int:
 
 def _handle_export_build(args: argparse.Namespace) -> int:
     """Handle export build command."""
-    from tooling.export_bundle import build_bundle
+    from engine.tooling.export_bundle import build_bundle
 
     repo_root = Path(str(getattr(args, "repo_root", ".") or ".")).resolve()
     out_raw = str(getattr(args, "out", "") or "dist/bundle")
@@ -169,7 +169,7 @@ def _handle_export_build(args: argparse.Namespace) -> int:
 
 def _handle_export_plan(args: argparse.Namespace) -> int:
     """Handle export plan command."""
-    from tooling.export_bundle import compute_export_plan
+    from engine.tooling.export_bundle import compute_export_plan, is_mesh_root
 
     repo_root = Path(str(getattr(args, "repo_root", ".") or ".")).resolve()
     include_unused = bool(getattr(args, "include_unused", False))
@@ -198,7 +198,7 @@ def _handle_export_plan(args: argparse.Namespace) -> int:
         print("\nJSON output:")
         print(json.dumps(plan.to_dict(), indent=2, sort_keys=True))
 
-    if out_path_raw:
+    if out_path_raw and is_mesh_root(repo_root):  # (#737: a refused folder gets no report file either)
         out_path = Path(out_path_raw)
         if not out_path.is_absolute():
             out_path = repo_root / out_path
@@ -210,7 +210,7 @@ def _handle_export_plan(args: argparse.Namespace) -> int:
 
 def _handle_export_diff(args: argparse.Namespace) -> int:
     """Handle export diff command."""
-    from tooling.export_bundle import diff_bundles
+    from engine.tooling.export_bundle import diff_bundles
 
     bundle_a = Path(str(getattr(args, "bundle_a", ""))).resolve()
     bundle_b = Path(str(getattr(args, "bundle_b", ""))).resolve()

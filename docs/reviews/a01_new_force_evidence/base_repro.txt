@@ -1,0 +1,24 @@
+== new_sibling: name='../../victim' exit=0
+  victim/MARKER.txt exists: False | sandbox/KEEP.txt exists: True
+  stderr: <home>\AppData\Local\Temp\claude\c18a071c64bbe7a7\bff3a484-a7b8-4c6b-bf14-a015c42db67e\scratchpad\A-01\repro\new_sibling\outer\victim
+INFO:engine.project_scaffold:Project created successfully.
+== new_absolute: name='C:\\Users\\<home>\\AppData\\Local\\Temp\\claude\\c18a071c64bbe7a7\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\A-01\\repro\\new_absolute\\outer\\victim' exit=0
+  victim/MARKER.txt exists: False | sandbox/KEEP.txt exists: True
+  stderr: :\Users\<home>\AppData\Local\Temp\claude\c18a071c64bbe7a7\bff3a484-a7b8-4c6b-bf14-a015c42db67e\scratchpad\A-01\repro\new_absolute\outer\victim
+INFO:engine.project_scaffold:Project created successfully.
+== new_parent: name='..' exit=0
+  victim/MARKER.txt exists: True | sandbox/KEEP.txt exists: False
+  stderr: <home>\AppData\Local\Temp\claude\c18a071c64bbe7a7\bff3a484-a7b8-4c6b-bf14-a015c42db67e\scratchpad\A-01\repro\new_parent\outer\sandbox
+INFO:engine.project_scaffold:Project created successfully.
+== new_project_sibling: name='../../victim' exit=0
+  victim/MARKER.txt exists: False | sandbox/KEEP.txt exists: True
+  stderr: \<home>\AppData\Local\Temp\claude\c18a071c64bbe7a7\bff3a484-a7b8-4c6b-bf14-a015c42db67e\scratchpad\A-01\repro\new_project_sibling\outer\victim
+INFO:engine.project_scaffold:Project created successfully.
+== new_project_absolute: name='C:\\Users\\<home>\\AppData\\Local\\Temp\\claude\\c18a071c64bbe7a7\\bff3a484-a7b8-4c6b-bf14-a015c42db67e\\scratchpad\\A-01\\repro\\new_project_absolute\\outer\\victim' exit=0
+  victim/MARKER.txt exists: False | sandbox/KEEP.txt exists: True
+  stderr: <home>\AppData\Local\Temp\claude\c18a071c64bbe7a7\bff3a484-a7b8-4c6b-bf14-a015c42db67e\scratchpad\A-01\repro\new_project_absolute\outer\victim
+INFO:engine.project_scaffold:Project created successfully.
+== new_project_parent: name='..' exit=0
+  victim/MARKER.txt exists: True | sandbox/KEEP.txt exists: False
+  stderr: \<home>\AppData\Local\Temp\claude\c18a071c64bbe7a7\bff3a484-a7b8-4c6b-bf14-a015c42db67e\scratchpad\A-01\repro\new_project_parent\outer\sandbox
+INFO:engine.project_scaffold:Project created successfully.

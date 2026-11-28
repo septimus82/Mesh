@@ -1,0 +1,86 @@
+{
+  "head": "05202d337590dbd22b1b7f2ccbfafec2667f4c58",
+  "studio_open_unsaved_play_mode": {
+    "mode_after_F4": "play",
+    "console_open_in_play": true,
+    "console_said": [
+      "DEBUG: Enter pressed (key=65293). Command: 'ai_job <tmp>\\studio\\job.json'",
+      "ai_job <tmp>\\studio\\job.json",
+      "[AI] ai_job: nothing was changed. Mesh Studio has this project open in this window, and ai_job would write its files behind your unsaved work. Ask an AI through Mesh Studio's AI panel (its changes come to you to accept), or close it and run the job in the game."
+    ],
+    "files_after_ai_job": {
+      "changed": [],
+      "created": [],
+      "deleted": []
+    },
+    "room_on_disk": {
+      "names": [
+        "None"
+      ],
+      "lights": 0
+    },
+    "quests_on_disk": "{\"quests\": []}\n",
+    "play_scene_lights_after": null,
+    "play_scene_entities": [
+      "Player",
+      "Unsaved Warden"
+    ],
+    "studio_after_stop": {
+      "mode": "edit",
+      "unsaved": true,
+      "names": [
+        "Player",
+        "Unsaved Warden"
+      ],
+      "lights": 0
+    },
+    "after_studio_save": {
+      "unsaved": false,
+      "room_on_disk": {
+        "names": [
+          "None",
+          "Unsaved Warden"
+        ],
+        "lights": 0
+      },
+      "files": {
+        "changed": [
+          "packs/core_regions/scenes/start.json"
+        ],
+        "created": [],
+        "deleted": []
+      },
+      "outside_change_backups": []
+    }
+  },
+  "studio_closed_game_window": {
+    "console_open": true,
+    "console_said": [
+      "DEBUG: Enter pressed (key=65293). Command: 'ai_job <tmp>\\game\\job.json'",
+      "ai_job <tmp>\\game\\job.json",
+      "[AI] Applied 2 operation(s) from <tmp>\\game\\job.json | scenes: packs/core_regions/scenes/start.json",
+      "[HotReload] Reloading scene: packs/core_regions/scenes/start.json",
+      "[HotReload] Clearing 1 entities...",
+      "[HotReload] Rebuilding layers...",
+      "[HotReload] Instantiating behaviours:",
+      "[HotReload]   - PlayerController(speed=150.0) \u2714",
+      "[HotReload]   - CameraFollowBehaviour(deadzone_h=0.0, deadzone_px=0.0, deadzone_w=0.0, follow_strength=5.0, lerp_factor=5.0, max_speed=0.0, max_zoom=3.0, min_zoom=0.25, offset_x=0.0, offset_y=0.0, padding=12, zoom=1.0, zoom_speed=5.0) \u2714",
+      "[HotReload]   - SpriteAnimatorBehaviour(animation_frame_rate=8.0, animation_state='idle_down', animations={'idle_down': {'fps': 2.0, 'frame_height': 48, 'frame_width': 32, 'frames': 1, 'sheet': 'assets/sprites/starter_hero.png', 'start': 0}, 'idle_left': {'fps': 2.0, 'frame_height': 48, 'frame_width': 32, 'frames': 1, 'sheet': 'assets/sprites/starter_hero.png', 'start': 4}, 'idle_right': {'fps': 2.0, 'frame_height': 48, 'frame_width': 32, 'frames': 1, 'sheet': 'assets/sprites/starter_hero.png', 'start': 8}, 'idle_up': {'fps': 2.0, 'frame_height': 48, 'frame_width': 32, 'frames': 1, 'sheet': 'assets/sprites/starter_hero.png', 'start': 12}, 'walk_down': {'fps': 8.0, 'frame_height': 48, 'frame_width': 32, 'frames': 4, 'sheet': 'assets/sprites/starter_hero.png', 'start': 0}, 'walk_left': {'fps': 8.0, 'frame_height': 48, 'frame_width': 32, 'frames': 4, 'sheet': 'assets/sprites/starter_hero.png', 'start': 4}, 'walk_right': {'fps': 8.0, 'frame_height': 48, 'frame_width': 32, 'frames': 4, 'sheet': 'assets/sprites/starter_hero.png', 'start': 8}, 'walk_up': {'fps': 8.0, 'frame_height': 48, 'frame_width': 32, 'frames': 4, 'sheet': 'assets/sprites/starter_hero.png', 'start': 12}}, directional_mode='4-way', enable_auto_state=True, facing_default='down', idle_clip='idle_down', override_duration=0.2, speed_threshold=5.0, walk_clip='walk_down') \u2714",
+      "[HotReload] Scene reload complete."
+    ],
+    "files_after_ai_job": {
+      "changed": [
+        "assets/data/quests.json",
+        "packs/core_regions/scenes/start.json"
+      ],
+      "created": [],
+      "deleted": []
+    },
+    "room_on_disk": {
+      "names": [
+        "None"
+      ],
+      "lights": 1
+    }
+  }
+}

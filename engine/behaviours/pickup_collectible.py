@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 if TYPE_CHECKING:
     from arcade import Sprite
@@ -10,9 +10,12 @@ if TYPE_CHECKING:
 from ..constants import EVENT_COLLECTED
 from ..events import MeshEvent
 from ..inventory import get_or_create_inventory, load_item_database
+from ..logging_tools import get_logger
 from .base import Behaviour, ParamDef
 from .inventory_holder import InventoryHolder
 from .registry import register_behaviour
+
+_LOG = get_logger("engine.behaviours.pickup_collectible")
 
 
 @register_behaviour(
@@ -76,6 +79,7 @@ class PickupCollectible(Behaviour):
         self.item_id = str(raw_item_id).strip() if raw_item_id not in (None, "") else None
         self.item_amount = self._coerce_amount(self.config.get("item_amount", 1))
         self._already_collected: bool = False
+        self.on_taken: Callable[[], None] | None = None  # called once it is taken (a drop left on the ground: DropTable)
 
     def on_interact(self, window, actor: Sprite) -> None:
         if self.once and self._already_collected:
@@ -84,6 +88,23 @@ class PickupCollectible(Behaviour):
         if self.allowed_tag:
             actor_tag = getattr(actor, "mesh_tag", None)
             if actor_tag != self.allowed_tag:
+                return
+
+        # A pickup the inventory can't take all of (full stack, owned non-stackable, unknown id), its own item or what
+        # it carries (InventoryHolder), stays in the world, and says why: never taken for nothing (#652/#627, D7).
+        wanted: dict[str, int] = {self.item_id: self.item_amount} if self.item_id and self.item_amount > 0 else {}
+        holder = self._find_inventory_holder()
+        for item_id, amount in holder.list_items() if holder is not None else ():
+            wanted[item_id] = wanted.get(item_id, 0) + amount
+        inventory = get_or_create_inventory(window.game_state.values)
+        for item_id, amount in wanted.items():
+            refusal = inventory.refusal(item_id, amount)
+            if refusal is not None:
+                _LOG.warning("Pickup '%s' refused: %s", getattr(self.entity, "mesh_name", "<unnamed>"), refusal)
+                hud = getattr(window, "player_hud", None)
+                enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
+                if callable(enqueue):
+                    enqueue(refusal, seconds=2.0)
                 return
 
         self._already_collected = True
@@ -117,6 +138,8 @@ class PickupCollectible(Behaviour):
         if granted_items:
             self._log_inventory_gain(window, granted_items)
 
+        if self.on_taken is not None:
+            self.on_taken()
         if self.remove_on_collect:
             self.entity.remove_from_sprite_lists()
         else:

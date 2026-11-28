@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 import importlib.util
+import os
 from engine.log_utils import get_logger
 from engine.swallowed_exceptions import _log_swallow
 from pathlib import Path
@@ -18,6 +19,37 @@ _VERIFY_WEB_GATE_EXCEPTIONS: tuple[type[Exception], ...] = (
     TypeError,
     ValueError,
 )
+
+# The test suite sets this (tests/conftest.py) so a verify-all it runs doesn't start the fast tier inside itself (#693).
+# Nothing else may skip pytest-fast: a stray "import pytest" in a CI verify-all must not drop D9's fast-tier gate.
+IN_TEST_SUITE_ENV = "MESH_VERIFY_IN_TEST_SUITE"
+# The branch or commit a change merges into: mypy-baseline-guard compares tooling/mypy_baseline.txt with it (#624 B).
+BASELINE_BASE_ENV = "MESH_BASELINE_BASE"
+MYPY_GUARD_NO_BASE = f"skipped: no merge base ({BASELINE_BASE_ENV} not set)"
+
+
+def running_in_test_suite() -> bool:
+    return os.getenv(IN_TEST_SUITE_ENV) == "1"
+
+
+# The labelled skips verify-all accepts as a pass (#624): (step, its exact "skipped: ..." text) -> why it is legitimate.
+# Any other skip fails the run (code 2): a step whose input is missing checked nothing, and a pass would hide that.
+ALLOWED_SKIPS: dict[tuple[str, str], str] = {
+    ("verify-demo", "skipped: arcade not installed"):
+        "headless installs without arcade (and the test suite's headless stub) can't open the demo window",
+    ("pytest-fast", "skipped: running under pytest"):
+        "verify-all inside the test suite (the shared audit run) must not start the fast tier inside itself",
+    ("mypy-baseline-guard", MYPY_GUARD_NO_BASE):
+        "CI's required baseline-growth job checks every baseline, this one included, against the merge base "
+        "(tooling/baseline_growth.py); CI's verify jobs are shallow clones with no merge base to read",
+    ("pytest-fast-duration-guard", "skipped: pytest-fast not run"):
+        "follows an allow-listed pytest-fast skip: there are no durations to compare",
+    ("web-smoke", "skipped: disabled by args"):
+        "--skip-web-smoke, asked for by the person running it; verify_reuse refuses to reuse such a run for a release",
+    ("web-smoke", "skipped: artifacts directory required"):
+        "the web build needs --artifacts to write into; every CI verify-all passes --artifacts",
+}
+
 
 def _normalize_diag_path(value: str | Path) -> str:
     return str(value).replace("\\", "/")
@@ -43,24 +75,6 @@ def _cleanup_stale_pytest_fast_budget_artifacts(
                 stale_path.unlink()
             except FileNotFoundError:
                 continue
-
-
-def _read_mypy_baseline_count(metrics_path: Path, *, current_count: int) -> int:
-    try:
-        return int(metrics_path.read_text(encoding="utf-8").strip() or "0")
-    except OSError:  # REASON: mypy-baseline-guard metrics file fallback
-        _log_swallow(
-            "VSTP-005",
-            f"mypy-baseline-guard metrics read fallback path={_normalize_diag_path(metrics_path)}",
-            once=False,
-        )
-    except ValueError:  # REASON: mypy-baseline-guard metrics coercion fallback
-        _log_swallow(
-            "VSTP-005",
-            f"mypy-baseline-guard metrics coercion fallback path={_normalize_diag_path(metrics_path)}",
-            once=False,
-        )
-    return current_count
 
 
 def _read_swallow_scan_total_matches(scan_path: Path) -> int | None:
@@ -215,8 +229,11 @@ class VerifyStepContext:
     ensure_scene_transition_entity: Callable[..., Any]
     exception_budget_files: tuple[str, ...]
     steps: list[dict[str, Any]] = field(default_factory=list)
-    pytest_fast_metrics: dict[str, float | bool | None] = field(
-        default_factory=lambda: {"ok": None, "total": None, "top10": None}
+    pytest_fast_metrics: dict[str, Any] = field(
+        default_factory=lambda: {
+            "ok": None, "baseline": "none", "entries": None,
+            "slowest_entries_seconds": None, "slowest10_seconds": None, "wall_seconds": None,
+        }
     )
     pytest_fast_ran: bool = False
     exit_code: int = 0
@@ -284,7 +301,10 @@ def run_verify_steps(state: VerifyStepContext) -> None:
         error: str,
         artifact: str | None,
     ) -> None:
-        nonlocal _step_started_at, step_duration_total_ms
+        nonlocal _step_started_at, step_duration_total_ms, failure_seen, exit_code
+        if int(code) == 0 and error.startswith("skipped:") and (name, error) not in ALLOWED_SKIPS:
+            code, error = 2, f"skip not allow-listed (pipeline.ALLOWED_SKIPS): {error}"
+            failure_seen, exit_code = True, 2
         is_skipped = int(code) == 2 and error == "skipped: previous step failed"
         if is_skipped:
             step_ms = 0
@@ -417,8 +437,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 error = "" if code == 0 else f"failed with code {code}"
             except ModuleNotFoundError as exc:
                 if str(getattr(exc, "name", "")).startswith("tooling"):
-                    code = 0
-                    error = "skipped: tooling package unavailable"
+                    code = 2
+                    error = "tooling package unavailable"
                 else:
                     raise
             except Exception as exc:  # noqa: BLE001  # REASON: mypy-gate step isolation
@@ -436,33 +456,21 @@ def run_verify_steps(state: VerifyStepContext) -> None:
             _skipped_step("mypy-baseline-guard")
         else:
             try:
-                from tooling import mypy_gate
+                from tooling import baseline_growth
 
-                baseline_path = mypy_gate.BASELINE_PATH
-                if baseline_path.exists():
-                    raw = baseline_path.read_text(encoding="utf-8")
-                    current_count = sum(1 for line in raw.splitlines() if line.strip())
+                base = os.getenv(BASELINE_BASE_ENV, "").strip()
+                if not base:
+                    code, error = 0, MYPY_GUARD_NO_BASE
                 else:
-                    current_count = 0
-
-                metrics_path = repo_root / ".mesh" / "metrics" / "mypy_baseline_count.txt"
-                metrics_path.parent.mkdir(parents=True, exist_ok=True)
-                if metrics_path.exists():
-                    previous_count = _read_mypy_baseline_count(metrics_path, current_count=current_count)
-                else:
-                    previous_count = current_count
-
-                if current_count > previous_count:
-                    code = 2
-                    error = f"mypy baseline grew: {previous_count} -> {current_count}"
-                else:
-                    code = 0
-                    error = ""
-                    metrics_path.write_text(f"{current_count}\n", encoding="utf-8")
+                    # The committed baseline at the merge base, not local state (#624 B): growth needs a
+                    # "baseline-growth: tooling/mypy_baseline.txt: <reason>" line in a commit message.
+                    code, lines = baseline_growth.check(repo_root, base, [baseline_growth.MYPY_BASELINE])
+                    error = "" if code == 0 else ("mypy baseline grew: " if code == 1 else "") + " ".join(
+                        line.strip() for line in lines if "explained:" not in line)
             except ModuleNotFoundError as exc:
                 if str(getattr(exc, "name", "")).startswith("tooling"):
-                    code = 0
-                    error = "skipped: tooling package unavailable"
+                    code = 2
+                    error = "tooling package unavailable"
                 else:
                     raise
             except Exception as exc:  # noqa: BLE001  # REASON: mypy-baseline-guard step isolation
@@ -487,8 +495,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 error = "" if code == 0 else f"failed with code {code}"
             except ModuleNotFoundError as exc:
                 if str(getattr(exc, "name", "")).startswith("tooling"):
-                    code = 0
-                    error = "skipped: tooling package unavailable"
+                    code = 2
+                    error = "tooling package unavailable"
                 else:
                     raise
             except Exception as exc:  # noqa: BLE001  # REASON: ruff-gate step isolation
@@ -513,8 +521,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 error = "" if code == 0 else f"typed island failed with code {code}"
             except ModuleNotFoundError as exc:
                 if str(getattr(exc, "name", "")).startswith("tooling"):
-                    code = 0
-                    error = "skipped: tooling package unavailable"
+                    code = 2
+                    error = "tooling package unavailable"
                 else:
                     raise
             except Exception as exc:  # noqa: BLE001  # REASON: mypy-island step isolation
@@ -539,7 +547,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
 
                     budget_payload = {
                         **_build_exception_budget_payload(
-                            ok=code == 0,
+                            ok=code == 0 and not error,  # a labelled skip (no baseline) is no pass
                             current_count=current,
                             baseline_count=baseline,
                             per_file_counts=per_file,
@@ -578,7 +586,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     code = int(find_blanket_swallow.main(["--roots", "engine", "mesh_cli"]))
 
                 scan_path = repo_root / "artifacts" / "swallow_scan.json"
-                if scan_path.exists():
+                if scan_path.exists() and artifacts_dir is not None:  # an artifact only when asked for, as every step
                     artifact = _normalize_path_for_json(scan_path, repo_root=repo_root)
                     artifacts_written["swallow_scan"] = artifact
 
@@ -592,8 +600,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             error = f"pass-only blanket swallows found: {total_matches}"
             except ModuleNotFoundError as exc:
                 if str(getattr(exc, "name", "")).startswith("tooling"):
-                    code = 0
-                    error = "skipped: tooling package unavailable"
+                    code = 2
+                    error = "tooling package unavailable"
                 else:
                     raise
             except Exception as exc:  # noqa: BLE001  # REASON: swallow-scan-gate step isolation
@@ -668,6 +676,14 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             path=baseline_path_ep,
                             purpose="exception-policy-scan baseline coercion fallback",
                         )
+                        bl_broad = _coerce_int_field(  # counted by every scan, checked by none until #624
+                            bl,
+                            "broad_catch_count_total",
+                            default=0,
+                            tag="VSTP-048",
+                            path=baseline_path_ep,
+                            purpose="exception-policy-scan baseline coercion fallback",
+                        )
                         bl_ble001_missing_reason_max = _coerce_int_field(
                             bl,
                             "ble001_missing_reason_max",
@@ -678,6 +694,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         )
                         cur_ble001 = int(ep_result.get("ble001_count_total", 0))
                         cur_silent = int(ep_result.get("silent_broad_catch_count_total", 0))
+                        cur_broad = int(ep_result.get("broad_catch_count_total", 0))
                         cur_ble001_missing_reason = int(
                             ep_result.get(
                                 "missing_ble001_reason_total",
@@ -685,7 +702,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             )
                         )
 
-                        if None in (bl_ble001, bl_silent, bl_silent_max, bl_ble001_missing_reason_max):
+                        if None in (bl_ble001, bl_silent, bl_silent_max, bl_broad, bl_ble001_missing_reason_max):
                             code = 1
                             error = "invalid exception_policy_baseline.json"
                         else:
@@ -697,6 +714,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                                 violations.append(
                                     f"BLE001 grew: {baseline_ble001} -> {cur_ble001}"
                                 )
+                            if cur_broad > cast(int, bl_broad):
+                                violations.append(f"broad catches grew: {bl_broad} -> {cur_broad}")
                             if cur_silent > baseline_silent_max:
                                 violations.append(
                                     f"silent broad catches ({cur_silent}) exceed max ({baseline_silent_max})"
@@ -714,14 +733,14 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                                 code = 0
                                 error = ""
                 else:
-                    # No baseline yet → pass but warn
+                    # Fails closed (#624): no baseline, nothing compared. A labelled skip, not allow-listed.
                     code = 0
-                    error = ""
+                    error = "skipped: no tooling/exception_policy_baseline.json"
 
             except ModuleNotFoundError as exc:
                 if str(getattr(exc, "name", "")).startswith("tooling"):
-                    code = 0
-                    error = "skipped: tooling package unavailable"
+                    code = 2
+                    error = "tooling package unavailable"
                 else:
                     raise
             except Exception as exc:  # noqa: BLE001  # REASON: exception-policy-scan step isolation
@@ -739,21 +758,20 @@ def run_verify_steps(state: VerifyStepContext) -> None:
             _skipped_step("pytest-fast")
         else:
             try:
-                import os
                 import subprocess
                 import sys
 
-                if (
-                    os.getenv("PYTEST_CURRENT_TEST")
-                    or os.getenv("MESH_SKIP_PYTEST_FAST") == "1"
-                    or "pytest" in sys.modules
-                ):
+                if importlib.util.find_spec("tooling.pytest_fast") is None:
+                    code = 2
+                    error = "tooling package unavailable"
+                    pytest_fast_ran = False
+                elif running_in_test_suite():
                     code = 0
                     error = "skipped: running under pytest"
                     pytest_fast_ran = False
-                elif importlib.util.find_spec("tooling.pytest_fast") is None:
+                elif os.getenv("MESH_SKIP_PYTEST_FAST") == "1":  # not allow-listed: it drops the fast tier's gate (D9)
                     code = 0
-                    error = "skipped: tooling package unavailable"
+                    error = "skipped: MESH_SKIP_PYTEST_FAST=1"
                     pytest_fast_ran = False
                 else:
                     _cleanup_stale_pytest_fast_budget_artifacts(
@@ -785,24 +803,26 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 failure_seen = True
                 exit_code = 1 if code != 2 else 2
 
-        # Step 10: pytest-fast-duration-guard (ratchet against slowdowns)
+        # Step 10: pytest-fast-duration-guard: the slowest test entries against a baseline recorded on purpose
+        # (MESH_RECORD_PYTEST_FAST_BASELINE=1); without one (a fresh checkout, CI) it only reports (#422 F13)
         if failure_seen:
             _skipped_step("pytest-fast-duration-guard")
         elif not pytest_fast_ran:
             _add_step("pytest-fast-duration-guard", 0, error="skipped: pytest-fast not run", artifact=None)
         else:
             try:
-                metrics_dir = repo_root / ".mesh" / "metrics"
-                durations_path = metrics_dir / "pytest_durations_fast.json"
-                total_baseline_path = metrics_dir / "pytest_fast_total_seconds.txt"
-                top10_baseline_path = metrics_dir / "pytest_fast_top10_seconds.txt"
 
-                code, error, total_seconds, top10_seconds, ok = _evaluate_pytest_fast_duration_guard(
-                    durations_path, total_baseline_path, top10_baseline_path
+                metrics_dir = repo_root / ".mesh" / "metrics"
+                wall_ms = next((row["ms"] for row in reversed(step_duration_rows) if row["name"] == "pytest-fast"), None)
+                code, error, guard_metrics = _evaluate_pytest_fast_duration_guard(
+                    metrics_dir / "pytest_durations_fast.json",
+                    metrics_dir / "pytest_fast_duration_baseline.json",
+                    wall_seconds=None if wall_ms is None else float(cast(int, wall_ms)) / 1000.0,
+                    record=os.getenv("MESH_RECORD_PYTEST_FAST_BASELINE") == "1",
                 )
-                pytest_fast_metrics["total"] = total_seconds
-                pytest_fast_metrics["top10"] = top10_seconds
-                pytest_fast_metrics["ok"] = ok
+                pytest_fast_metrics.update(guard_metrics)
+                if code == 0 and guard_metrics["ok"] is None:
+                    error = f"report-only: baseline {guard_metrics['baseline']}"
             except Exception as exc:  # noqa: BLE001  # REASON: pytest-fast-duration-guard step isolation
                 _log_swallow("VSTP-010", "pytest-fast-duration-guard step isolation fallback", once=False)
                 code = 1
@@ -865,7 +885,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     error = "" if code == 0 else f"failed with code {code}"
                 else:
                     code = 0
-                    error = ""
+                    error = "skipped: no smoke scene"
             except Exception as exc:  # noqa: BLE001  # REASON: runtime-player-smoke step isolation
                 _log_swallow("VSTP-012", "runtime-player-smoke step isolation fallback", once=False)
                 code = 1
@@ -888,9 +908,12 @@ def run_verify_steps(state: VerifyStepContext) -> None:
 
                 has_packaging_sources = bool((repo_root / "engine").is_dir() and (repo_root / "mesh_cli").is_dir())
                 has_smoke_scene = bool((repo_root / "scenes" / "runtime_smoke_scene.json").is_file())
-                if not has_packaging_sources or not has_smoke_scene:
+                if not has_packaging_sources:
                     code = 0
-                    error = ""
+                    error = "skipped: no engine/ and mesh_cli/ sources"
+                elif not has_smoke_scene:
+                    code = 0
+                    error = "skipped: no scenes/runtime_smoke_scene.json"
                 else:
                     package_root = (artifacts_dir / "player_pkg") if artifacts_dir is not None else (repo_root / ".mesh" / "player_pkg")
                     manifest_path = package_root / "manifest.json"
@@ -910,7 +933,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     with suppress_stdout():
                         package_result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(repo_root))
                     code = int(package_result.returncode)
-                    error = "" if code == 0 else f"failed with code {code}"
+                    error = "" if code == 0 else f"failed with code {code}{_error_line(package_result)}"
                     if code == 0:
                         check_path = package_root / "package_check.json"
                         if not check_path.exists():
@@ -1006,7 +1029,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     build_code = int(build_result.returncode)
                     if build_code != 0:
                         code = build_code
-                        error = f"build-web failed with code {build_code}"
+                        error = f"build-web failed with code {build_code}{_error_line(build_result)}"
                     elif smoke_code != 0:
                         code = smoke_code
                         error = f"web-smoke failed with code {smoke_code}"
@@ -1081,7 +1104,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         artifacts_written["perf_compare"] = _normalize_path_for_json(target_compare, repo_root=repo_root)
                 else:
                     code = 0
-                    error = ""
+                    error = "skipped: no perf scene set or baseline"
             except Exception as exc:  # noqa: BLE001  # REASON: perf-baseline-compare step isolation
                 _log_swallow("VSTP-014", "perf-baseline-compare step isolation fallback", once=False)
                 code = 1
@@ -2320,7 +2343,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     error = "" if code == 0 else "content-audit found errors"
                 else:
                     code = 0
-                    error = ""
+                    error = "skipped: no content roots"
 
             except Exception as exc:  # noqa: BLE001  # REASON: content-audit step isolation
                 _log_swallow("VSTP-039", "content-audit step isolation fallback", once=False)
@@ -2507,3 +2530,10 @@ def run_verify_steps(state: VerifyStepContext) -> None:
     state.exit_code = int(exit_code)
     state.failure_seen = bool(failure_seen)
     state.step_duration_total_ms = int(step_duration_total_ms)
+
+
+def _error_line(result: Any) -> str:
+    """The last ``ERROR:`` line a failed command printed (why it refused an output folder, say), or ""."""
+    lines = [line.strip() for text in (result.stdout or "", result.stderr or "") for line in text.splitlines()]
+    found = [line for line in lines if "ERROR:" in line]
+    return f": {found[-1]}" if found else ""

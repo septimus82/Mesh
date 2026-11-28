@@ -1,0 +1,26 @@
+import ctypes, sys, tempfile, threading, time
+from pathlib import Path
+from ctypes import wintypes
+k = ctypes.WinDLL("kernel32", use_last_error=True)
+k.CreateFileW.restype = wintypes.HANDLE
+k.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+d = Path(tempfile.mkdtemp()); p = d/"0002.cmd"; p.write_text("state")
+h = k.CreateFileW(str(p), 0x80000000, 0, None, 3, 0x80, None)  # GENERIC_READ, share none
+print("is_file:", p.is_file())
+try: p.read_text()
+except PermissionError as e: print("read_text:", type(e).__name__, e.winerror, e)
+k.CloseHandle(h)
+print(p.read_text())
+# stress: replace-then-read with a concurrent scanner opening the file with no sharing
+stop=False; hits=0
+def scan(): 
+    while not stop:
+        for f in d.glob("*.cmd"):
+            hh = k.CreateFileW(str(f), 0x80000000, 0, None, 3, 0x80, None)
+            if hh != wintypes.HANDLE(-1).value and hh: k.CloseHandle(hh)
+t=threading.Thread(target=scan); t.start(); errs=0
+for i in range(3000):
+    w=d/f"{i:05d}.tmp"; w.write_text("x"); w.replace(w.with_suffix(".cmd"))
+    try: w.with_suffix(".cmd").read_text()
+    except PermissionError as e: errs+=1; last=e
+stop=True; t.join(); print("stress read errors:", errs, "of 3000")

@@ -82,6 +82,8 @@ def load_prefab_palette(path: str = DEFAULT_PREFAB_PATH, *, strict: bool = False
             _LOG.warning("%s", message)
             return []
 
+        if isinstance(entry.get("metadata"), dict) and entry["metadata"].get("shared_player"):
+            continue  # the game's one player (every room has it): not something to place
         normalized_entity = dict(entity)
         _normalize_behaviours(normalized_entity)
 

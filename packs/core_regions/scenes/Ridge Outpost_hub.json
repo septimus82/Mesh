@@ -366,6 +366,7 @@
         },
         "Vendor": {
           "listen_event": "open_shop",
+          "open_on": "event",
           "shop_id": "ridge_shop",
           "stock": [
             {

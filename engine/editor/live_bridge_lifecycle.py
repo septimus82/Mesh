@@ -25,7 +25,10 @@ def maybe_start_live_bridge(editor: Any) -> None:
         from engine.editor.live_session_bridge import EditorLiveSessionBridge  # noqa: PLC0415
 
         workspace_root = _workspace_root_for_editor(editor)
-        bridge = EditorLiveSessionBridge(editor, workspace_root)
+        # (#462 R2: the hold the launch took on the project, if this editor was launched on it; else the bridge's own)
+        held = getattr(getattr(editor, "window", None), "project_ownership", None)
+        usable = held is not None and held.held and Path(held.root) == Path(workspace_root).resolve()
+        bridge = EditorLiveSessionBridge(editor, workspace_root, ownership=held if usable else None)
         bridge.start()
     except Exception as exc:  # noqa: BLE001  # REASON: live bridge startup is optional and must not block editor boot
         logger.warning("[Editor][LiveBridge] Live session bridge unavailable: %s", exc, exc_info=True)

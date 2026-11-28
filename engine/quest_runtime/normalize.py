@@ -1,6 +1,28 @@
 from __future__ import annotations
 
+import math
 from typing import Any
+
+REWARD_AMOUNT_KEYS = ("gold", "xp")
+REWARD_KEYS = frozenset({"set_flags", "inc_counters", *REWARD_AMOUNT_KEYS})
+
+
+def quest_entries(quests_root: Any) -> list[dict[str, Any]]:
+    """Raw quest dicts from a quests.json ``"quests"`` value (list or dict form), same id rule as the loader.
+
+    Dict form ``{"<key>": {...}}``: an entry without its own "id" gets the key as id; an inner "id" wins.
+    List entries are returned as they are. Non-dict entries are skipped.
+    """
+    if isinstance(quests_root, dict):
+        rows = [
+            {**raw, "id": key} if not str(raw.get("id", "")).strip() else raw
+            for key, raw in quests_root.items()
+            if isinstance(raw, dict)
+        ]
+        return rows
+    if isinstance(quests_root, list):
+        return [raw for raw in quests_root if isinstance(raw, dict)]
+    return []
 
 
 def normalize_quest(data: Any) -> dict[str, Any] | None:
@@ -25,7 +47,8 @@ def normalize_quest(data: Any) -> dict[str, Any] | None:
         if isinstance(blocks_flags_raw, list)
         else []
     )
-    auto_start = bool(data.get("auto_start", False))
+    # Tri-state: True / False (explicit) / None (absent: legacy implicit start when the first stage has no trigger).
+    auto_start = bool(data["auto_start"]) if "auto_start" in data else None
     stages = normalize_stages(data.get("stages"))
     if not stages:
         print(f"[Mesh][Quests] Quest '{quest_id}' has no stages; skipping")
@@ -170,5 +193,19 @@ def normalize_reward(data: Any) -> dict[str, Any]:
             inc_counters[name] = float(value)
         except (TypeError, ValueError):
             continue
-    return {"set_flags": set_flags, "inc_counters": inc_counters}
+    reward: dict[str, Any] = {"set_flags": set_flags, "inc_counters": inc_counters}
+    # gold / xp: paid by complete_quest (#755: they were validated, then dropped here). Kept only when present,
+    # so a reward without them normalizes as before.
+    for key in REWARD_AMOUNT_KEYS:
+        if key not in data:
+            continue
+        value = data[key]
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0:
+            reward[key] = value
+        else:
+            print(f"[Mesh][Quests] Ignoring reward.{key} {value!r}: it must be a finite number of 0 or more")
+    unknown = sorted(str(key) for key in data if key not in REWARD_KEYS)
+    if unknown:
+        print(f"[Mesh][Quests] Ignoring unknown reward field(s) {unknown}; supported: {sorted(REWARD_KEYS)}")
+    return reward
 

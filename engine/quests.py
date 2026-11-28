@@ -41,9 +41,16 @@ class QuestManager:
 
     def __init__(self, window, data_path: str = "assets/data/quests.json") -> None:
         self.window = window
+        self._data_rel = data_path
         self.data_path = resolve_path(data_path)
         self._definitions: dict[str, dict[str, Any]] = {}
         self._stage_lookup: dict[str, dict[str, Any]] = {}
+        self.load_definitions()
+
+    def relocate(self) -> None:
+        """Read the quest definitions again, from the window's project (it changed: the main menu's project switch,
+        #675), so the previous project's quests no longer drive the quest state the new project's saves keep."""
+        self.data_path = resolve_path(self._data_rel)
         self.load_definitions()
 
     # ------------------------------------------------------------------
@@ -64,7 +71,15 @@ class QuestManager:
                 entries = [(None, entry) for entry in root]
             else:
                 entries = []
-            for _, raw in entries:
+            for key, raw in entries:
+                if key is not None and isinstance(raw, dict):
+                    inner = str(raw.get("id", "")).strip()
+                    if not inner:
+                        # Dict form: the key is the id when the entry has none (normalize a copy).
+                        raw = {**raw, "id": key}
+                    elif inner != str(key).strip():
+                        # The inner id wins (as before); never drop silently.
+                        print(f"[Mesh][Quests] Quest key '{key}' differs from its id '{inner}'; using '{inner}'")
                 quest = self._normalize_quest(raw)
                 if quest is None:
                     continue

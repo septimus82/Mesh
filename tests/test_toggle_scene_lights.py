@@ -1,3 +1,5 @@
+import pytest
+
 from engine.behaviours.toggle_scene_lights import ToggleSceneLights
 from engine.events import MeshEventBus
 
@@ -42,6 +44,17 @@ def test_toggle_scene_lights_indices_on_off():
     beh_off = ToggleSceneLights(entity=None, window=window, listen_event="all_off", indices=[0, 1], group="", mode="off")
     window.event_bus.emit("all_off")
     assert scene["lights"][0]["enabled"] is False
+    assert scene["lights"][1]["enabled"] is False
+
+
+@pytest.mark.fast
+def test_non_integer_indices_are_skipped():
+    # (Studio stores typed text like "abc" in the array field as ["abc"]; it must not drop the behaviour)
+    scene = {"lights": [{"enabled": True}, {"enabled": True}]}
+    window = DummyWindow(scene)
+    ToggleSceneLights(entity=None, window=window, listen_event="off", indices=["abc", " 1 ", "", None], mode="off")
+    window.event_bus.emit("off")
+    assert scene["lights"][0]["enabled"] is True
     assert scene["lights"][1]["enabled"] is False
 
 

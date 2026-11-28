@@ -12,6 +12,7 @@ from engine.combat_constants import (
     KEY_TARGET,
 )
 from engine.event_emit import emit_gameplay_event
+from engine.hd2d.world import same_level
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -90,8 +91,10 @@ class Projectile(Behaviour):
 
         import math
         rad = math.radians(self.direction)
-        self.entity.change_x = math.cos(rad) * self.speed
-        self.entity.change_y = math.sin(rad) * self.speed
+        # The scene moves sprites by change_x/y once per frame (arcade's unit: pixels per 1/60 s), and
+        # speed is pixels per second: unconverted, a 300 px/s shot jumped 300 px a frame, through anything.
+        self.entity.change_x = math.cos(rad) * self.speed / 60.0
+        self.entity.change_y = math.sin(rad) * self.speed / 60.0
         self.entity.angle = self.direction
 
     def update(self, dt: float) -> None:
@@ -126,10 +129,10 @@ class Projectile(Behaviour):
 
         # Check collision
 
-        sprite_list = optional_arcade.arcade.SpriteList()
-        for candidate in candidates:
-            sprite_list.append(candidate)
-        hits = optional_arcade.arcade.check_for_collision_with_list(self.entity, sprite_list)
+        # Sprite against sprite, not through a SpriteList made per update: each held GPU buffers that every candidate
+        # kept (a sprite keeps the lists it joins), so they grew without end.
+        check = optional_arcade.arcade.check_for_collision
+        hits = [candidate for candidate in candidates if check(self.entity, candidate)]
         for hit in hits:
             tag = getattr(hit, "mesh_tag", "")
 
@@ -139,6 +142,9 @@ class Projectile(Behaviour):
                 return
 
             if tag == self.target_tag:
+                shooter = getattr(self.entity, "mesh_attacker", self.entity)  # (Shooter says who fired it)
+                if not same_level(getattr(self.window, "hd2d_world", None), shooter, hit):
+                    continue  # (an HD-2D room: on another floor than the shooter, engine.hd2d.world.same_level)
                 self._apply_damage(hit)
                 self.entity.remove_from_sprite_lists()
                 return

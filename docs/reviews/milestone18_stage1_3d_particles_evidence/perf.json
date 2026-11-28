@@ -1,0 +1,208 @@
+{
+  "method": "one game; per case the renderer's particles set, then 5 interleaved rounds of 60 frames with them drawn and switched off (medians)",
+  "cases": {
+    "rain_100": {
+      "particles": 100,
+      "particle_bytes": 5504,
+      "draw_calls": 32,
+      "shadow_draws": 330,
+      "make_layer_ms": 2.96,
+      "frame_ms_on": 7.6,
+      "draw_cpu_ms_on": 4.62,
+      "frame_gpu_ms_on": 1.31,
+      "particle_pass_gpu_ms_on": 0.004,
+      "frame_ms_off": 7.6,
+      "draw_cpu_ms_off": 4.34,
+      "frame_gpu_ms_off": 1.58,
+      "added_frame_ms": 0.0,
+      "added_frame_gpu_ms": -0.27
+    },
+    "rain_1000": {
+      "particles": 1000,
+      "particle_bytes": 27104,
+      "draw_calls": 32,
+      "shadow_draws": 30,
+      "make_layer_ms": 3.17,
+      "frame_ms_on": 5.15,
+      "draw_cpu_ms_on": 2.01,
+      "frame_gpu_ms_on": 1.583,
+      "particle_pass_gpu_ms_on": 0.01,
+      "frame_ms_off": 5.03,
+      "draw_cpu_ms_off": 1.91,
+      "frame_gpu_ms_off": 1.579,
+      "added_frame_ms": 0.12,
+      "added_frame_gpu_ms": 0.004
+    },
+    "rain_5000": {
+      "particles": 5000,
+      "particle_bytes": 123104,
+      "draw_calls": 32,
+      "shadow_draws": 30,
+      "make_layer_ms": 8.36,
+      "frame_ms_on": 5.04,
+      "draw_cpu_ms_on": 1.97,
+      "frame_gpu_ms_on": 1.502,
+      "particle_pass_gpu_ms_on": 0.035,
+      "frame_ms_off": 4.99,
+      "draw_cpu_ms_off": 1.87,
+      "frame_gpu_ms_off": 1.58,
+      "added_frame_ms": 0.05,
+      "added_frame_gpu_ms": -0.078
+    },
+    "rain_10000": {
+      "particles": 10000,
+      "particle_bytes": 243104,
+      "draw_calls": 32,
+      "shadow_draws": 30,
+      "make_layer_ms": 15.56,
+      "frame_ms_on": 5.04,
+      "draw_cpu_ms_on": 1.99,
+      "frame_gpu_ms_on": 1.561,
+      "particle_pass_gpu_ms_on": 0.062,
+      "frame_ms_off": 4.87,
+      "draw_cpu_ms_off": 1.91,
+      "frame_gpu_ms_off": 1.476,
+      "added_frame_ms": 0.17,
+      "added_frame_gpu_ms": 0.085
+    },
+    "rain_20000": {
+      "particles": 20000,
+      "particle_bytes": 483104,
+      "draw_calls": 32,
+      "shadow_draws": 30,
+      "make_layer_ms": 29.18,
+      "frame_ms_on": 5.02,
+      "draw_cpu_ms_on": 1.98,
+      "frame_gpu_ms_on": 1.575,
+      "particle_pass_gpu_ms_on": 0.105,
+      "frame_ms_off": 4.81,
+      "draw_cpu_ms_off": 1.87,
+      "frame_gpu_ms_off": 1.39,
+      "added_frame_ms": 0.21,
+      "added_frame_gpu_ms": 0.185
+    },
+    "snow_10000": {
+      "particles": 10000,
+      "particle_bytes": 243104,
+      "draw_calls": 32,
+      "shadow_draws": 30,
+      "make_layer_ms": 15.69,
+      "frame_ms_on": 4.91,
+      "draw_cpu_ms_on": 1.98,
+      "frame_gpu_ms_on": 1.598,
+      "particle_pass_gpu_ms_on": 0.039,
+      "frame_ms_off": 4.85,
+      "draw_cpu_ms_off": 1.91,
+      "frame_gpu_ms_off": 1.476,
+      "added_frame_ms": 0.06,
+      "added_frame_gpu_ms": 0.122
+    },
+    "wind_10000": {
+      "particles": 10000,
+      "particle_bytes": 243104,
+      "draw_calls": 32,
+      "shadow_draws": 30,
+      "make_layer_ms": 15.67,
+      "frame_ms_on": 4.94,
+      "draw_cpu_ms_on": 2.01,
+      "frame_gpu_ms_on": 1.431,
+      "particle_pass_gpu_ms_on": 0.056,
+      "frame_ms_off": 4.81,
+      "draw_cpu_ms_off": 1.89,
+      "frame_gpu_ms_off": 1.475,
+      "added_frame_ms": 0.13,
+      "added_frame_gpu_ms": -0.044
+    },
+    "all_three_10000": {
+      "particles": 10000,
+      "particle_bytes": 243104,
+      "draw_calls": 34,
+      "shadow_draws": 30,
+      "make_layer_ms": 15.79,
+      "frame_ms_on": 5.01,
+      "draw_cpu_ms_on": 2.04,
+      "frame_gpu_ms_on": 1.62,
+      "particle_pass_gpu_ms_on": 0.054,
+      "frame_ms_off": 4.9,
+      "draw_cpu_ms_off": 1.92,
+      "frame_gpu_ms_off": 1.391,
+      "added_frame_ms": 0.11,
+      "added_frame_gpu_ms": 0.229
+    }
+  },
+  "gpu": {
+    "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2",
+    "vendor": "NVIDIA Corporation",
+    "gl_version": [
+      4,
+      6
+    ]
+  },
+  "walking_rain_5000": {
+    "on": 7.335,
+    "off": 7.225
+  },
+  "shadows_off_rain_5000_frame_ms": 3.65,
+  "gl_lifecycle": {
+    "none": {
+      "buffer": 52481,
+      "texture": 50,
+      "framebuffer": 6,
+      "program": 27
+    },
+    "one_layer": {
+      "buffer": 52483,
+      "texture": 51,
+      "framebuffer": 6,
+      "program": 28
+    },
+    "after_200_toggles": {
+      "buffer": 52483,
+      "texture": 51,
+      "framebuffer": 6,
+      "program": 28
+    },
+    "released": {
+      "buffer": 52481,
+      "texture": 50,
+      "framebuffer": 6,
+      "program": 27
+    },
+    "after_20_made_and_released": {
+      "buffer": 52481,
+      "texture": 50,
+      "framebuffer": 6,
+      "program": 27
+    }
+  },
+  "room_changes_no_particles": {
+    "gl_before": {
+      "buffer": 269,
+      "texture": 31,
+      "framebuffer": 3,
+      "program": 27
+    },
+    "gl_after": {
+      "buffer": 136,
+      "texture": 42,
+      "framebuffer": 6,
+      "program": 27
+    },
+    "python_heap_growth_kb": 10446.4
+  },
+  "room_changes_all_three": {
+    "gl_before": {
+      "buffer": 273,
+      "texture": 32,
+      "framebuffer": 3,
+      "program": 28
+    },
+    "gl_after": {
+      "buffer": 140,
+      "texture": 43,
+      "framebuffer": 6,
+      "program": 28
+    },
+    "python_heap_growth_kb": 6416.9
+  }
+}

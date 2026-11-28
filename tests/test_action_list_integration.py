@@ -15,6 +15,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from tests._fake_window import fake_sprite, fake_window
+
 
 @pytest.fixture
 def mock_window():
@@ -22,7 +24,7 @@ def mock_window():
     from engine.game_state_controller import GameState
     from engine.gameplay_event_bus import GameplayEventBus
 
-    window = MagicMock()
+    window = fake_window()  # (spec'd: only the real window's attributes, S1 5.6 (c))
     window.gameplay_event_bus = GameplayEventBus()
 
     game_state_ctrl = MagicMock()
@@ -45,7 +47,7 @@ class TestTriggerActionListIntegration:
         from engine.behaviours.trigger_volume import TriggerVolumeBehaviour
 
         # Create entities
-        trigger_entity = MagicMock()
+        trigger_entity = fake_sprite()
         trigger_entity.mesh_id = "trigger_zone"
         trigger_entity.mesh_name = "TriggerZone"
         trigger_entity.center_x = 100.0
@@ -53,17 +55,17 @@ class TestTriggerActionListIntegration:
         trigger_entity.width = 32
         trigger_entity.height = 32
 
-        action_entity = MagicMock()
+        action_entity = fake_sprite()
         action_entity.mesh_id = "action_runner"
         action_entity.mesh_name = "ActionRunner"
         action_entity.mesh_tags = []
         action_entity.behaviours = []
 
-        quest_entity = MagicMock()
+        quest_entity = fake_sprite()
         quest_entity.mesh_id = "quest_tracker"
         quest_entity.mesh_name = "QuestTracker"
 
-        player = MagicMock()
+        player = fake_sprite()
         player.mesh_id = "player"
         player.mesh_name = "Player"
         player.mesh_tags = ["player"]
@@ -132,7 +134,7 @@ class TestTriggerActionListIntegration:
         from engine.behaviours.timer import TimerBehaviour
 
         # Create entities
-        action_entity = MagicMock()
+        action_entity = fake_sprite()
         action_entity.mesh_id = "action_runner"
         action_entity.mesh_name = "ActionRunner"
         action_entity.mesh_tags = []
@@ -147,7 +149,7 @@ class TestTriggerActionListIntegration:
             timer_id="my_timer",
         )
 
-        action_entity.behaviours = [timer]
+        action_entity.mesh_behaviours_runtime = [timer]
 
         # Create action runner that starts the timer
         action_runner = ActionListRunnerBehaviour(
@@ -177,7 +179,7 @@ class TestTriggerActionListIntegration:
         from engine.gameplay_event_bus import GameplayEventBus
 
         # Create entities
-        trigger_entity = MagicMock()
+        trigger_entity = fake_sprite()
         trigger_entity.mesh_id = "trigger"
         trigger_entity.mesh_name = "Trigger"
         trigger_entity.center_x = 100.0
@@ -185,17 +187,17 @@ class TestTriggerActionListIntegration:
         trigger_entity.width = 32
         trigger_entity.height = 32
 
-        action_entity = MagicMock()
+        action_entity = fake_sprite()
         action_entity.mesh_id = "runner"
         action_entity.mesh_name = "Runner"
         action_entity.mesh_tags = []
         action_entity.behaviours = []
 
-        quest_entity = MagicMock()
+        quest_entity = fake_sprite()
         quest_entity.mesh_id = "quest"
         quest_entity.mesh_name = "Quest"
 
-        player = MagicMock()
+        player = fake_sprite()
         player.mesh_id = "player"
         player.mesh_name = "Player"
         player.mesh_tags = ["player"]
@@ -333,7 +335,7 @@ class TestTriggerActionListIntegration:
             mock_window.gameplay_event_bus = GameplayEventBus()
             mock_window.game_state_controller.state.flags.clear()
 
-            entity = MagicMock()
+            entity = fake_sprite()
             entity.mesh_id = "runner"
             entity.mesh_name = "Runner"
             entity.mesh_tags = []

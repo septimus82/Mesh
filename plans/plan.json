@@ -31,7 +31,7 @@
     {
       "type": "create_scene",
       "args": {
-        "path": "scenes\\test_scene.json",
+        "path": "scenes/test_scene.json",
         "template": "empty"
       },
       "description": "Create scene 'test_scene.json'"
@@ -39,7 +39,7 @@
     {
       "type": "add_npc",
       "args": {
-        "scene_path": "scenes\\test_scene.json",
+        "scene_path": "scenes/test_scene.json",
         "name": "test_NPC",
         "role": "quest_giver",
         "quest_id": "test_quest"
@@ -49,7 +49,7 @@
     {
       "type": "create_quest",
       "args": {
-        "path": "assets\\data\\quests.json",
+        "path": "assets/data/quests.json",
         "id": "test_quest",
         "title": "Test Quest",
         "type": null
@@ -59,7 +59,7 @@
     {
       "type": "polish_scene",
       "args": {
-        "path": "scenes\\test_scene.json",
+        "path": "scenes/test_scene.json",
         "compact_only": false
       },
       "description": "Polish scene"
@@ -67,7 +67,7 @@
     {
       "type": "validate",
       "args": {
-        "scene_path": "scenes\\test_scene.json",
+        "scene_path": "scenes/test_scene.json",
         "check_refs": false
       },
       "description": "Validate scene"

@@ -1,0 +1,58 @@
+{
+ "stroke": {
+  "frame_ms": {
+   "median": 23.32,
+   "p95": 25.0,
+   "max": 48.81,
+   "n": 48
+  },
+  "update_terrain_ms": {
+   "median": 10.73,
+   "p95": 11.22,
+   "max": 11.46,
+   "n": 50
+  },
+  "commit_ms": 12.0,
+  "release_to_next_frame_ms": 102.8,
+  "undo_steps_added": 1,
+  "shown_equals_saved": true,
+  "raised_max_m": 0.359,
+  "message": "Raised the ground (50 dabs, one undo step)."
+ },
+ "undo_gives_before": true,
+ "redo_gives_after": true,
+ "saved_dirty_after": false,
+ "escape": {
+  "stroke_had_changed_the_ground": true,
+  "ground_back": true,
+  "nothing_recorded": true,
+  "message": "Stroke cancelled: the ground is as it was."
+ },
+ "play_mid_stroke": {
+  "mode": "play",
+  "after_stop": "edit",
+  "nothing_recorded": true,
+  "ground_is_saved": true
+ },
+ "room_change_mid_stroke": {
+  "nothing_recorded": true,
+  "ground_is_saved": true
+ },
+ "refused_upload": {
+  "ground_back": true,
+  "nothing_recorded": true,
+  "message": "The stroke stopped: the ground couldn't be drawn (out of memory (simulated))."
+ },
+ "controls": {
+  "shift_lowered": true,
+  "radius_px": [
+   64.0,
+   80.0,
+   64.0
+  ],
+  "picked_target_m": 0.98,
+  "flattened_towards_m": 0.203,
+  "tool": "flatten"
+ },
+ "reopened_same": true
+}

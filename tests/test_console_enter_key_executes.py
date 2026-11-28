@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import engine.optional_arcade as optional_arcade
 from engine.console_controller import ConsoleController
 from engine.input import InputManager
@@ -20,6 +22,7 @@ def test_console_return_executes_command() -> None:
         def __init__(self) -> None:
             self.input = InputManager()
             self.lighting = _Lighting()
+            self.engine_config = SimpleNamespace(_mesh_launch_mode="play")  # a dev launch: the console opens (#664)
 
     window = _Window()
     console = ConsoleController(window)

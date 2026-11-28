@@ -1,0 +1,28 @@
+tests/test_mesh_net_owed_reset.py run against the reviewed journal code (mesh_net/owed.py at bc0770e), on Windows
+(the POSIX-only test skipped). The lines give where each failing test stopped; an AttributeError is a test that also
+checks state the old journal did not have.
+  line 74: AttributeError: 'Journal' object has no attribute 'unconfirmed'
+  line 89: AttributeError: 'Journal' object has no attribute 'unconfirmed'
+  line 89: AttributeError: 'Journal' object has no attribute 'unconfirmed'
+  line 89: AttributeError: 'Journal' object has no attribute 'unconfirmed'
+  line 103: assert (314 == 0)
+  line 122: AttributeError: 'Journal' object has no attribute 'unusable'
+  line 136: AttributeError: 'Journal' object has no attribute 'unusable'
+  line 154: Failed: DID NOT RAISE <class 'mesh_net.owed.JournalError'>
+  line 233: assert (484 == 0)
+  line 254: AssertionError: assert ['unlock_owed'] == ['unlock_not_kept']
+  line 282: AssertionError: assert ['unlock_owed'] == ['unlock_not_kept']
+  line 319: assert (1 == 1 and 0 == 1)
+FAILED tests/test_mesh_net_owed_reset.py::test_started_over_the_journal_is_empty_and_the_next_record_is_its_first
+FAILED tests/test_mesh_net_owed_reset.py::test_a_start_over_that_fails_before_the_move_leaves_the_old_journal_whole_and_in_use[temp_create]
+FAILED tests/test_mesh_net_owed_reset.py::test_a_start_over_that_fails_before_the_move_leaves_the_old_journal_whole_and_in_use[temp_flush]
+FAILED tests/test_mesh_net_owed_reset.py::test_a_start_over_that_fails_before_the_move_leaves_the_old_journal_whole_and_in_use[replace]
+FAILED tests/test_mesh_net_owed_reset.py::test_moved_into_place_but_the_folder_not_flushed_the_journal_writes_at_the_start_and_calls_nothing_kept
+FAILED tests/test_mesh_net_owed_reset.py::test_a_fresh_journal_that_cannot_be_read_back_takes_no_more_writes_and_is_left_as_found
+FAILED tests/test_mesh_net_owed_reset.py::test_a_fresh_journal_found_holding_a_record_is_not_written_to_either
+FAILED tests/test_mesh_net_owed_reset.py::test_a_second_start_over_that_works_confirms_the_first
+FAILED tests/test_mesh_net_owed_reset.py::test_after_a_start_over_whose_folder_flush_failed_the_next_unlock_is_not_called_kept_and_is_not_lost
+FAILED tests/test_mesh_net_owed_reset.py::test_a_server_stopped_while_the_folder_still_cannot_be_flushed_loses_nothing_on_restart
+FAILED tests/test_mesh_net_owed_reset.py::test_a_fresh_journal_that_cannot_be_read_back_means_not_kept_and_no_new_expedition
+FAILED tests/test_mesh_net_owed_reset.py::test_a_server_killed_after_such_a_start_over_restarts_and_records_what_was_owed
+12 failed, 4 passed, 1 skipped in 6.92s

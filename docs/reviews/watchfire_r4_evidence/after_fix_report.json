@@ -1,0 +1,687 @@
+{
+ "A_written": {
+  "shown": {
+   "lines": [
+    "1. Traveller! The watchfire at t\u2026 > 2",
+    "1. start at line",
+    "2. Will you light it before nigh\u2026 ?",
+    "3. Bless you. Take my flint. > 5",
+    "4. Then I'll keep waiting... but\u2026 (end)",
+    "5. Follow the road east, past th\u2026 > 6",
+    "6. Mind the ford: it runs cold. > 7",
+    "7. Strike the flint on the dry k\u2026 > 8",
+    "8. Its light will carry to the f\u2026 > 9",
+    "9. Come back and tell me when it\u2026 > 10",
+    "10. Safe travels. (end)",
+    "11. Back already? Is it lit? (end)"
+   ],
+   "otherwise_line": "1",
+   "openings": [
+    "11"
+   ],
+   "next_line_button": [
+    "+ Next line (after 11)"
+   ]
+  },
+  "stored": {
+   "start": "root",
+   "starts": [
+    {
+     "node": "line_11",
+     "require_flags": [
+      "task_accepted"
+     ],
+     "forbid_flags": []
+    }
+   ],
+   "nodes": {
+    "root": {
+     "text": "Traveller! The watchfire at the crossing has gone dark.",
+     "next": "line_2",
+     "choices": []
+    },
+    "line_2": {
+     "text": "Will you light it before nightfall?",
+     "next": null,
+     "choices": [
+      {
+       "text": "I'll light the watchfire.",
+       "next": "line_3",
+       "set_flags": {
+        "task_accepted": true
+       }
+      },
+      {
+       "text": "Not right now.",
+       "next": "line_4",
+       "set_flags": null
+      }
+     ]
+    },
+    "line_3": {
+     "text": "Bless you. Take my flint.",
+     "next": "line_5",
+     "choices": []
+    },
+    "line_4": {
+     "text": "Then I'll keep waiting... but the dark won't.",
+     "next": null,
+     "choices": []
+    },
+    "line_5": {
+     "text": "Follow the road east, past the lamps.",
+     "next": "line_6",
+     "choices": []
+    },
+    "line_6": {
+     "text": "Mind the ford: it runs cold.",
+     "next": "line_7",
+     "choices": []
+    },
+    "line_7": {
+     "text": "Strike the flint on the dry kindling.",
+     "next": "line_8",
+     "choices": []
+    },
+    "line_8": {
+     "text": "Its light will carry to the forest road.",
+     "next": "line_9",
+     "choices": []
+    },
+    "line_9": {
+     "text": "Come back and tell me when it burns.",
+     "next": "line_10",
+     "choices": []
+    },
+    "line_10": {
+     "text": "Safe travels.",
+     "next": null,
+     "choices": []
+    },
+    "line_11": {
+     "text": "Back already? Is it lit?",
+     "next": null,
+     "choices": []
+    }
+   }
+  }
+ },
+ "A_saved": "Saved 1 file(s).",
+ "B_reopened": {
+  "shown": {
+   "lines": [
+    "1. Traveller! The watchfire at t\u2026 > 2",
+    "1. start at line",
+    "2. Will you light it before nigh\u2026 ?",
+    "3. Bless you. Take my flint. > 5",
+    "4. Then I'll keep waiting... but\u2026 (end)",
+    "5. Follow the road east, past th\u2026 > 6",
+    "6. Mind the ford: it runs cold. > 7",
+    "7. Strike the flint on the dry k\u2026 > 8",
+    "8. Its light will carry to the f\u2026 > 9",
+    "9. Come back and tell me when it\u2026 > 10",
+    "10. Safe travels. (end)",
+    "11. Back already? Is it lit? (end)"
+   ],
+   "otherwise_line": "1",
+   "openings": [
+    "11"
+   ],
+   "next_line_button": [
+    "+ Next line (after 11)"
+   ]
+  },
+  "stored": {
+   "start": "root",
+   "starts": [
+    {
+     "forbid_flags": [],
+     "node": "line_11",
+     "require_flags": [
+      "task_accepted"
+     ]
+    }
+   ],
+   "nodes": {
+    "line_10": {
+     "text": "Safe travels.",
+     "next": null,
+     "choices": []
+    },
+    "line_11": {
+     "text": "Back already? Is it lit?",
+     "next": null,
+     "choices": []
+    },
+    "line_2": {
+     "text": "Will you light it before nightfall?",
+     "next": null,
+     "choices": [
+      {
+       "text": "I'll light the watchfire.",
+       "next": "line_3",
+       "set_flags": {
+        "task_accepted": true
+       }
+      },
+      {
+       "text": "Not right now.",
+       "next": "line_4",
+       "set_flags": null
+      }
+     ]
+    },
+    "line_3": {
+     "text": "Bless you. Take my flint.",
+     "next": "line_5",
+     "choices": []
+    },
+    "line_4": {
+     "text": "Then I'll keep waiting... but the dark won't.",
+     "next": null,
+     "choices": []
+    },
+    "line_5": {
+     "text": "Follow the road east, past the lamps.",
+     "next": "line_6",
+     "choices": []
+    },
+    "line_6": {
+     "text": "Mind the ford: it runs cold.",
+     "next": "line_7",
+     "choices": []
+    },
+    "line_7": {
+     "text": "Strike the flint on the dry kindling.",
+     "next": "line_8",
+     "choices": []
+    },
+    "line_8": {
+     "text": "Its light will carry to the forest road.",
+     "next": "line_9",
+     "choices": []
+    },
+    "line_9": {
+     "text": "Come back and tell me when it burns.",
+     "next": "line_10",
+     "choices": []
+    },
+    "root": {
+     "text": "Traveller! The watchfire at the crossing has gone dark.",
+     "next": "line_2",
+     "choices": []
+    }
+   }
+  }
+ },
+ "B_add_line_at_the_end_follows": [
+  "Back already? Is it lit?"
+ ],
+ "C_edited": {
+  "shown": {
+   "lines": [
+    "1. Traveller! The watchfire at t\u2026 > 2",
+    "1. start at line",
+    "2. Will you light it before nigh\u2026 ?",
+    "3. Bless you, traveller. Take my\u2026 > 11",
+    "4. Then I'll keep waiting... but\u2026 (end)",
+    "5. Follow the road east, past th\u2026 > 6",
+    "6. Mind the ford: it runs cold. > 7",
+    "7. Its light will carry to the f\u2026 > 8",
+    "8. Come back and tell me when it\u2026 > 9",
+    "9. Safe travels. (end)",
+    "10. Back already? Is it lit? (end)",
+    "11. It sparks on the first strike. > 5"
+   ],
+   "otherwise_line": "1",
+   "openings": [
+    "10"
+   ],
+   "next_line_button": []
+  },
+  "stored": {
+   "start": "root",
+   "starts": [
+    {
+     "forbid_flags": [],
+     "node": "line_11",
+     "require_flags": [
+      "task_accepted"
+     ]
+    }
+   ],
+   "nodes": {
+    "line_10": {
+     "text": "Safe travels.",
+     "next": null,
+     "choices": []
+    },
+    "line_11": {
+     "text": "Back already? Is it lit?",
+     "next": null,
+     "choices": []
+    },
+    "line_2": {
+     "text": "Will you light it before nightfall?",
+     "next": null,
+     "choices": [
+      {
+       "text": "I'll light the watchfire.",
+       "next": "line_3",
+       "set_flags": {
+        "task_accepted": true
+       }
+      },
+      {
+       "text": "Not right now.",
+       "next": "line_10",
+       "set_flags": null
+      }
+     ]
+    },
+    "line_3": {
+     "text": "Bless you, traveller. Take my flint.",
+     "next": "line_12",
+     "choices": []
+    },
+    "line_4": {
+     "text": "Then I'll keep waiting... but the dark won't.",
+     "next": null,
+     "choices": []
+    },
+    "line_5": {
+     "text": "Follow the road east, past the lamps.",
+     "next": "line_6",
+     "choices": []
+    },
+    "line_6": {
+     "text": "Mind the ford: it runs cold.",
+     "next": "line_8",
+     "choices": []
+    },
+    "line_8": {
+     "text": "Its light will carry to the forest road.",
+     "next": "line_9",
+     "choices": []
+    },
+    "line_9": {
+     "text": "Come back and tell me when it burns.",
+     "next": "line_10",
+     "choices": []
+    },
+    "root": {
+     "text": "Traveller! The watchfire at the crossing has gone dark.",
+     "next": "line_2",
+     "choices": []
+    },
+    "line_12": {
+     "text": "It sparks on the first strike.",
+     "next": "line_5",
+     "choices": []
+    }
+   }
+  },
+  "undo_restored_the_line": true,
+  "redo_same": true
+ },
+ "C_next_line_button": [],
+ "D_room_and_back": {
+  "shown": {
+   "lines": [
+    "1. Traveller! The watchfire at t\u2026 > 2",
+    "1. start at line",
+    "2. Will you light it before nigh\u2026 ?",
+    "3. Bless you, traveller. Take my\u2026 > 11",
+    "4. Then I'll keep waiting... but\u2026 (end)",
+    "5. Follow the road east, past th\u2026 > 6",
+    "6. Mind the ford: it runs cold. > 7",
+    "7. Its light will carry to the f\u2026 > 8",
+    "8. Come back and tell me when it\u2026 > 9",
+    "9. Safe travels. (end)",
+    "10. Back already? Is it lit? (end)",
+    "11. It sparks on the first strike. > 5"
+   ],
+   "otherwise_line": "1",
+   "openings": [
+    "10"
+   ],
+   "next_line_button": []
+  },
+  "stored": {
+   "start": "root",
+   "starts": [
+    {
+     "forbid_flags": [],
+     "node": "line_11",
+     "require_flags": [
+      "task_accepted"
+     ]
+    }
+   ],
+   "nodes": {
+    "line_10": {
+     "text": "Safe travels.",
+     "next": null,
+     "choices": []
+    },
+    "line_11": {
+     "text": "Back already? Is it lit?",
+     "next": null,
+     "choices": []
+    },
+    "line_2": {
+     "text": "Will you light it before nightfall?",
+     "next": null,
+     "choices": [
+      {
+       "text": "I'll light the watchfire.",
+       "next": "line_3",
+       "set_flags": {
+        "task_accepted": true
+       }
+      },
+      {
+       "text": "Not right now.",
+       "next": "line_10",
+       "set_flags": null
+      }
+     ]
+    },
+    "line_3": {
+     "text": "Bless you, traveller. Take my flint.",
+     "next": "line_12",
+     "choices": []
+    },
+    "line_4": {
+     "text": "Then I'll keep waiting... but the dark won't.",
+     "next": null,
+     "choices": []
+    },
+    "line_5": {
+     "text": "Follow the road east, past the lamps.",
+     "next": "line_6",
+     "choices": []
+    },
+    "line_6": {
+     "text": "Mind the ford: it runs cold.",
+     "next": "line_8",
+     "choices": []
+    },
+    "line_8": {
+     "text": "Its light will carry to the forest road.",
+     "next": "line_9",
+     "choices": []
+    },
+    "line_9": {
+     "text": "Come back and tell me when it burns.",
+     "next": "line_10",
+     "choices": []
+    },
+    "root": {
+     "text": "Traveller! The watchfire at the crossing has gone dark.",
+     "next": "line_2",
+     "choices": []
+    },
+    "line_12": {
+     "text": "It sparks on the first strike.",
+     "next": "line_5",
+     "choices": []
+    }
+   }
+  }
+ },
+ "D_saved": "Saved 1 file(s).",
+ "E_reopened": {
+  "shown": {
+   "lines": [
+    "1. Traveller! The watchfire at t\u2026 > 2",
+    "1. start at line",
+    "2. Will you light it before nigh\u2026 ?",
+    "3. Bless you, traveller. Take my\u2026 > 11",
+    "4. Then I'll keep waiting... but\u2026 (end)",
+    "5. Follow the road east, past th\u2026 > 6",
+    "6. Mind the ford: it runs cold. > 7",
+    "7. Its light will carry to the f\u2026 > 8",
+    "8. Come back and tell me when it\u2026 > 9",
+    "9. Safe travels. (end)",
+    "10. Back already? Is it lit? (end)",
+    "11. It sparks on the first strike. > 5"
+   ],
+   "otherwise_line": "1",
+   "openings": [
+    "10"
+   ],
+   "next_line_button": []
+  },
+  "stored": {
+   "start": "root",
+   "starts": [
+    {
+     "forbid_flags": [],
+     "node": "line_11",
+     "require_flags": [
+      "task_accepted"
+     ]
+    }
+   ],
+   "nodes": {
+    "line_10": {
+     "text": "Safe travels.",
+     "next": null,
+     "choices": []
+    },
+    "line_11": {
+     "text": "Back already? Is it lit?",
+     "next": null,
+     "choices": []
+    },
+    "line_12": {
+     "text": "It sparks on the first strike.",
+     "next": "line_5",
+     "choices": []
+    },
+    "line_2": {
+     "text": "Will you light it before nightfall?",
+     "next": null,
+     "choices": [
+      {
+       "text": "I'll light the watchfire.",
+       "next": "line_3",
+       "set_flags": {
+        "task_accepted": true
+       }
+      },
+      {
+       "text": "Not right now.",
+       "next": "line_10",
+       "set_flags": null
+      }
+     ]
+    },
+    "line_3": {
+     "text": "Bless you, traveller. Take my flint.",
+     "next": "line_12",
+     "choices": []
+    },
+    "line_4": {
+     "text": "Then I'll keep waiting... but the dark won't.",
+     "next": null,
+     "choices": []
+    },
+    "line_5": {
+     "text": "Follow the road east, past the lamps.",
+     "next": "line_6",
+     "choices": []
+    },
+    "line_6": {
+     "text": "Mind the ford: it runs cold.",
+     "next": "line_8",
+     "choices": []
+    },
+    "line_8": {
+     "text": "Its light will carry to the forest road.",
+     "next": "line_9",
+     "choices": []
+    },
+    "line_9": {
+     "text": "Come back and tell me when it burns.",
+     "next": "line_10",
+     "choices": []
+    },
+    "root": {
+     "text": "Traveller! The watchfire at the crossing has gone dark.",
+     "next": "line_2",
+     "choices": []
+    }
+   }
+  }
+ },
+ "F_repeat": {
+  "files_identical": true,
+  "shown": {
+   "lines": [
+    "1. Traveller! The watchfire at t\u2026 > 2",
+    "1. start at line",
+    "2. Will you light it before nigh\u2026 ?",
+    "3. Bless you, traveller. Take my\u2026 > 11",
+    "4. Then I'll keep waiting... but\u2026 (end)",
+    "5. Follow the road east, past th\u2026 > 6",
+    "6. Mind the ford: it runs cold. > 7",
+    "7. Its light will carry to the f\u2026 > 8",
+    "8. Come back and tell me when it\u2026 > 9",
+    "9. Safe travels. (end)",
+    "10. Back already? Is it lit? (end)",
+    "11. It sparks on the first strike. > 5"
+   ],
+   "otherwise_line": "1",
+   "openings": [
+    "10"
+   ],
+   "next_line_button": []
+  },
+  "stored": {
+   "start": "root",
+   "starts": [
+    {
+     "forbid_flags": [],
+     "node": "line_11",
+     "require_flags": [
+      "task_accepted"
+     ]
+    }
+   ],
+   "nodes": {
+    "line_10": {
+     "text": "Safe travels.",
+     "next": null,
+     "choices": []
+    },
+    "line_11": {
+     "text": "Back already? Is it lit?",
+     "next": null,
+     "choices": []
+    },
+    "line_12": {
+     "text": "It sparks on the first strike.",
+     "next": "line_5",
+     "choices": []
+    },
+    "line_2": {
+     "text": "Will you light it before nightfall?",
+     "next": null,
+     "choices": [
+      {
+       "text": "I'll light the watchfire.",
+       "next": "line_3",
+       "set_flags": {
+        "task_accepted": true
+       }
+      },
+      {
+       "text": "Not right now.",
+       "next": "line_10",
+       "set_flags": null
+      }
+     ]
+    },
+    "line_3": {
+     "text": "Bless you, traveller. Take my flint.",
+     "next": "line_12",
+     "choices": []
+    },
+    "line_4": {
+     "text": "Then I'll keep waiting... but the dark won't.",
+     "next": null,
+     "choices": []
+    },
+    "line_5": {
+     "text": "Follow the road east, past the lamps.",
+     "next": "line_6",
+     "choices": []
+    },
+    "line_6": {
+     "text": "Mind the ford: it runs cold.",
+     "next": "line_8",
+     "choices": []
+    },
+    "line_8": {
+     "text": "Its light will carry to the forest road.",
+     "next": "line_9",
+     "choices": []
+    },
+    "line_9": {
+     "text": "Come back and tell me when it burns.",
+     "next": "line_10",
+     "choices": []
+    },
+    "root": {
+     "text": "Traveller! The watchfire at the crossing has gone dark.",
+     "next": "line_2",
+     "choices": []
+    }
+   }
+  }
+ },
+ "G_game": {
+  "first_talk": [
+   "Traveller! The watchfire at the crossing has gone dark.",
+   "Will you light it before nightfall?",
+   "Bless you, traveller. Take my flint.",
+   "It sparks on the first strike.",
+   "Follow the road east, past the lamps.",
+   "Mind the ford: it runs cold.",
+   "Its light will carry to the forest road.",
+   "Come back and tell me when it burns.",
+   "Safe travels."
+  ],
+  "flags": [
+   "task_accepted"
+  ],
+  "second_talk": [
+   "Back already? Is it lit?"
+  ]
+ },
+ "H_export": {
+  "exit": 0,
+  "tail": "[Mesh][Export] building bundle from <scratch>\\r4_after\\r4...\n[Mesh][Export] OK (1061 files, 10,288,456 bytes)\n[Mesh][Export] wrote bundle to <scratch>\\r4_after\\bundle\n"
+ },
+ "H_exported_game": {
+  "first_talk": [
+   "Traveller! The watchfire at the crossing has gone dark.",
+   "Will you light it before nightfall?",
+   "Bless you, traveller. Take my flint.",
+   "It sparks on the first strike.",
+   "Follow the road east, past the lamps.",
+   "Mind the ford: it runs cold.",
+   "Its light will carry to the forest road.",
+   "Come back and tell me when it burns.",
+   "Safe travels."
+  ],
+  "flags": [
+   "task_accepted"
+  ],
+  "second_talk": [
+   "Back already? Is it lit?"
+  ]
+ }
+}

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import math
 from collections import deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence
 import engine.optional_arcade as optional_arcade
 
-from ..hud_model import HudViewModel, build_hud_view_model, merge_event_histories
+from ..hud_model import HudViewModel, build_hud_view_model, find_player, merge_event_histories
 from engine.swallowed_exceptions import _log_swallow
+from ..text_draw import TextCache, draw_text_cached, get_text_scale
 from .common import (
     UIElement,
     _draw_tb_rectangle_outline,
@@ -19,6 +21,72 @@ _HUD_PROVIDER_EXCEPTIONS: tuple[type[Exception], ...] = (
     TypeError,
     ValueError,
 )
+
+# Toasts ("Game saved", the controls hint...): one layout gives the text its lines and the box its size, both from the
+# text's measured width (#422 H8: the box was estimated from the character count and capped at 360 px while the text
+# was drawn unbounded, so the controls hint ran far past its border).
+TOAST_LEFT = 20.0  # from the window's left edge; the box keeps the same margin from its right edge
+TOAST_TOP = 110.0  # the first toast's top, down from the window's top (the next ones stack below it)
+TOAST_PAD_X, TOAST_PAD_Y = 12.0, 6.0
+TOAST_MIN_WIDTH, TOAST_MAX_WIDTH = 180.0, 640.0  # (a short message keeps its box; a long one wraps before 640 px)
+TOAST_LINE_HEIGHT = 22.0  # the line pitch at text scale 1, as before; a taller font or text scale gets more
+TOAST_FONT, TOAST_FONT_SIZE = "Consolas", 12.0
+ELLIPSIS = "\u2026"  # ends the last Quest Log line that fits when more of its text doesn't
+HUD_GAP = 6.0  # between a HUD box and what it keeps clear of (Studio's play bar, the open Quest Log)
+
+
+@dataclass(frozen=True, slots=True)
+class ToastLayout:
+    lines: tuple[str, ...]
+    width: float  # the box, padding included
+    height: float
+    line_height: float
+
+
+def _wrap(text: str, fits: Callable[[str], bool]) -> list[str]:
+    """``text`` in lines that each ``fits``: broken where it has two spaces (between "Q: Quest Log" and "Tab:
+    Inventory"), else between words, else, for a word too long on its own, between letters."""
+    lines: list[str] = []
+
+    def add(piece: str, sep: str) -> None:
+        if lines and fits(f"{lines[-1]}{sep}{piece}"):
+            lines[-1] = f"{lines[-1]}{sep}{piece}"
+        else:
+            lines.append(piece)
+
+    for group in (g.strip() for g in text.split("  ") if g.strip()):
+        if fits(group):
+            add(group, "  ")
+            continue
+        for n, word in enumerate(group.split()):
+            while len(word) > 1 and not fits(word):
+                cut = next((i for i in range(len(word) - 1, 0, -1) if fits(word[:i])), 1)
+                lines.append(word[:cut])
+                word = word[cut:]
+            add(word, "  " if n == 0 else " ")
+    return lines or [text]
+
+
+def layout_toast(text: str, *, measure: Callable[[str], float], line_height: float, max_width: float) -> ToastLayout:
+    """The lines and box of a toast at most ``max_width`` wide (padding included): ``measure`` gives a line's width as
+    the font draws it."""
+    # In whole pixels: a box edge between two pixels smears its outline over both.
+    max_width, line_height = float(math.floor(max_width)), float(math.ceil(line_height))
+    inner = max(1.0, max_width - 2 * TOAST_PAD_X)
+    lines = tuple(_wrap(text, lambda s: measure(s) <= inner))
+    text_width = math.ceil(max(measure(line) for line in lines) + 2 * TOAST_PAD_X)
+    width = min(max_width, max(TOAST_MIN_WIDTH, float(text_width)))
+    return ToastLayout(lines, width, len(lines) * line_height + 2 * TOAST_PAD_Y, line_height)
+
+
+def _below(play_bar: Any, left: float, right: float, top: float) -> float:
+    """``top``, or just under Studio's play bar (Stop, Flags, Menu; ``Studio.play_bar_rect``) when a play-test has it
+    over ``left``..``right``: a small window, or a bar widened by the AI permissions, put it over the HP bar and the
+    objective (#769)."""
+    if play_bar is None or play_bar[2] <= left or play_bar[0] >= right:
+        return top
+    return min(top, float(play_bar[1]) - HUD_GAP)
+
 
 if TYPE_CHECKING:  # pragma: no cover
     from arcade import Sprite
@@ -63,10 +131,11 @@ class InteractPromptOverlay(UIElement):
 
     def draw(self) -> None:
         payload = None
-        has_provider = callable(self.provider)
-        if has_provider:
+        provider = self.provider
+        has_provider = callable(provider)
+        if provider is not None and has_provider:
             try:
-                payload = self.provider(self.window)
+                payload = provider(self.window)
             except _HUD_PROVIDER_EXCEPTIONS:
                 _log_swallow("HUD-001", "engine.ui_overlays.hud.InteractPromptOverlay.draw provider")
                 return
@@ -79,7 +148,9 @@ class InteractPromptOverlay(UIElement):
         if not text:
             return
 
-        width = 220.0
+        # The box grows to fit the label (the font is monospaced, ~10.5 px a character at 14 pt):
+        # a fixed width let long names spill off the screen's left edge.
+        width = max(220.0, len(text) * 10.5 + 24.0)
         height = 40.0
         left = 20.0
         bottom = 150.0
@@ -277,7 +348,10 @@ class HealthBar(UIElement):
 
 
 class QuestLog(UIElement):
-    """Side panel overlay that lists tracked quests and their objectives."""
+    """Side panel overlay that lists tracked quests and their objectives.
+
+    Tracked = started (``quest_ui.get_active_quests``): active quests, and completed ones greyed with "Status:
+    Complete"; quests not yet accepted aren't listed. The HUD's pinned objective shows the first active one only."""
 
     def __init__(self, window: "GameWindow") -> None:
         super().__init__(window)
@@ -299,6 +373,13 @@ class QuestLog(UIElement):
             font_size=12,
             anchor_y="top",
         )
+        self._probes: dict[float, Any] = {}  # font size -> a Text that measures lines in it
+        self._layouts: dict[tuple[str, float, float], tuple[list[tuple[str, float]], float]] = {}
+        self._ellipses: dict[tuple[str, float, float], tuple[str, float]] = {}
+        self._text_cache = TextCache()  # one Text a line drawn
+        # What the last draw put on screen: (kind, line, left, top, width, height); kind "title:<n>" or "detail".
+        self.drawn_lines: list[tuple[str, str, float, float, float, float]] = []
+        self.drawn_panel: tuple[float, float, float, float] | None = None  # (left, bottom, right, top) last drawn
 
     def on_resize(self, width: int, height: int) -> None:  # noqa: ARG002
         """QuestLog computes layout per draw; no persistent cache to update."""
@@ -360,13 +441,9 @@ class QuestLog(UIElement):
             return
 
         entries = self._collect_entries()
-        width = min(420.0, max(280.0, self.window.width * 0.4))
-        height = max(220.0, self.window.height - 160.0)
-        left = self.window.width - width - 24.0
-        right = left + width
-        bottom = 72.0
-        top = bottom + height
-
+        left, bottom, right, top = self.panel_rect()
+        width, height = right - left, top - bottom
+        self.drawn_panel = (left, bottom, right, top)  # (the box drawn here, from these same numbers)
         _draw_rectangle_filled(
             center_x=(left + right) / 2.0,
             center_y=(top + bottom) / 2.0,
@@ -386,77 +463,103 @@ class QuestLog(UIElement):
         content_y = top - 52.0
         padding = 20.0
         content_width = width - padding * 1.5
+        floor = bottom + 40.0  # (text stops above the "Press Q to close" hint)
+        self.drawn_lines = []
         if not entries:
-            optional_arcade.arcade.draw_text(
-                "No tracked quests yet.",
-                left + padding,
-                content_y,
-                color=optional_arcade.arcade.color.LIGHT_GRAY,
-                font_size=13,
-                anchor_y="top",
-                width=content_width,
-            )
+            self._draw_wrapped("No tracked quests yet.", left + padding, content_y, content_width, floor,
+                               font_size=13, color=optional_arcade.arcade.color.LIGHT_GRAY)
             return
 
         left_width = max(180.0, content_width * 0.45)
         right_left = left + padding + left_width + 16.0
         right_width = right - right_left - padding
         entries = entries[:50]
-        self._selection_index = min(max(0, self._selection_index), max(0, len(entries) - 1))
+        self._selection_index = selected_index = min(max(0, self._selection_index), max(0, len(entries) - 1))
 
+        # The list starts at the first title that keeps the selected one in view (it doesn't scroll otherwise).
+        heights = []
+        for entry in entries[: selected_index + 1]:
+            lines, pitch = self._layout(str(entry.get("title", "<quest>")), 14, left_width)
+            heights.append(len(lines) * pitch)
+        first = 0
+        while first < selected_index and sum(heights[first:]) > content_y - floor:
+            first += 1
         y = content_y
-        for idx, entry in enumerate(entries):
-            if y < bottom + 60.0:
-                break
-            title_color = optional_arcade.arcade.color.YELLOW if idx == self._selection_index else optional_arcade.arcade.color.WHITE
+        for idx in range(first, len(entries)):
+            entry = entries[idx]
+            title_color = optional_arcade.arcade.color.YELLOW if idx == selected_index else optional_arcade.arcade.color.WHITE
             if entry.get("completed"):
                 title_color = optional_arcade.arcade.color.GRAY
-            optional_arcade.arcade.draw_text(
-                entry.get("title", "<quest>"),
-                left + padding,
-                y,
-                color=title_color,
-                font_size=14,
-                width=left_width,
-                anchor_y="top",
-            )
-            y -= 18.0
+            y = self._draw_wrapped(str(entry.get("title", "<quest>")), left + padding, y, left_width, floor,
+                                   font_size=14, color=title_color, kind=f"title:{idx}")
 
-        if entries:
-            selected = entries[self._selection_index]
-            detail_color = optional_arcade.arcade.color.LIGHT_GRAY
-            status = "Complete" if selected.get("completed") else "Active"
-            optional_arcade.arcade.draw_text(
-                f"Status: {status}",
-                right_left,
-                content_y,
-                color=detail_color,
-                font_size=12,
-                width=right_width,
-                anchor_y="top",
-            )
-            objective = selected.get("current_objective") or selected.get("text") or ""
-            if objective:
-                optional_arcade.arcade.draw_text(
-                    f"Objective: {objective}",
-                    right_left,
-                    content_y - 20.0,
-                    color=detail_color,
-                    font_size=12,
-                    width=right_width,
-                    anchor_y="top",
-                    multiline=True,
-                )
-            else:
-                optional_arcade.arcade.draw_text(
-                    "Objective: -",
-                    right_left,
-                    content_y - 20.0,
-                    color=detail_color,
-                    font_size=12,
-                    width=right_width,
-                    anchor_y="top",
-                )
+        selected = entries[selected_index]
+        detail_color = optional_arcade.arcade.color.LIGHT_GRAY
+        status = "Complete" if selected.get("completed") else "Active"
+        objective = selected.get("current_objective") or selected.get("text") or "-"
+        y = self._draw_wrapped(f"Status: {status}", right_left, content_y, right_width, floor,
+                               font_size=12, color=detail_color, kind="detail")
+        self._draw_wrapped(f"Objective: {objective}", right_left, min(y, content_y - 20.0), right_width, floor,
+                           font_size=12, color=detail_color, kind="detail")
+
+    def panel_rect(self) -> tuple[float, float, float, float]:
+        """The panel's left, bottom, right and top edges in this window (toasts keep to its left while it's open)."""
+        width = min(420.0, max(280.0, self.window.width * 0.4))
+        left = self.window.width - width - 24.0
+        return left, 72.0, left + width, 72.0 + max(220.0, self.window.height - 160.0)
+
+    def _measure(self, line: str, size: float) -> float:
+        """``line``'s width in the Quest Log's font at ``size`` (text scale applied)."""
+        probe = self._probes.get(size)
+        if probe is None:
+            probe = self._probes[size] = optional_arcade.arcade.Text("Ag", 0, 0, font_size=size)
+        probe.text = line
+        return float(getattr(probe, "content_width", 0.6 * size * len(line)))
+
+    def _layout(self, text: str, font_size: float, width: float) -> tuple[list[tuple[str, float]], float]:
+        """``text`` in lines no wider than ``width`` (each with its width), broken at its newlines too, and the line
+        pitch: measured once in the font it is drawn in, at the text scale."""
+        size = font_size * get_text_scale()
+        key = (text, size, width)
+        layout = self._layouts.get(key)
+        if layout is None:
+            self._measure("Ag", size)  # (the font's line height, whatever the probe measured last)
+            pitch = float(getattr(self._probes[size], "content_height", 1.5 * size))
+            lines = [line for part in text.split("\n") for line in _wrap(part, lambda s: self._measure(s, size) <= width)]
+            if len(self._layouts) > 128:
+                self._layouts.clear()
+            layout = self._layouts[key] = ([(line, self._measure(line, size)) for line in lines], pitch)
+        return layout
+
+    def _ellipsized(self, line: str, size: float, width: float) -> tuple[str, float]:
+        """``line`` shortened to end in an ellipsis within ``width``, and its width."""
+        key = (line, size, width)
+        cached = self._ellipses.get(key)
+        if cached is None:
+            cut = line.rstrip()
+            while cut and self._measure(cut + ELLIPSIS, size) > width:
+                cut = cut[:-1].rstrip()
+            if len(self._ellipses) > 128:
+                self._ellipses.clear()
+            cached = self._ellipses[key] = (cut + ELLIPSIS, self._measure(cut + ELLIPSIS, size))
+        return cached
+
+    def _draw_wrapped(self, text: str, x: float, top: float, width: float, floor: float, *, font_size: float,
+                      color: Any, kind: str = "text") -> float:
+        """Draw ``text`` from ``top`` down in lines no wider than ``width``, one cached Text a line (arcade's
+        draw_text keeps one label for every call with the same font and width, and its ``multiline`` isn't part of
+        that key, so a single-line call before it left a multiline one unwrapped). Lines that would reach below
+        ``floor`` are left out, the last one kept ending in an ellipsis. Returns the top of the next line."""
+        lines, pitch = self._layout(text, font_size, width)
+        for n, (line, line_width) in enumerate(lines):
+            if top - pitch < floor:
+                break
+            if n + 1 < len(lines) and top - 2 * pitch < floor:  # (the last line with room, and more to come)
+                line, line_width = self._ellipsized(line, font_size * get_text_scale(), width)
+            draw_text_cached(line, x, top, color=color, font_size=font_size, anchor_y="top", cache=self._text_cache)
+            self.drawn_lines.append((kind, line, x, top, line_width, pitch))
+            top -= pitch
+        return top
 
     def _collect_entries(self) -> list[dict[str, Any]]:
         from ..quest_ui import get_active_quests  # noqa: PLC0415
@@ -535,8 +638,11 @@ class PlayerHUD(UIElement):
         from ..ui_toasts import ToastManager  # noqa: PLC0415
 
         self._toast_manager: ToastManager = ToastManager()
+        self._toast_layouts: dict[tuple[str, float, float], ToastLayout] = {}
         self._hud_frame: int = 0
         self._latest_view_model: HudViewModel | None = None
+        # What the last draw put on screen: kind ("hp", "objective", "toast:<n>") -> (text, left, bottom, right, top).
+        self.drawn: dict[str, tuple[str, float, float, float, float]] = {}
         self._health_text = optional_arcade.arcade.Text(
             text="",
             x=20,
@@ -545,9 +651,6 @@ class PlayerHUD(UIElement):
             font_size=14,
             anchor_y="top",
         )
-
-    def clear_toasts(self) -> None:
-        self._toast_manager.clear()
         self._xp_text = optional_arcade.arcade.Text(
             text="",
             x=20,
@@ -575,16 +678,9 @@ class PlayerHUD(UIElement):
             multiline=True,
             width=300
         )
-        self._toast_text = optional_arcade.arcade.Text(
-            text="",
-            x=20,
-            y=self.window.height - 110,
-            color=optional_arcade.arcade.color.LIGHT_GRAY,
-            font_size=12,
-            anchor_y="top",
-            multiline=True,
-            width=360,
-        )
+
+    def clear_toasts(self) -> None:
+        self._toast_manager.clear()
 
     @staticmethod
     def build_pinned_objective_text(quest_manager: Any, *, max_chars: int = 220) -> str | None:
@@ -598,16 +694,11 @@ class PlayerHUD(UIElement):
         if not entries:
             return None
 
-        picked: dict[str, Any] | None = None
-        for entry in entries:
-            if not isinstance(entry, dict):
-                continue
-            status = str(entry.get("status") or "").strip().lower()
-            if status in {"active", "in_progress", "started"}:
-                picked = entry
-                break
-        if picked is None:
-            picked = next((entry for entry in entries if isinstance(entry, dict)), None)
+        # The first active quest's, or none: the listing has every quest, not yet accepted and completed ones too, and
+        # falling back to any of them showed an objective before its quest was accepted and after it was done (#768).
+        picked = next((entry for entry in entries if isinstance(entry, dict) and not entry.get("completed")
+                       and str(entry.get("status") or "").strip().lower() in {"active", "in_progress", "started"}),
+                      None)
         if picked is None:
             return None
 
@@ -680,6 +771,8 @@ class PlayerHUD(UIElement):
 
         Persists the shown state via the game state's flags when available.
         """
+        if getattr(window, "studio", None) is not None:
+            return None  # a Studio play-test: these keys (F2 editor, I inspector...) are not that game's
         flag_name = "hint_shown_controls"
         getter = getattr(window, "get_flag", None)
         if callable(getter) and getter(flag_name, False):
@@ -701,7 +794,7 @@ class PlayerHUD(UIElement):
             if "hub" not in filename:
                 return None
 
-        hint = "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  F2: Editor  H: Help"
+        hint = "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help"
         setter = getattr(window, "set_flag", None)
         if callable(setter):
             setter(flag_name, True)
@@ -711,6 +804,10 @@ class PlayerHUD(UIElement):
 
     def enqueue_toast(self, message: str, *, seconds: float = 4.0) -> None:
         self._toast_manager.push_toast(message, ttl_s=seconds)
+
+    def active_toasts(self) -> list[str]:
+        """The messages showing now."""
+        return self._toast_manager.get_active_toasts()
 
     def update(self, dt: float) -> None:
         self._hud_frame += 1
@@ -728,10 +825,88 @@ class PlayerHUD(UIElement):
             self.enqueue_toast(hint, seconds=4.0)
 
     def draw(self) -> None:
+        self.drawn = {}
         if getattr(getattr(self.window, "editor_controller", None), "active", False):
             return
-        player = getattr(self.window, "player", None)
-        if not player:
+        self._draw_stats()
+        # Toasts ("Game saved", ...) show even for a player without health stats, as in most Studio games.
+        self._draw_toasts()
+
+    def toast_layout(self, text: str) -> ToastLayout:
+        """``text``'s toast in this window, now: its lines measured in the font it is drawn in (at the text scale),
+        the box as wide as the widest line plus padding, never wider than the window less a margin each side."""
+        from ..text_draw import get_text_scale  # noqa: PLC0415
+
+        scale = get_text_scale()
+        max_width = min(TOAST_MAX_WIDTH, float(self.window.width) - 2 * TOAST_LEFT)
+        log = getattr(getattr(self.window, "ui_controller", None), "quest_log", None)
+        if log is not None and log.is_visible():  # (wrapped to the open Quest Log's left, not run under it)
+            max_width = min(max_width, log.panel_rect()[0] - HUD_GAP - TOAST_LEFT)
+        objective = self.drawn.get("objective")  # (this frame's: a long one reaches down past the toasts' top)
+        if objective is not None and objective[2] < float(self.window.height) - TOAST_TOP:
+            max_width = min(max_width, objective[1] - HUD_GAP - TOAST_LEFT)
+        key = (text, max_width, scale)
+        layout = self._toast_layouts.get(key)
+        if layout is None:
+            text_class = getattr(optional_arcade.arcade, "Text", None)
+            if text_class is None:  # (a stand-in arcade, no fonts: the old estimate)
+                def measure(line: str) -> float:
+                    return 7.5 * scale * len(line)
+                pitch = TOAST_LINE_HEIGHT * scale
+            else:
+                probe = text_class("Ag", 0, 0, font_size=TOAST_FONT_SIZE * scale, font_name=TOAST_FONT)
+
+                def measure(line: str) -> float:
+                    probe.text = line
+                    return float(probe.content_width)
+                pitch = max(TOAST_LINE_HEIGHT * scale, float(probe.content_height))
+            if len(self._toast_layouts) > 64:
+                self._toast_layouts.clear()
+            layout = self._toast_layouts[key] = layout_toast(text, measure=measure, line_height=pitch,
+                                                             max_width=max_width)
+        return layout
+
+    def _draw_toasts(self) -> None:
+        toasts = self._toast_manager.get_active_entries()
+        if toasts:
+            from ..text_draw import draw_text_cached  # noqa: PLC0415
+
+            top = self.window.height - TOAST_TOP
+            cache = getattr(self.window, "text_cache", None)
+            for index, (toast_text, alpha) in enumerate(toasts):
+                if not toast_text:
+                    continue
+                fade = max(0.0, min(1.0, float(alpha)))
+                if fade <= 0.0:
+                    continue
+                layout = self.toast_layout(toast_text)
+                left, right, bottom = TOAST_LEFT, TOAST_LEFT + layout.width, top - layout.height
+                self.drawn[f"toast:{index}"] = (toast_text, left, bottom, right, top)
+                _draw_rectangle_filled(
+                    center_x=(left + right) / 2.0,
+                    center_y=(top + bottom) / 2.0,
+                    width=layout.width,
+                    height=layout.height,
+                    color=(0, 0, 0, int(round(170 * fade))),
+                )
+                _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+                for n, line in enumerate(layout.lines):
+                    draw_text_cached(
+                        line,
+                        left + TOAST_PAD_X,
+                        top - TOAST_PAD_Y - n * layout.line_height,
+                        color=(255, 255, 255, int(round(255 * fade))),
+                        font_size=TOAST_FONT_SIZE,
+                        anchor_y="top",
+                        font_name=TOAST_FONT,
+                        cache=cache,
+                    )
+                top = bottom - 6.0
+
+    def _draw_stats(self) -> None:
+        player = find_player(self.window)
+        if player is None:
+            self._latest_view_model = None
             return
 
         self._latest_view_model = build_hud_view_model(
@@ -743,11 +918,14 @@ class PlayerHUD(UIElement):
         if health_state.max_hp <= 0:
             return
 
+        rect_of = getattr(getattr(self.window, "studio", None), "play_bar_rect", None)
+        play_bar = rect_of() if callable(rect_of) else None  # (once a frame: it lays the bar out)
+
         # Draw Health Bar
         bar_x = 20
-        bar_y = self.window.height - 30
         bar_width = 200
         bar_height = 20
+        bar_y = _below(play_bar, bar_x - 2, bar_x + bar_width + 2, self.window.height - 28) - 2  # (its border: 2)
 
         # Background
         _draw_rectangle_filled(
@@ -777,6 +955,7 @@ class PlayerHUD(UIElement):
         self._health_text.anchor_x = "center"
         self._health_text.anchor_y = "center"
         self._health_text.draw()
+        self.drawn["hp"] = (self._health_text.text, bar_x - 2, bar_y - bar_height - 2, bar_x + bar_width + 2, bar_y + 2)
 
         cfg = getattr(self.window, "engine_config", None)
         if cfg is None or getattr(cfg, "hud_show_objective", True):
@@ -789,53 +968,15 @@ class PlayerHUD(UIElement):
             if show_objective:
                 objective = self.build_pinned_objective_text(getattr(self.window, "quest_manager", None))
                 if objective:
-                    self._quest_text.text = objective
-                    self._quest_text.x = self.window.width - 20
-                    self._quest_text.y = self.window.height - 20
-                    self._quest_text.draw()
-
-        toasts = self._toast_manager.get_active_entries()
-        if toasts:
-            from ..text_draw import draw_text_cached  # noqa: PLC0415
-
-            start_x = 20.0
-            start_y = self.window.height - 110.0
-            line_height = 22.0
-            padding_x = 12.0
-            padding_y = 6.0
-            cache = getattr(self.window, "text_cache", None)
-            for idx, (toast_text, alpha) in enumerate(toasts):
-                if not toast_text:
-                    continue
-                fade = max(0.0, min(1.0, float(alpha)))
-                if fade <= 0.0:
-                    continue
-                width = min(360.0, max(180.0, 24.0 + (len(toast_text) * 7.5)))
-                height = line_height + padding_y * 2
-                left = start_x
-                top = start_y - (idx * (height + 6.0))
-                right = left + width
-                bottom = top - height
-                bg_alpha = int(round(170 * fade))
-                text_alpha = int(round(255 * fade))
-                _draw_rectangle_filled(
-                    center_x=(left + right) / 2.0,
-                    center_y=(top + bottom) / 2.0,
-                    width=width,
-                    height=height,
-                    color=(0, 0, 0, bg_alpha),
-                )
-                _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
-                draw_text_cached(
-                    toast_text,
-                    left + padding_x,
-                    top - padding_y,
-                    color=(255, 255, 255, text_alpha),
-                    font_size=12,
-                    anchor_y="top",
-                    font_name="Consolas",
-                    cache=cache,
-                )
+                    text = self._quest_text
+                    text.text = objective
+                    text.x = self.window.width - 20.0  # (its 300 px box's right edge: the lines start at its left)
+                    left = float(getattr(text, "left", text.x - 300.0))  # (a stand-in arcade's Text: the box)
+                    right = left + float(getattr(text, "content_width", 300.0))
+                    text.y = _below(play_bar, left, right, self.window.height - 20.0)
+                    text.draw()
+                    bottom = text.y - float(getattr(text, "content_height", 0.0))
+                    self.drawn["objective"] = (objective, left, bottom, right, text.y)
 
         if cfg is not None and not getattr(cfg, "hud_show_xp_bar", True):
             return

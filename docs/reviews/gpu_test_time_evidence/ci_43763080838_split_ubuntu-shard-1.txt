@@ -1,0 +1,54 @@
+wrapped: ['hd2d_demo.HiddenGame.__init__', 'hd2d_demo.HiddenGame.close', 'hd2d_demo.HiddenGame.step', 'hd2d_studio_demo.StudioDriver.__init__', 'hd2d_studio_demo.StudioDriver.advance', 'rebuild'] exit 0
+tests 238  total 909 s
+  rebuild          314.7 s  34.6%   n=1124
+  studio_frames    250.5 s  27.5%   n=5398
+  game_frames        8.6 s   0.9%   n=12347
+  studio_open       40.3 s   4.4%   n=48
+  window_open        8.7 s   1.0%   n=135
+  window_close       1.1 s   0.1%   n=135
+  subprocess        17.1 s   1.9%   n=15
+(studio_open includes its window_open, first rebuild and first frame; rebuilds are never inside frames)
+
+  total  setup   call      rebuild       frames      open  subproc  test
+  179.5  179.5    0.0  109.7/359     45.6/514     4.5/5        5.6  test_dialogue_reopen_gpu.py::test_reopening_shows_the_same_numbers_openings_and_next_lin
+  177.7  177.7    0.0  103.5/331     40.1/447     1.4/2        0.0  test_hd2d_lighting_controls_gpu.py::test_the_hd2d_panel_shows_only_what_the_renderer_rea
+   67.1    0.0   67.1    4.9/30      45.1/1610    1.5/2        0.0  test_terrain_gpu.py::test_studio_paints_live_one_stroke_one_undo_step
+   47.8   47.8    0.0   24.5/62      14.4/182     2.2/3        4.5  test_hd2d_bloom_gpu.py::test_studio_glows_its_view_at_once_and_not_its_lines
+   47.3   47.3    0.0   25.1/62      12.6/179     3.0/3        4.4  test_hd2d_haze_gpu.py::test_studio_hazes_its_view_at_once_and_not_its_lines
+   22.2    0.0   22.2    3.7/22      12.7/353     1.4/2        0.0  test_terrain_gpu.py::test_studio_sculpts_live_one_stroke_one_undo_step
+   21.5    0.0   21.5    2.8/9       11.8/343     0.7/1        0.0  test_terrain_gpu.py::test_the_terrain_gate_fails_injected_regressions
+   19.4    0.0   19.4    7.5/30       6.8/77      1.6/2        0.0  test_water_gpu.py::test_a_creator_places_shapes_turns_and_banks_water_in_studio
+   19.1   19.1    0.0    1.6/11      15.0/583     0.4/1        0.9  test_scatter_diagnostics_gpu.py::test_trees_over_a_dense_meadow_say_the_meadow_leaves_no
+   15.1    0.0   15.1    1.8/20       7.7/197     1.4/2        0.0  test_terrain_gpu.py::test_studio_sculpts_a_click_at_a_time_with_undo_redo_save_and_reope
+   14.9   14.9    0.0    0.0/0        0.2/474     0.0/0        0.0  test_hd2d_bloom_gpu.py::test_off_and_strength_zero_are_the_original_picture_with_nothing
+   12.8   12.8    0.0    4.6/29       3.3/183     0.8/2        0.9  test_soundscape_studio_gpu.py::test_a_sound_is_placed_chosen_and_set_with_studios_contro
+   11.5    0.0   11.5    0.0/0        0.0/30      0.0/0        0.0  test_weather_collisions_gpu.py::test_rain_stops_at_roofs_and_decks_and_splashes_on_what_
+   11.3    0.0   11.3    4.6/15       4.2/25      2.4/1        0.0  test_water_passable_gpu.py::test_studio_sets_walking_into_it_for_a_stream_and_a_pond_one
+   11.2    0.0   11.2    0.9/11       7.4/187     0.7/1        0.0  test_terrain_gpu.py::test_a_plain_room_s_first_paint_stroke_its_undo_and_esc
+   10.9    0.0   10.9    4.0/16       3.9/50      3.5/2        0.0  test_water_gpu.py::test_a_creator_adds_and_edits_water_in_studio
+   10.7    0.0   10.7    1.1/12       6.9/176     0.7/1        0.0  test_terrain_gpu.py::test_qa_s_findings_stay_fixed
+    9.8    9.8    0.0    0.5/6        1.0/610     2.4/2        0.0  test_hd2d_lamp_glow_gpu.py::test_only_the_lamp_heads_change_in_each_investigation_room[v
+    9.2    9.2    0.0    0.0/0        1.7/2967    0.0/0        0.0  test_hd2d_lighting_gpu.py::test_sun_shadows_agree_with_rays_through_the_geometry_everywh
+    9.0    9.0    0.0    4.3/18       2.2/368     0.8/2        0.9  test_hd2d_room_expand_gpu.py::test_a_populated_room_is_expanded_in_studio_with_everythin
+
+modules:  total  rebuild  frames  subprocess
+   179.5   109.7    45.6     5.6  tests/test_dialogue_reopen_gpu.py
+   177.7   103.5    40.1     0.0  tests/test_hd2d_lighting_controls_gpu.py
+   175.0    15.9    94.4     0.0  tests/test_terrain_gpu.py
+    67.4    11.5    11.4     0.0  tests/test_water_gpu.py
+    62.7    24.5    14.6     4.5  tests/test_hd2d_bloom_gpu.py
+    55.2    25.1    12.8     4.4  tests/test_hd2d_haze_gpu.py
+    34.0     0.7     1.3     0.0  tests/test_weather_collisions_gpu.py
+    19.1     1.6    15.0     0.9  tests/test_scatter_diagnostics_gpu.py
+    16.6     4.6     5.4     0.0  tests/test_water_passable_gpu.py
+    15.9     0.0     1.7     0.0  tests/test_hd2d_lighting_gpu.py
+    15.4     5.0     3.8     0.0  tests/test_room_file_ownership_gpu.py
+    12.8     4.6     3.3     0.9  tests/test_soundscape_studio_gpu.py
+    10.7     0.3     0.1     0.0  tests/test_hd2d_billboard_camera_gpu.py
+     9.9     0.0     0.9     0.0  tests/test_hd2d_cutaway_gpu.py
+     9.8     0.5     1.0     0.0  tests/test_hd2d_lamp_glow_gpu.py
+     9.0     4.3     2.2     0.9  tests/test_hd2d_room_expand_gpu.py
+     8.1     0.0     1.7     0.0  tests/test_saved_world_gpu.py
+     6.6     0.0     0.2     0.0  tests/test_gameplay_viewport_hud_gpu.py
+     4.7     2.7     0.8     0.0  tests/test_studio_room_undo_save_gpu.py
+     4.3     0.0     0.4     0.0  tests/test_hd2d_runtime_gpu.py

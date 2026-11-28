@@ -5,6 +5,14 @@ import pytest
 pytestmark = [pytest.mark.slow, pytest.mark.integration]
 
 
+@pytest.fixture(autouse=True)
+def _synthetic_repo_skips(monkeypatch):
+    """These verify-alls run on a synthetic repo without the checkout's step inputs: allow exactly its skips (#624)."""
+    from tests._verify_skips import allow_synthetic_repo_skips
+
+    allow_synthetic_repo_skips(monkeypatch)
+
+
 def _stub_config():
     return type(
         "C",
@@ -73,6 +81,19 @@ def test_cli_verify_all_success_path(monkeypatch, tmp_path, capsys):
     assert payload["ok"] is True
     assert payload["artifacts"]["dir"] is None
     assert payload["artifacts"]["written"] == {
+        # Milestone 13: the steps the pipeline gained since this list was written (none writes without --artifacts)
+        "artifact_index": None,
+        "authoring_trace": None,
+        "authoring_trace_budget_check": None,
+        "overlay_perf": None,
+        "release_notes_json": None,
+        "release_notes_md": None,
+        "shadow_backend": None,
+        "swallowed_exceptions": None,
+        "verify_report": None,
+        "verify_summary_json": None,
+        "verify_summary_txt": None,
+        "web_smoke": None,
         "doctor_assets": None,
         "stamp_audit": None,
         "brush_audit": None,
@@ -103,8 +124,11 @@ def test_cli_verify_all_success_path(monkeypatch, tmp_path, capsys):
     for step in payload["steps"]:
         assert step["ok"] is True
         assert step["code"] == 0
-        if step["name"] in {"pytest-fast", "pytest-fast-duration-guard"}:
+        if step["name"] in {"pytest-fast", "pytest-fast-duration-guard", "web-smoke"}:  # web-smoke: skipped without a web build
             assert step["error"]
+        elif step["name"] in {"runtime-player-smoke", "player-package-gate", "perf-baseline-compare", "content-audit",
+                                  "mypy-baseline-guard", "exception-budget-guard", "exception-policy-scan"}:
+            assert step["error"].startswith("skipped: no ")  # the synthetic repo has no input for it (#624)
         else:
             assert step["error"] == ""
         assert step["artifact"] is None

@@ -7,6 +7,14 @@ import pytest
 pytestmark = [pytest.mark.slow, pytest.mark.integration]
 
 
+@pytest.fixture(autouse=True)
+def _synthetic_repo_skips(monkeypatch):
+    """These verify-alls run on a synthetic repo without the checkout's step inputs: allow exactly its skips (#624)."""
+    from tests._verify_skips import allow_synthetic_repo_skips
+
+    allow_synthetic_repo_skips(monkeypatch)
+
+
 def _stub_config():
     return type("C", (), {"world_file": "worlds/main_world.json"})()
 
@@ -34,6 +42,8 @@ def test_verify_all_includes_doctor_assets_warning_ok(monkeypatch, tmp_path, cap
             {
                 "entities": [
                     {
+                        "x": 0,  # a loadable room: verify-all now smoke-runs it (runtime-player-smoke)
+                        "y": 0,
                         "behaviours": ["SceneTransition"],
                         "behaviour_config": {"SceneTransition": {"target_scene": "scenes/missing.json"}},
                     }

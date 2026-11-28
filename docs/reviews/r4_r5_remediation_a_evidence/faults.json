@@ -1,0 +1,167 @@
+{
+  "caught": 12,
+  "of": 12,
+  "mutations": [
+    {
+      "mutation": "rule: a writer locks the folder it started in (no walk up to the project)",
+      "file": "engine/editor/project_ownership.py",
+      "caught": true,
+      "summary": [
+        "12 failed, 58 passed, 1 skipped in 173.21s (0:02:53)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_project_root.py::test_inside_an_ordinary_folder_writers_work_under_the_projects_lock",
+        "tests/test_ai_write_paths_project_root.py::test_started_from_a_folder_inside_a_project_studio_has_every_writer_is_refused",
+        "tests/test_ai_write_paths_project_root.py::test_two_writers_starting_in_different_folders_cannot_both_hold_the_project",
+        "tests/test_mcp_project_ownership_root.py::test_a_writer_owning_the_project_stops_one_started_in_an_inner_folder",
+        "tests/test_mcp_project_ownership_root.py::test_an_inner_root_works_under_the_projects_lock",
+        "tests/test_mcp_project_ownership_root.py::test_studio_opening_after_the_check_is_never_written_behind_through_an_inner_root",
+        "tests/test_project_ownership_root.py::test_whose_project_a_path_is",
+        "tests/test_project_ownership_root.py::test_windows_case_and_junctions",
+        "tests/test_project_ownership_root.py::test_writers_starting_in_different_folders_of_one_project_take_one_lock"
+      ]
+    },
+    {
+      "mutation": "rule: a nested project's files count as the outer project's",
+      "file": "engine/editor/project_ownership.py",
+      "caught": true,
+      "summary": [
+        "9 failed, 61 passed, 1 skipped in 177.25s (0:02:57)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths.py::test_a_plan_writes_only_inside_the_project_it_owns",
+        "tests/test_ai_write_paths_project_root.py::test_an_undo_with_a_destination_outside_the_project_or_an_unsafe_alias_is_refused",
+        "tests/test_ai_write_paths_project_root.py::test_an_undo_with_any_destination_in_another_project_is_refused_whole",
+        "tests/test_ai_write_paths_project_root.py::test_the_outer_projects_console_cant_change_a_nested_project",
+        "tests/test_mcp_project_ownership.py::test_writes_stay_in_the_owned_project",
+        "tests/test_mcp_project_ownership_root.py::test_the_outer_root_cant_change_a_nested_project_studio_has",
+        "tests/test_project_ownership_root.py::test_aiops_held_to_a_project_writes_its_files_and_no_nested_projects",
+        "tests/test_project_ownership_root.py::test_whose_project_a_path_is",
+        "tests/test_project_ownership_root.py::test_windows_case_and_junctions"
+      ]
+    },
+    {
+      "mutation": "rule: links and junctions not resolved",
+      "file": "engine/editor/project_ownership.py",
+      "caught": true,
+      "summary": [
+        "2 failed, 68 passed, 1 skipped in 178.56s (0:02:58)"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership.py::test_refused_while_studio_holds_unsaved_edits",
+        "tests/test_project_ownership_root.py::test_windows_case_and_junctions"
+      ]
+    },
+    {
+      "mutation": "AIOps: the held project not enforced",
+      "file": "engine/ai_ops.py",
+      "caught": true,
+      "summary": [
+        "4 failed, 66 passed, 1 skipped in 178.02s (0:02:58)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_project_root.py::test_the_outer_projects_console_cant_change_a_nested_project",
+        "tests/test_mcp_project_ownership.py::test_writes_stay_in_the_owned_project",
+        "tests/test_mcp_project_ownership_root.py::test_the_outer_root_cant_change_a_nested_project_studio_has",
+        "tests/test_project_ownership_root.py::test_aiops_held_to_a_project_writes_its_files_and_no_nested_projects"
+      ]
+    },
+    {
+      "mutation": "undo: destinations not checked",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "2 failed, 68 passed, 1 skipped in 176.96s (0:02:56)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_project_root.py::test_an_undo_with_a_destination_outside_the_project_or_an_unsafe_alias_is_refused",
+        "tests/test_ai_write_paths_project_root.py::test_an_undo_with_any_destination_in_another_project_is_refused_whole"
+      ]
+    },
+    {
+      "mutation": "undo: a missing backup copy not checked",
+      "file": "engine/tooling/plan_executor.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 69 passed, 1 skipped in 178.08s (0:02:58)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_project_root.py::test_an_undo_with_a_destination_outside_the_project_or_an_unsafe_alias_is_refused"
+      ]
+    },
+    {
+      "mutation": "undo CLI: a failed undo reported as success",
+      "file": "mesh_cli/ai.py",
+      "caught": true,
+      "summary": [
+        "3 failed, 67 passed, 1 skipped in 174.12s (0:02:54)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_project_root.py::test_a_failed_undo_exits_nonzero_and_never_says_it_succeeded",
+        "tests/test_ai_write_paths_project_root.py::test_an_undo_with_a_destination_outside_the_project_or_an_unsafe_alias_is_refused",
+        "tests/test_ai_write_paths_project_root.py::test_an_undo_with_any_destination_in_another_project_is_refused_whole"
+      ]
+    },
+    {
+      "mutation": "apply-plan / undo: lock the starting folder",
+      "file": "mesh_cli/ai.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 69 passed, 1 skipped in 176.86s (0:02:56)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_project_root.py::test_started_from_a_folder_inside_a_project_studio_has_every_writer_is_refused"
+      ]
+    },
+    {
+      "mutation": "ai_job: locks the starting folder",
+      "file": "engine/console_runtime/handlers_ai.py",
+      "caught": true,
+      "summary": [
+        "4 failed, 66 passed, 1 skipped in 175.92s (0:02:55)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_project_root.py::test_inside_an_ordinary_folder_writers_work_under_the_projects_lock",
+        "tests/test_ai_write_paths_project_root.py::test_started_from_a_folder_inside_a_project_studio_has_every_writer_is_refused",
+        "tests/test_ai_write_paths_project_root.py::test_two_writers_starting_in_different_folders_cannot_both_hold_the_project",
+        "tests/test_mcp_project_ownership.py::test_refused_while_studio_holds_unsaved_edits"
+      ]
+    },
+    {
+      "mutation": "ai_job: AIOps not held to the project",
+      "file": "engine/console_runtime/handlers_ai.py",
+      "caught": true,
+      "summary": [
+        "1 failed, 69 passed, 1 skipped in 177.66s (0:02:57)"
+      ],
+      "failed": [
+        "tests/test_ai_write_paths_project_root.py::test_the_outer_projects_console_cant_change_a_nested_project"
+      ]
+    },
+    {
+      "mutation": "MCP: locks root as given",
+      "file": "engine/mcp_server/tools.py",
+      "caught": true,
+      "summary": [
+        "6 failed, 64 passed, 1 skipped in 175.84s (0:02:55)"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership_root.py::test_a_writer_owning_the_project_stops_one_started_in_an_inner_folder",
+        "tests/test_mcp_project_ownership_root.py::test_an_inner_root_works_under_the_projects_lock",
+        "tests/test_mcp_project_ownership_root.py::test_studio_opening_after_the_check_is_never_written_behind_through_an_inner_root"
+      ]
+    },
+    {
+      "mutation": "MCP: AIOps not held to the project",
+      "file": "engine/mcp_server/tools.py",
+      "caught": true,
+      "summary": [
+        "2 failed, 68 passed, 1 skipped in 178.09s (0:02:58)"
+      ],
+      "failed": [
+        "tests/test_mcp_project_ownership.py::test_writes_stay_in_the_owned_project",
+        "tests/test_mcp_project_ownership_root.py::test_the_outer_root_cant_change_a_nested_project_studio_has"
+      ]
+    }
+  ]
+}

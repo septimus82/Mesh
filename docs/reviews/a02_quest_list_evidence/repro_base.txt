@@ -1,0 +1,26 @@
+INFO:engine.project_scaffold:Creating new project 'Game' at C:\Users\<name>\AppData\Local\Temp\a02_i4vdqfyk\game (template=blank)
+INFO:engine.project_templates:Applying template 'blank' to C:\Users\<name>\AppData\Local\Temp\a02_i4vdqfyk\game
+INFO:engine.project_scaffold:Project created successfully.
+INFO:engine.project_scaffold:Creating new project 'Game' at C:\Users\<name>\AppData\Local\Temp\a02_v86dbacd\game (template=blank)
+INFO:engine.project_templates:Applying template 'blank' to C:\Users\<name>\AppData\Local\Temp\a02_v86dbacd\game
+INFO:engine.project_scaffold:Project created successfully.
+apply_job BEFORE {"quests": [{"id": "a", "title": "A"}, {"id": "b", "title": "B"}]}
+
+apply_job ok True AFTER {
+  "quests": {
+    "c": {
+      "title": "C"
+    }
+  }
+}
+
+mcp BEFORE {"quests": [{"id": "a", "title": "A"}, {"id": "b", "title": "B"}]}
+
+mcp ok True AFTER {
+  "quests": {
+    "c": {
+      "title": "C"
+    }
+  }
+}
+

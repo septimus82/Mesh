@@ -5,11 +5,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from engine.migrations import migrate_payload
 from engine.path_norm import normalize_scene_path
 from engine.paths import resolve_path
 from engine.persistence_io import write_json_atomic
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
+from engine.schema_validation import SchemaValidationError, validate
 
 
 @dataclass(slots=True)
@@ -28,6 +30,13 @@ def validate_scene_payload(scene_payload: dict[str, Any]) -> list[str]:
         full = scene_payload
     report = loader.validate_scene(full, strict=False)
     errors = [str(e) for e in (report.errors or [])]
+    # #665: what would be written must pass the loader's own schema check, or the room no longer loads. (Only once the
+    # structural checks pass: a payload they reject, e.g. entities not a list, can't be compacted; it is refused anyway.)
+    if not errors:
+        try:
+            validate(migrate_payload("scene", compact_scene_payload(scene_payload)), "scene.schema.json", "scene")
+        except SchemaValidationError as exc:
+            errors.append(f"schema {exc.json_pointer or '/'}: {exc.message}")
     errors.sort()
     return errors
 

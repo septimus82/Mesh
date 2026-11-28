@@ -1,0 +1,17 @@
+{
+  "before": {
+    "terrain": false
+  },
+  "after": {
+    "materials_stored": true,
+    "heights_stored": false,
+    "frame_ms": {
+      "median": 16.0,
+      "p95": 16.98,
+      "max": 90.71,
+      "n": 81
+    }
+  },
+  "undo_back_to_plain_ground": true,
+  "escape_back_to_plain_ground": true
+}

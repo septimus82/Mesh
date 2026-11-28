@@ -1,0 +1,114 @@
+"""Deliberate faults in M21C2 (the weather outside heard indoors); which tests fail. Each file is restored.
+
+Usage: py mutate_indoor.py <repo> <out.json> [name part ...]
+
+Headless tests (tests/test_indoor_weather.py) run for every fault; the real-window ones
+(tests/test_indoor_weather_gpu.py, MESH_GL_SMOKE=1) for the faults marked GPU as well.
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+REPO = Path(sys.argv[1])
+OUT = Path(sys.argv[2])
+ONLY = sys.argv[3:]
+SE, OPS, STUDIO = "engine/sound_emitters.py", "engine/project_ops.py", "engine/studio_sound.py"
+HEADLESS = ["tests/test_indoor_weather.py"]
+GPU = ["tests/test_indoor_weather_gpu.py"]
+ASKS = "    outside = scape.indoor and weather.indoors  # (Milestone 21C2: an indoor room hearing the weather outside it)\n"
+READS = "        if scape.indoor and scape.weather.indoors and scape.weather.rain:\n"
+
+MUTATIONS = {
+    "none": (None, None, None, True),
+    "every indoor room hears the weather outside, asked or not (incorrectly audible indoor weather)": (
+        SE, ASKS, "    outside = scape.indoor\n", True),
+    "the setting works outdoors too": (
+        SE, ASKS, "    outside = weather.indoors\n", False),
+    "indoors the rain is still taken from the particles on screen (none: the weather is lost)": (
+        SE, "    rain_target = min(1.0, scape.outside_rain if outside else _rain_rate(window)) * weather.rain_volume \\\n",
+        "    rain_target = min(1.0, _rain_rate(window)) * weather.rain_volume \\\n", True),
+    "the last room's rain outside is kept when this room's can't be read": (
+        SE, "    scape.indoor, scape.outside_rain = False, 0.0\n", "", False),
+    "the weather is not quieter indoors": (
+        SE, "        rain_target, wind_target = rain_target * INDOORS, wind_target * INDOORS\n",
+        "        rain_target, wind_target = rain_target, wind_target\n", True),
+    "only the rain is quieter indoors": (
+        SE, "        rain_target, wind_target = rain_target * INDOORS, wind_target * INDOORS\n",
+        "        rain_target, wind_target = rain_target * INDOORS, wind_target\n", True),
+    "each room has its own weather loops (a second copy at every door)": (
+        SE, "        key = f\"weather:{name}\"\n", "        key = f\"weather:{name}:{scape.room}\"\n", True),
+    "a rain effect switched off in the room still counts": (
+        SE, "            scape.outside_rain = rain_rate(effects, [e.enabled for e in effects])\n",
+        "            scape.outside_rain = rain_rate(effects, [True for e in effects])\n", False),
+    "the setting is on unless set (rooms made before this change)": (
+        SE, "    indoors: bool = False  # an indoor room: hear its rain and wind, quietly, as the weather outside (Milestone 21C2)\n",
+        "    indoors: bool = True\n", False),
+    "the setting may be anything": (
+        SE, "    if not isinstance(indoors, bool):\n        raise EmitterError(f\"{where}.indoors must be true or false (got {indoors!r})\")\n",
+        "", False),
+    "the op writes off as a setting": (
+        OPS, "    if indoors is False:\n        now.pop(\"indoors\", None)  # (off is no setting: the room reads as one made before Milestone 21C2 does)\n    elif indoors is not _UNSET:\n",
+        "    if indoors is not _UNSET:\n", False),
+    "the op drops the setting while no sound is chosen": (
+        OPS, "    if any(now.get(k) for k in (\"rain\", \"wind\", \"indoors\")):\n", "    if any(now.get(k) for k in (\"rain\", \"wind\")):\n", True),
+    "Studio says rain is heard though it has no sound": (
+        OPS, "    rain = indoor and sounds[\"indoors\"] and rain_set != \"off\" and bool(sounds[\"rain\"])\n",
+        "    rain = indoor and sounds[\"indoors\"] and rain_set != \"off\"\n", False),
+    "Studio says the weather is heard in an outdoor room that has the setting": (
+        OPS, "    rain = indoor and sounds[\"indoors\"] and rain_set != \"off\" and bool(sounds[\"rain\"])\n",
+        "    rain = sounds[\"indoors\"] and rain_set != \"off\" and bool(sounds[\"rain\"])\n", False),
+    "the Sound panel doesn't offer the switch in an indoor room": (
+        STUDIO, "        if heard[\"indoor\"]:  # (Milestone 21C2)\n", "        if False:\n", True),
+    "the Sound panel doesn't say what is heard": (
+        STUDIO, "        rows.add(self._label(heard[\"message\"], color=C_ERROR if silent else C_MUTED, size=9, width=width))\n",
+        "", True),
+}
+
+results = {}
+for name, (file, old, new, gpu) in MUTATIONS.items():
+    if ONLY and not any(part in name for part in ONLY):
+        continue
+    original = None
+    try:
+        if file is not None:
+            path = REPO / file
+            original = path.read_bytes()
+            text = original.decode("utf-8")
+            nl = "\r\n" if "\r\n" in text else "\n"
+            flat = text.replace("\r\n", "\n")
+            pairs = old if isinstance(old, list) else [(old, new)]
+            missing = [a[:60] for a, _b in pairs if flat.count(a) != 1]
+            if missing:
+                results[name] = {"error": f"pattern not found once in {file}: {missing}"}
+                print("SKIPPED ", name, results[name]["error"], flush=True)
+                original = None
+                continue
+            for a, b in pairs:
+                flat = flat.replace(a, b)
+            path.write_bytes(flat.replace("\n", nl).encode("utf-8"))
+        started = time.perf_counter()
+        failed, summaries = [], []
+        for tests, env in ((HEADLESS, dict(os.environ)), (GPU, dict(os.environ, MESH_GL_SMOKE="1"))):
+            if tests is GPU and not gpu:
+                continue
+            args = ["-m", "gl"] if tests is GPU else []
+            run = subprocess.run([sys.executable, "-m", "pytest", "-o", "addopts=", "-q", "-p", "no:cacheprovider", "-W", "error",
+                                  "--strict-markers", *args, *tests], cwd=REPO, env=env, capture_output=True, text=True, timeout=900)
+            failed += sorted(set(re.findall(r"^(?:FAILED|ERROR) \S+?::(.+?)(?: - .*)?$", run.stdout, re.M)))
+            lines = [line for line in run.stdout.strip().splitlines() if " passed" in line or " failed" in line or " error" in line]
+            summaries.append(lines[-1] if lines else run.stderr[-200:])
+        results[name] = {"file": file, "caught": bool(failed), "failing": failed, "summary": " | ".join(summaries),
+                         "wall_s": round(time.perf_counter() - started, 1)}
+    finally:
+        if original is not None:
+            (REPO / file).write_bytes(original)
+    r = results[name]
+    print(("CAUGHT " if r["caught"] else "PASSED ") + f" {name}: {r['summary']}", flush=True)
+    for test in r["failing"]:
+        print("          ", test[:150], flush=True)
+    OUT.write_text(json.dumps(results, indent=1), encoding="utf-8")
+print(subprocess.run(["git", "status", "--short"], cwd=REPO, capture_output=True, text=True).stdout)

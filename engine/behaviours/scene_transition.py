@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from arcade import Sprite
 
 import engine.optional_arcade as optional_arcade
+from engine.hd2d.world import door_level, same_level
 
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
@@ -81,6 +83,11 @@ class SceneTransition(Behaviour):
         "event_field": ParamDef(str, default="", description="Payload field to check"),
         "event_value": ParamDef(str, default="", description="Optional value that event_field must equal"),
         "once": ParamDef(bool, default=False, description="Prevent the transition from firing more than once"),
+        "area_width": ParamDef(float, default=0.0, description="Width of the area walking into triggers (0: the picture)"),
+        "area_height": ParamDef(float, default=0.0, description="Height of that area (0: the picture)"),
+        "area_at": ParamDef(str, default="centre",
+                            description="Where that area is centred: the picture's centre, or its base (where an "
+                                        "HD-2D billboard stands)"),
     }
 
     def __init__(self, entity: Any, window: Any, **config: Any) -> None:
@@ -107,6 +114,13 @@ class SceneTransition(Behaviour):
         raw_value = merged.get("event_value", merged.get("payload_value"))
         self.event_value = str(raw_value).strip() if raw_value not in (None, "") else None
         self.once = bool(merged.get("once", False))
+        # A passage without a picture (or over painted map art) is an area, not its placeholder picture's box.
+        try:
+            self.area = (max(0.0, float(merged.get("area_width") or 0)), max(0.0, float(merged.get("area_height") or 0)))
+        except (TypeError, ValueError):
+            self.area = (0.0, 0.0)
+        # An HD-2D door stands on its picture's bottom edge, so its doorway is there, not at the picture's centre.
+        self.area_at = "base" if str(merged.get("area_at") or "").strip().lower() == "base" else "centre"
         self.config.update(
             {
                 "target_scene": self.target_scene,
@@ -132,7 +146,7 @@ class SceneTransition(Behaviour):
         return data
 
     def update(self, dt: float) -> None:
-        if not self.trigger_on_touch or self._triggered:
+        if not self.trigger_on_touch or self._triggered or self.hidden_by_show_when():
             return
 
         # Find entities with target_tag
@@ -142,17 +156,47 @@ class SceneTransition(Behaviour):
 
         candidates = []
         for sprite in scene_controller.all_sprites:
-            if getattr(sprite, "mesh_tag", "") == self.target_tag:
+            if sprite is not self.entity and getattr(sprite, "mesh_tag", "") == self.target_tag:
                 candidates.append(sprite)
 
         if not candidates:
             return
-        sprite_list = optional_arcade.arcade.SpriteList()
+        # An HD-2D room: only for a candidate on the door's level (engine.hd2d.world.door_level and same_level, as the
+        # net authority's doors); a 2D room has no World, and every candidate is on it.
+        world = getattr(self.window, "hd2d_world", None)
+        if self.area[0] > 0 and self.area[1] > 0:
+            x = float(self.entity.center_x)
+            y = float(self.entity.bottom if self.area_at == "base" else self.entity.center_y)
+            half_w, half_h = self.area[0] / 2, self.area[1] / 2
+            for candidate in candidates:
+                if (candidate.left < x + half_w and candidate.right > x - half_w
+                        and candidate.bottom < y + half_h and candidate.top > y - half_h
+                        and same_level(world, door_level(world, self._doorway(x, y, *self.area)), candidate)):
+                    self._trigger_transition(reason="collision", actor=candidate)
+                    return
+            return
+        # Sprite against sprite (their hit boxes), not through a SpriteList made for the check: a SpriteList holds GPU
+        # buffers, and a sprite keeps every list it joins, so one per update grew the GPU's buffers without end.
+        check = optional_arcade.arcade.check_for_collision
         for candidate in candidates:
-            sprite_list.append(candidate)
-        hit_list = optional_arcade.arcade.check_for_collision_with_list(self.entity, sprite_list)
-        if hit_list:
-            self._trigger_transition(reason="collision", actor=hit_list[0])
+            if check(self.entity, candidate) and same_level(world, door_level(world, self._doorway(
+                    self.entity.center_x, self.entity.bottom, self.entity.width, self.entity.height)), candidate):
+                self._trigger_transition(reason="collision", actor=candidate)
+                return
+
+    def _doorway(self, x: Any, y: Any, width: Any, height: Any) -> SimpleNamespace:
+        """The door's doorway for door_level: the area at (x, y), or a picture door's picture standing on its base
+        (in an HD-2D room a picture stands on its bottom edge: its middle is up in the wall behind)."""
+        return SimpleNamespace(center_x=x, center_y=y, width=width, height=height,
+                               mesh_entity_data=getattr(self.entity, "mesh_entity_data", None))
+
+    def hidden_by_show_when(self) -> bool:
+        """Whether its "Show when" (a ConditionalActivator on the door) keeps it hidden now, by the flags as they are
+        now: a hidden door isn't there to walk through, as one isn't there to use with the interact key
+        (``engine.interaction``). By the behaviour's name, as ``water.active`` does: a module imported again (the
+        headless import sweep test) registers a new class, which ``isinstance`` against the old one misses."""
+        return any(type(b).__name__ == "ConditionalActivator" and not b._requirements_met()
+                   for b in getattr(self.entity, "mesh_behaviours_runtime", None) or ())
 
     def on_interact(self, window: Any, actor: Any) -> None:  # noqa: D401
         if not self.allow_interact:
@@ -225,7 +269,10 @@ class SceneTransition(Behaviour):
         )
         requester = getattr(self.window, "request_scene_change", None)
         if callable(requester):
-            requester(self.target_scene)
+            requester(self.target_scene)  # (this clears any carry mark: a door marks it after)
+            controller = getattr(self.window, "scene_controller", None)
+            if controller is not None:
+                controller._carry_player_hp = True  # the player's HP goes through the door (N1)
 
     def _log(self, message: str) -> None:
         logger = getattr(self.window, "console_log", None)

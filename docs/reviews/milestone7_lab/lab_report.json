@@ -1,0 +1,459 @@
+{
+  "results": [
+    {
+      "check": "4. NPC follows a path around an obstacle (FollowPath, A*)",
+      "status": "PASS",
+      "detail": {
+        "start": [
+          303.7331069278253,
+          204.11327375936963
+        ],
+        "end": [
+          463.9992380807904,
+          236.7526221367945
+        ],
+        "goal": [
+          464.0,
+          240.0
+        ],
+        "points_inside_wall": 0,
+        "went_around": true
+      },
+      "screenshot": "nav_walker.png"
+    },
+    {
+      "check": "5. Line of sight affects a behaviour (ChaseTarget los_required)",
+      "status": "PASS",
+      "detail": {
+        "seer_moved": true,
+        "seer_at": [
+          159.48881699790945,
+          112.0
+        ],
+        "blind_moved": false,
+        "blind_at": [
+          528.0,
+          112.0
+        ]
+      },
+      "screenshot": "los.png"
+    },
+    {
+      "check": "12. Save and load restore runtime state (F5/F9)",
+      "status": "PASS",
+      "detail": {
+        "player_saved": [
+          128.0,
+          128.0
+        ],
+        "player_moved_to": [
+          230.8928299958352,
+          128.0
+        ],
+        "player_after_load": [
+          128.0,
+          128.0
+        ],
+        "seer_saved": [
+          159.48881699790945,
+          112.0
+        ],
+        "seer_after_load": [
+          159.48881699790945,
+          112.0
+        ],
+        "scene_after_load": "saves\\quicksave.json"
+      },
+      "screenshot": "save_load.png"
+    },
+    {
+      "check": "1. A flickering light illuminates the scene",
+      "status": "PASS",
+      "detail": {
+        "lighting": {
+          "available": true,
+          "enabled": true,
+          "shadows_mode": "hard",
+          "clock": 24.9,
+          "ambient": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "ambient_tint": [
+            25,
+            25,
+            35,
+            255
+          ],
+          "static_lights": 1,
+          "occluders": 1,
+          "dynamic": []
+        },
+        "brightness_at_light": [
+          99,
+          99,
+          99,
+          99,
+          99,
+          99,
+          99,
+          99
+        ],
+        "brightness_near_edge": [
+          28,
+          50,
+          48,
+          45,
+          42,
+          39,
+          36,
+          33
+        ],
+        "dark_far_away": 12,
+        "flicker_range_at_edge": 21.3
+      },
+      "screenshot": "lights.png"
+    },
+    {
+      "check": "2. An occluder casts a visible shadow (hard shadows)",
+      "status": "PASS",
+      "detail": {
+        "behind_pillar": 10,
+        "open_same_distance": 33,
+        "occluders": 1,
+        "mode": "hard"
+      },
+      "screenshot": "lights.png"
+    },
+    {
+      "check": "Scene transition through a door (SceneTransition)",
+      "status": "PASS",
+      "detail": {
+        "from": "packs/core_regions/scenes/lights.json",
+        "to": "packs/core_regions/scenes/paths.json",
+        "arrived_at": [
+          560.0,
+          64.0
+        ]
+      },
+      "screenshot": "transition.png"
+    },
+    {
+      "check": "3. A moving entity carries a dynamic light (LightSource)",
+      "status": "PASS",
+      "detail": {
+        "samples": [
+          {
+            "light": [
+              364.3349419981241,
+              272.0
+            ],
+            "npc": [
+              376.0034379984718,
+              272.0
+            ],
+            "lights": [
+              {
+                "at": [
+                  364.3349419981241,
+                  272.0
+                ],
+                "radius": 140.0,
+                "owner": "Sprite",
+                "owner_at": [
+                  364.3349419981241,
+                  272.0
+                ]
+              }
+            ]
+          },
+          {
+            "light": [
+              422.750207999954,
+              272.0
+            ],
+            "npc": [
+              434.42251899879193,
+              272.0
+            ],
+            "lights": [
+              {
+                "at": [
+                  422.750207999954,
+                  272.0
+                ],
+                "radius": 140.0,
+                "owner": "Sprite",
+                "owner_at": [
+                  422.750207999954,
+                  272.0
+                ]
+              }
+            ]
+          },
+          {
+            "light": [
+              492.9717509979964,
+              272.0
+            ],
+            "npc": [
+              482.4577929980587,
+              272.0
+            ],
+            "lights": [
+              {
+                "at": [
+                  492.9717509979964,
+                  272.0
+                ],
+                "radius": 140.0,
+                "owner": "Sprite",
+                "owner_at": [
+                  492.9717509979964,
+                  272.0
+                ]
+              }
+            ]
+          },
+          {
+            "light": [
+              435.7110859990935,
+              272.0
+            ],
+            "npc": [
+              424.0433459983906,
+              272.0
+            ],
+            "lights": [
+              {
+                "at": [
+                  435.7110859990935,
+                  272.0
+                ],
+                "radius": 140.0,
+                "owner": "Sprite",
+                "owner_at": [
+                  435.7110859990935,
+                  272.0
+                ]
+              }
+            ]
+          },
+          {
+            "light": [
+              365.49632599769393,
+              272.0
+            ],
+            "npc": [
+              353.7474489985034,
+              272.0
+            ],
+            "lights": [
+              {
+                "at": [
+                  365.49632599769393,
+                  272.0
+                ],
+                "radius": 140.0,
+                "owner": "Sprite",
+                "owner_at": [
+                  365.49632599769393,
+                  272.0
+                ]
+              }
+            ]
+          },
+          {
+            "light": [
+              307.03644899843493,
+              272.0
+            ],
+            "npc": [
+              295.36518099938985,
+              272.0
+            ],
+            "lights": [
+              {
+                "at": [
+                  307.03644899843493,
+                  272.0
+                ],
+                "radius": 140.0,
+                "owner": "Sprite",
+                "owner_at": [
+                  307.03644899843493,
+                  272.0
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "screenshot": "torch.png"
+    },
+    {
+      "check": "6. A sequence moves an object, waits and starts dialogue (SequencePlayer + Dialogue)",
+      "status": "PASS",
+      "detail": {
+        "moved_to": [
+          368.0,
+          176.0
+        ],
+        "dialogue": "Moved, waited, now talking.",
+        "wait_between_s": 3.11,
+        "herald_trail": [
+          [
+            368,
+            176
+          ],
+          [
+            368,
+            176
+          ]
+        ]
+      },
+      "screenshot": "sequence.png"
+    },
+    {
+      "check": "10. A particle effect appears (ParticleEmitter)",
+      "status": "PASS",
+      "detail": {
+        "sprites": 13,
+        "alive": 13
+      },
+      "screenshot": "particles.png"
+    },
+    {
+      "check": "Prefab reuse (a prefab reference and a copy)",
+      "status": "PASS",
+      "detail": {
+        "reference_spawned_as": "Person",
+        "copy": "Twin (copy)"
+      },
+      "screenshot": "particles.png"
+    },
+    {
+      "check": "Custom behaviour from a plugin (mods/, LabSpinner)",
+      "status": "PASS",
+      "detail": {
+        "angles": [
+          216.06017399928533,
+          306.33685200009495
+        ],
+        "plugin_logged": true
+      },
+      "screenshot": "particles.png"
+    },
+    {
+      "check": "8. A background uses parallax (background_layers, parallax 0.5)",
+      "status": "PASS",
+      "detail": {
+        "stripe_screen_x": [
+          314.0,
+          93.5
+        ],
+        "camera_x": [
+          652.0,
+          1092.7317860313833
+        ],
+        "expected_shift": 220.4
+      },
+      "screenshot": "parallax_after.png"
+    },
+    {
+      "check": "7. Camera zoom (a camera area zooms in)",
+      "status": "PASS",
+      "detail": {
+        "before": 1.0,
+        "in_area": {
+          "zoom": 1.8,
+          "zoom_target": 1.8,
+          "trauma": 0.0,
+          "center": [
+            400.0,
+            160.0
+          ],
+          "area": "close-up"
+        }
+      },
+      "screenshot": "zoom_area.png"
+    },
+    {
+      "check": "9. HD-2D draw order (y-sort) with sprites sharing a texture",
+      "status": "PASS",
+      "detail": {
+        "front_red_over_blue_pixel": [
+          220,
+          50,
+          50
+        ],
+        "blue_over_back_red_pixel": [
+          50,
+          90,
+          230
+        ],
+        "expected": "front overlap red, back overlap blue",
+        "lighting": {
+          "available": true,
+          "enabled": true,
+          "shadows_mode": "hard",
+          "clock": 73.45,
+          "ambient": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "ambient_tint": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "static_lights": 0,
+          "occluders": 0,
+          "dynamic": []
+        }
+      },
+      "screenshot": "depth.png"
+    },
+    {
+      "check": "Sprite shadows (on by default)",
+      "status": "PASS",
+      "detail": {
+        "under_sprite": 69,
+        "plain_floor": 108
+      },
+      "screenshot": "depth.png"
+    },
+    {
+      "check": "11. A positional sound changes with distance",
+      "status": "PASS",
+      "detail": {
+        "far": {
+          "path": "assets/sounds/hit.wav",
+          "volume": 0.0,
+          "pan": 1.0,
+          "distance": 900.0,
+          "occluded": false
+        },
+        "near": {
+          "path": "assets/sounds/hit.wav",
+          "volume": 0.4107,
+          "pan": 0.3156,
+          "distance": 284.0,
+          "occluded": false
+        }
+      },
+      "screenshot": "audio.png"
+    },
+    {
+      "check": "background_planes load from a scene file (headless)",
+      "status": "FAIL",
+      "detail": "SchemaValidationError: Schema validation failed for '<lab project>/planes_probe.json' ('background_planes' was unexpected)",
+      "screenshot": null
+    }
+  ]
+}

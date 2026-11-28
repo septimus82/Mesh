@@ -7,14 +7,28 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterator, Tuple, cast
 
-_ITEM_DB_CACHE: "ItemDatabase | None" = None
+from .logging_tools import get_logger
+
+_LOG = get_logger("engine.inventory")
+_ITEM_DB_CACHE: "ItemDatabase | None" = None  # (cleared when the project changes: engine.paths.pin_config/reset)
+_WARNED_MISSING: set[str] = set()
 
 
 def load_item_database(root: str | Path | None = None) -> "ItemDatabase":
+    """The game's item database. A project without ``assets/data/items.json`` has no items: an empty database and
+    one warning, never an error (#652, owner decision D7), so every grant refuses its unknown item. That empty answer
+    isn't cached: the file is read once it exists."""
     global _ITEM_DB_CACHE
     if _ITEM_DB_CACHE is not None:
         return _ITEM_DB_CACHE
-    db = ItemDatabase.load(root)
+    try:
+        db = ItemDatabase.load(root)
+    except FileNotFoundError as exc:
+        if str(exc) not in _WARNED_MISSING:
+            _WARNED_MISSING.add(str(exc))
+            _LOG.warning("%s: this game has no items, so pickups, shops and drops of items are refused "
+                         "(create the file to add items)", exc)
+        return ItemDatabase({})
     _ITEM_DB_CACHE = db
     return db
 
@@ -43,8 +57,11 @@ class ItemDatabase:
 
     @classmethod
     def load(cls, root: str | Path | None = None) -> "ItemDatabase":
-        base = Path(root or Path.cwd())
-        data_path = base / "assets" / "data" / "items.json"
+        """The items of the project at ``root``; by default the game project's (engine.paths.project_root), never
+        the bare current folder's (#623)."""
+        from engine.paths import project_root  # noqa: PLC0415
+
+        data_path = Path(root or project_root()) / "assets" / "data" / "items.json"
         if not data_path.exists():
             raise FileNotFoundError(f"Item database not found at {data_path}")
         raw = json.loads(data_path.read_text(encoding="utf-8"))
@@ -98,14 +115,35 @@ class Inventory:
             self.state_bucket["items"] = items
         self._state = items
 
+    @staticmethod
+    def _max_stack(item_id: str) -> int | None:
+        """How many of ``item_id`` one inventory can hold; None for an id the item database does not know."""
+        item = load_item_database().get(item_id)
+        if item is None:
+            return None
+        return item.max_stack if item.stackable else 1
+
+    def can_add(self, item_id: str, count: int = 1) -> bool:
+        """True when ``add_item(item_id, count)`` would add all ``count`` items (known id, room in the stack)."""
+        max_stack = self._max_stack(item_id)
+        return count > 0 and max_stack is not None and self.get_count(item_id) + count <= max_stack
+
+    def refusal(self, item_id: str, count: int = 1) -> str | None:
+        """Why ``add_item(item_id, count)`` can't add all ``count`` items, for the player; None when it can."""
+        if count <= 0 or self.can_add(item_id, count):
+            return None
+        item = load_item_database().get(item_id)
+        if item is None:
+            return f"Unknown item '{item_id}' (not in assets/data/items.json)"
+        return f"Can't carry any more {item.name}"
+
     def add_item(self, item_id: str, count: int = 1) -> bool:
         if count <= 0:
             return False
-        item = load_item_database().get(item_id)
-        if item is None:
+        max_stack = self._max_stack(item_id)
+        if max_stack is None:
             return False
         bucket = int(self._state.get(item_id, 0))
-        max_stack = item.max_stack if item.stackable else 1
         new_total = min(max_stack, bucket + count)
         self._state[item_id] = new_total
         return new_total > bucket

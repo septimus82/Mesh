@@ -4,9 +4,9 @@
     "snapshot_count": 28,
     "world_digest_count": 28
   },
-  "expected_event_digest": "f1879565cb92f086a7705784511fbadd600951e923c61274a925f6e780059ab2",
-  "expected_final_state_digest": "96a03f07002e4365a954709ad3d6bc5e1a49e3bb55b473c08a85b8ade9f79e56",
-  "expected_world_digest": "30aec0c3089a480242241459e7e8361809ee8a8f1c69a495969350c2e3df3bfa",
+  "expected_event_digest": "594103f0e6c9ee372f0e83495785f4e099ccd8b5fe2435ee765715e177c27470",
+  "expected_final_state_digest": "289e6f7216e71a45946a824b5d2a0a74e3e377999a0e85cfa5345b83aa0e995f",
+  "expected_world_digest": "f2718814f3d195d46ec3e50ad72d90659749ce93cce0fb4e587aa8576a125a77",
   "id": "ep02",
   "run_determinism": {
     "digests_match": true,
@@ -26,17 +26,17 @@
       "action_list_completed"
     ],
     "world_digests_first": [
-      "0808b01b62d2abb6c90da1e0678412fea41f45d506698f25c945b566697d6c22",
-      "27ab879ae9c52c9723366a4a795647ebefa023767db36db70bb890d198bf3270",
-      "dbb5970b6528c7ba92255fc6ce4cffb7d7c9bac1b736d47b999ea5f37c04bef3"
+      "e5a13e4bc09859e611ba0d2361c7abe717f039a6b68e08a2803afc37b8959fbc",
+      "8b981f9960403741ef63f80129fac1898acb7468a483749ceca3c96efb4f19fb",
+      "138c9f3b0088dd857b18e92638ec4307735626773d0f786d20144519cac5039a"
     ],
     "world_digests_last": [
-      "10a8fd754200ab0912458a42bb890a4026697e29c2b39a431a7637405be4ef20",
-      "3de814309ddf8b97c8a3d84df05e53b5a51739b5855068414b957c888d979231",
-      "7dbd296c6368698cafacfae9d5694cb734b1ca275e0592a57f80e757e8a4e2a5"
+      "a8af64c668ba8e90dcaa8b98f42385af2168d70eed7668c6ff73d97034b21a98",
+      "bab89cab67ed5e0725648be3e1adc3e847cde1119f451f2dd9c5ab0492d79828",
+      "a157e77551231ca8be66173fe5de4454e559a2fed61768b9cb210d0ab898f550"
     ]
   },
   "scene": "scenes/episode_02_ep02.json",
-  "schema_version": 1,
+  "schema_version": 2,
   "script": "replays/ep02.json"
 }

@@ -1,0 +1,65 @@
+"""#462 tileset import ownership fault injection: each mutation undoes part of the correction; the tests must fail.
+Each file is put back byte for byte (checked).
+
+    MESH_GL_SMOKE=1 py -3.13 mutate_tileset.py REPO OUT_JSON"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+TESTS = ["tests/test_tileset_import_ownership.py", "tests/test_studio_tileset_ownership_gpu.py",
+         "tests/test_studio_project.py"]
+STUDIO, PROJECT = "engine/studio.py", "engine/studio_project.py"
+CHECK = "        foreign = [d for d in (picture, rel, *maps) if owner is not None and not owner.owns(self.root / d)]"
+MUTATIONS = [
+    ("Studio's import without its ownership", STUDIO,
+     ",\n                                                 owner=self.ownership)", ")"),
+    ("the destination check refuses nothing", PROJECT, CHECK, "        foreign: list[str] = []"),
+    ("map files left out of the check", PROJECT, CHECK,
+     "        foreign = [d for d in (picture, rel) if owner is not None and not owner.owns(self.root / d)]"),
+    ("foreign map files skipped, the rest imported (reported as success)", PROJECT, CHECK,
+     CHECK.replace("foreign = ", "maps = {m: d for m, d in maps.items() if owner is None or owner.owns(self.root / m)}\n"
+                   "        foreign = ")),
+    ("the tileset files written before the check", PROJECT,
+     "        maps = self._maps_with_tileset(rel)\n",
+     "        maps = self._maps_with_tileset(rel)\n        (self.root / folder).mkdir(parents=True, exist_ok=True)\n"
+     "        image.save(self.root / picture)\n        write_json_atomic(self.root / rel, document)\n"),
+]
+
+
+def main() -> None:
+    results = []
+    for name, rel, old, new in MUTATIONS:
+        path = REPO / rel
+        original = path.read_bytes()
+        text = original.decode("utf-8")
+        if "\r\n" in text:
+            old, new = old.replace("\n", "\r\n"), new.replace("\n", "\r\n")
+        assert text.count(old) == 1, (name, text.count(old))
+        path.write_bytes(text.replace(old, new).encode("utf-8"))
+        try:
+            run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-W", "error",
+                                  "-o", "addopts=", "--strict-markers", "--tb=line", "-rf", *TESTS], cwd=REPO,
+                                 env=dict(os.environ), capture_output=True, text=True, timeout=1200)
+        finally:
+            path.write_bytes(original)
+        assert path.read_bytes() == original
+        lines = run.stdout.splitlines()
+        summary = [line for line in lines if " passed" in line or " failed" in line][-1:]
+        failed = sorted({line.split(" ")[1].split("[")[0] for line in lines if line.startswith("FAILED")})
+        results.append({"mutation": name, "file": rel, "caught": run.returncode != 0, "summary": summary,
+                        "failed": failed or None})
+        print(json.dumps(results[-1])[:300], flush=True)
+    report = {"caught": sum(r["caught"] for r in results), "of": len(results), "mutations": results}
+    OUT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(f"{report['caught']}/{report['of']} caught")
+
+
+if __name__ == "__main__":
+    main()

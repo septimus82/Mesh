@@ -1,9 +1,0 @@
-{
-  "name": "region_interior",
-  "version": 1,
-  "settings": {
-    "region_template": "hub-interior-dungeon",
-    "scene_kind": "interior"
-  },
-  "entities": []
-}

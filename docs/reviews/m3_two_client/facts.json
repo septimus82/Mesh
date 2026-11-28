@@ -1,0 +1,2179 @@
+{
+ "walks": [
+  {
+   "to": [
+    "RIGHT",
+    560.0,
+    8.0
+   ],
+   "at": 557.0,
+   "carry": 7.5,
+   "legs": [
+    [
+     "RIGHT",
+     512.0,
+     0.0
+    ],
+    [
+     "LEFT",
+     572.0,
+     7.5
+    ]
+   ]
+  },
+  {
+   "to": [
+    "LEFT",
+    347.0,
+    8.0
+   ],
+   "at": 347.0,
+   "carry": 0.0,
+   "legs": [
+    [
+     "LEFT",
+     512.0,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "UP",
+    648.0,
+    8.0
+   ],
+   "at": 654.0,
+   "carry": 0.0,
+   "legs": [
+    [
+     "UP",
+     144.0,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "RIGHT",
+    504.0,
+    8.0
+   ],
+   "at": 512.0,
+   "carry": 7.5,
+   "legs": [
+    [
+     "RIGHT",
+     347.0,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "LEFT",
+    347.0,
+    8.0
+   ],
+   "at": 347.0,
+   "carry": 0.0,
+   "legs": [
+    [
+     "LEFT",
+     512.0,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "DOWN",
+    144.0,
+    8.0
+   ],
+   "at": 136.5,
+   "carry": 7.5,
+   "legs": [
+    [
+     "DOWN",
+     654.0,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "LEFT",
+    347.0,
+    8.0
+   ],
+   "at": 339.5,
+   "carry": 7.5,
+   "legs": [
+    [
+     "LEFT",
+     557.0,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "UP",
+    648.0,
+    8.0
+   ],
+   "at": 654.0,
+   "carry": 0.0,
+   "legs": [
+    [
+     "UP",
+     144.0,
+     0.0
+    ],
+    [
+     "DOWN",
+     661.5,
+     7.5
+    ]
+   ]
+  },
+  {
+   "to": [
+    "RIGHT",
+    504.0,
+    8.0
+   ],
+   "at": 504.5,
+   "carry": 0.0,
+   "legs": [
+    [
+     "RIGHT",
+     339.5,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "LEFT",
+    347.0,
+    8.0
+   ],
+   "at": 339.5,
+   "carry": 7.5,
+   "legs": [
+    [
+     "LEFT",
+     504.5,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "DOWN",
+    144.0,
+    8.0
+   ],
+   "at": 144.0,
+   "carry": 0.0,
+   "legs": [
+    [
+     "DOWN",
+     654.0,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "LEFT",
+    347.0,
+    8.0
+   ],
+   "at": 347.0,
+   "carry": 0.0,
+   "legs": []
+  },
+  {
+   "to": [
+    "UP",
+    648.0,
+    8.0
+   ],
+   "at": 654.0,
+   "carry": 0.0,
+   "legs": [
+    [
+     "UP",
+     136.5,
+     0.0
+    ],
+    [
+     "DOWN",
+     661.5,
+     7.5
+    ]
+   ]
+  },
+  {
+   "to": [
+    "RIGHT",
+    528.0,
+    8.0
+   ],
+   "at": 527.0,
+   "carry": 7.5,
+   "legs": [
+    [
+     "RIGHT",
+     347.0,
+     0.0
+    ],
+    [
+     "LEFT",
+     542.0,
+     7.5
+    ]
+   ]
+  },
+  {
+   "to": [
+    "RIGHT",
+    528.0,
+    8.0
+   ],
+   "at": 534.5,
+   "carry": 0.0,
+   "legs": [
+    [
+     "RIGHT",
+     339.5,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "UP",
+    500.0,
+    8.0
+   ],
+   "at": 504.0,
+   "carry": 0.0,
+   "legs": [
+    [
+     "UP",
+     144.0,
+     0.0
+    ],
+    [
+     "DOWN",
+     511.5,
+     7.5
+    ]
+   ]
+  },
+  {
+   "to": [
+    "UP",
+    760.0,
+    16
+   ],
+   "at": 744.0,
+   "carry": 0.0,
+   "legs": []
+  },
+  {
+   "to": [
+    "DOWN",
+    654.0,
+    8.0
+   ],
+   "at": 654.0,
+   "carry": 0.0,
+   "legs": [
+    [
+     "DOWN",
+     744.0,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "DOWN",
+    500.0,
+    8.0
+   ],
+   "at": 496.5,
+   "carry": 0.0,
+   "legs": [
+    [
+     "DOWN",
+     654.0,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "LEFT",
+    504.0,
+    8.0
+   ],
+   "at": 497.0,
+   "carry": 0.0,
+   "legs": [
+    [
+     "LEFT",
+     527.0,
+     0.0
+    ],
+    [
+     "RIGHT",
+     489.5,
+     7.5
+    ]
+   ]
+  },
+  {
+   "to": [
+    "RIGHT",
+    544.0,
+    8.0
+   ],
+   "at": 549.5,
+   "carry": 0.0,
+   "legs": [
+    [
+     "RIGHT",
+     534.5,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "UP",
+    610.0,
+    8.0
+   ],
+   "at": 609.0,
+   "carry": 7.5,
+   "legs": [
+    [
+     "UP",
+     496.5,
+     0.0
+    ],
+    [
+     "DOWN",
+     624.0,
+     7.5
+    ]
+   ]
+  },
+  {
+   "to": [
+    "UP",
+    632.0,
+    8.0
+   ],
+   "at": 639.0,
+   "carry": 0.0,
+   "legs": [
+    [
+     "UP",
+     616.5,
+     0.0
+    ]
+   ]
+  },
+  {
+   "to": [
+    "DOWN",
+    500.0,
+    8.0
+   ],
+   "at": 496.5,
+   "carry": 0.0,
+   "legs": [
+    [
+     "DOWN",
+     639.0,
+     0.0
+    ],
+    [
+     "UP",
+     489.0,
+     7.5
+    ]
+   ]
+  },
+  {
+   "to": [
+    "LEFT",
+    480.0,
+    8.0
+   ],
+   "at": 474.5,
+   "carry": 0.0,
+   "legs": [
+    [
+     "LEFT",
+     549.5,
+     0.0
+    ],
+    [
+     "RIGHT",
+     467.0,
+     7.5
+    ]
+   ]
+  }
+ ],
+ "join": {
+  "keys": [
+   "crossing",
+   "crossing"
+  ],
+  "identity": [
+   "ac41be0f4fbedc1b59a394b7240ab059aa8aba717fa8250efbba06f13e5bffa5",
+   "ac41be0f4fbedc1b59a394b7240ab059aa8aba717fa8250efbba06f13e5bffa5",
+   "ac41be0f4fbedc1b59a394b7240ab059aa8aba717fa8250efbba06f13e5bffa5"
+  ],
+  "hd2d": [
+   true,
+   true
+  ],
+  "entities": [
+   2,
+   1
+  ],
+  "players": [
+   2,
+   1
+  ],
+  "bandit": "crossing_person_544_672_0_0",
+  "door": "crossing_door_to_start_480_656_0_0"
+ },
+ "a": {
+  "a": {
+   "up": {
+    "server": [
+     512.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "own": [
+     512.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck"
+    ],
+    "peer": [
+     512.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck"
+    ]
+   },
+   "down": {
+    "server": [
+     347.0,
+     136.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ],
+    "own": [
+     347.0,
+     136.5,
+     0.0,
+     "ground"
+    ],
+    "peer": [
+     347.0,
+     136.5,
+     0.0,
+     "ground"
+    ]
+   },
+   "other_before": [
+    557.0,
+    144.0,
+    0.0,
+    "ground",
+    "crossing:1"
+   ],
+   "other_after": [
+    557.0,
+    144.0,
+    0.0,
+    "ground",
+    "crossing:1"
+   ]
+  },
+  "b": {
+   "up": {
+    "server": [
+     504.5,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "own": [
+     504.5,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck"
+    ],
+    "peer": [
+     504.5,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck"
+    ]
+   },
+   "down": {
+    "server": [
+     339.5,
+     144.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ],
+    "own": [
+     339.5,
+     144.0,
+     0.0,
+     "ground"
+    ],
+    "peer": [
+     339.5,
+     144.0,
+     0.0,
+     "ground"
+    ]
+   },
+   "other_before": [
+    347.0,
+    136.5,
+    0.0,
+    "ground",
+    "crossing:1"
+   ],
+   "other_after": [
+    347.0,
+    136.5,
+    0.0,
+    "ground",
+    "crossing:1"
+   ]
+  }
+ },
+ "b": {
+  "above": [
+   527.0,
+   654.0,
+   64.0,
+   "bridge_6m/col_deck",
+   "crossing:1"
+  ],
+  "samples": [
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     504.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     504.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     504.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     504.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     511.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     511.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     511.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     519.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     519.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     519.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     526.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     534.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     534.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     541.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     541.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     541.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     549.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     556.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     556.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     564.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     564.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     564.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     564.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     571.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     579.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     586.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     586.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     586.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     594.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     601.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     601.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     609.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     609.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     609.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     616.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     624.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     624.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     631.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     631.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     631.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     631.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     639.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     646.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     646.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     654.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     654.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     654.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     661.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     669.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     669.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     669.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     676.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     676.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     676.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     684.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     691.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     699.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     699.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     699.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     699.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     706.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     714.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     714.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     721.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     721.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     721.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     729.0,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     736.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     736.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   },
+   {
+    "a": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck",
+     "crossing:1"
+    ],
+    "b": [
+     534.5,
+     736.5,
+     0.0,
+     "ground",
+     "crossing:1"
+    ]
+   }
+  ],
+  "passed": [
+   534.5,
+   744.0,
+   0.0,
+   "ground",
+   "crossing:1"
+  ],
+  "a": [
+   527.0,
+   654.0,
+   64.0,
+   "bridge_6m/col_deck",
+   "crossing:1"
+  ],
+  "b": [
+   534.5,
+   654.0,
+   0.0,
+   "ground",
+   "crossing:1"
+  ],
+  "windows": {
+   "a": {
+    "own": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck"
+    ],
+    "peer": [
+     534.5,
+     654.0,
+     0.0,
+     "ground"
+    ]
+   },
+   "b": {
+    "own": [
+     534.5,
+     654.0,
+     0.0,
+     "ground"
+    ],
+    "peer": [
+     527.0,
+     654.0,
+     64.0,
+     "bridge_6m/col_deck"
+    ]
+   }
+  },
+  "look": {
+   "a": {
+    "size": [
+     640,
+     360
+    ],
+    "avatars": {
+     "1": {
+      "drawn": 560,
+      "box": [
+       319,
+       103,
+       350,
+       139
+      ],
+      "feet": {
+       "row": 139.6,
+       "0": 139.6,
+       "64": 90.0
+      }
+     },
+     "2": {
+      "drawn": 404,
+      "box": [
+       315,
+       50,
+       351,
+       90
+      ],
+      "feet": {
+       "row": 90.0,
+       "0": 139.6,
+       "64": 90.0
+      }
+     }
+    },
+    "gl": [
+     "NVIDIA Corporation",
+     "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+    ]
+   },
+   "b": {
+    "size": [
+     640,
+     360
+    ],
+    "avatars": {
+     "1": {
+      "drawn": 685,
+      "box": [
+       311,
+       112,
+       346,
+       151
+      ],
+      "feet": {
+       "row": 151.6,
+       "0": 151.6,
+       "64": 97.9
+      }
+     },
+     "2": {
+      "drawn": 500,
+      "box": [
+       307,
+       55,
+       347,
+       98
+      ],
+      "feet": {
+       "row": 97.9,
+       "0": 151.6,
+       "64": 97.9
+      }
+     }
+    },
+    "gl": [
+     "NVIDIA Corporation",
+     "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+    ]
+   }
+  }
+ },
+ "d": {
+  "a": {
+   "camera_target": 2,
+   "followed": 2,
+   "camera": [
+    16.468750000000007,
+    11.957346559900866,
+    2.799999999999999
+   ],
+   "camera_height": 0.8,
+   "own": [
+    527.0,
+    654.0,
+    64.0,
+    "bridge_6m/col_deck"
+   ]
+  },
+  "b": {
+   "camera_target": 1,
+   "followed": 1,
+   "camera": [
+    16.703124999999993,
+    16.449420107546278,
+    0.8000000000000003
+   ],
+   "camera_height": 0.8,
+   "own": [
+    534.5,
+    654.0,
+    0.0,
+    "ground"
+   ]
+  },
+  "entities": {
+   "a": 2,
+   "b": 1
+  }
+ },
+ "c": {
+  "a_at": [
+   497.0,
+   654.0,
+   64.0,
+   "bridge_6m/col_deck",
+   "crossing:1"
+  ],
+  "a_facing": 0,
+  "a_planar_hit": true,
+  "hp_before": 1.0,
+  "after_a_attack": {
+   "hp": 1.0,
+   "dead": false
+  },
+  "a_swung": true,
+  "after_b_attack": {
+   "hp": 0.0,
+   "dead": true,
+   "dropped": true
+  },
+  "drops_seen": [
+   [
+    "crossing_person_544_672_0_0"
+   ],
+   [
+    "crossing_person_544_672_0_0"
+   ]
+  ],
+  "a_loot_distance": 50.33,
+  "after_a_take": {
+   "dropped": true,
+   "held": false
+  },
+  "a_sent": [
+   "attack",
+   "take"
+  ],
+  "b_loot_distance": 33.46,
+  "b_sent": "take",
+  "after_b_take": {
+   "dropped": false,
+   "b": 1,
+   "holder": 1
+  },
+  "loot_seen": [
+   [
+    [
+     "crossing_person_544_672_0_0",
+     1
+    ]
+   ],
+   [
+    [
+     "crossing_person_544_672_0_0",
+     1
+    ]
+   ]
+  ]
+ },
+ "e": {
+  "before": {
+   "a": [
+    497.0,
+    654.0,
+    64.0,
+    "bridge_6m/col_deck",
+    "crossing:1"
+   ],
+   "b": [
+    549.5,
+    639.0,
+    0.0,
+    "ground",
+    "crossing:1"
+   ],
+   "online": [
+    1,
+    2
+   ]
+  },
+  "raised": {
+   "phase": "disconnected",
+   "status": "Disconnected (the server runs a different world) | R resume / N new",
+   "loads": [],
+   "player": null,
+   "refusal": null,
+   "phases": [
+    "connecting",
+    "disconnected"
+   ]
+  },
+  "after_raised": {
+   "a": [
+    497.0,
+    654.0,
+    64.0,
+    "bridge_6m/col_deck",
+    "crossing:1"
+   ],
+   "b": [
+    549.5,
+    639.0,
+    0.0,
+    "ground",
+    "crossing:1"
+   ],
+   "online": [
+    1,
+    2
+   ]
+  },
+  "windows_after_raised": {
+   "a": [
+    "playing",
+    2,
+    [
+     1,
+     2
+    ]
+   ],
+   "b": [
+    "playing",
+    1,
+    [
+     1,
+     2
+    ]
+   ]
+  },
+  "flat": {
+   "phase": "disconnected",
+   "status": "Refused: this window plays the HD-2D room in 2D (RuntimeError: simulated: the driver refused a buffer): it can't join a room the server runs on 3D floors | N new",
+   "loads": [
+    "crossing:1"
+   ],
+   "player": 4,
+   "refusal": "this window plays the HD-2D room in 2D (RuntimeError: simulated: the driver refused a buffer): it can't join a room the server runs on 3D floors",
+   "hd2d_error": "RuntimeError: simulated: the driver refused a buffer",
+   "phases": [
+    "connecting",
+    "disconnected",
+    "loading"
+   ]
+  },
+  "flat_member": {
+   "online": false,
+   "eid": null
+  },
+  "server_ticks": 10,
+  "after": {
+   "a": [
+    497.0,
+    654.0,
+    64.0,
+    "bridge_6m/col_deck",
+    "crossing:1"
+   ],
+   "b": [
+    549.5,
+    639.0,
+    0.0,
+    "ground",
+    "crossing:1"
+   ],
+   "online": [
+    1,
+    2
+   ]
+  },
+  "windows": {
+   "a": [
+    "playing",
+    2,
+    [
+     1,
+     2
+    ]
+   ],
+   "b": [
+    "playing",
+    1,
+    [
+     1,
+     2
+    ]
+   ]
+  },
+  "workers": []
+ },
+ "door": {
+  "a_touched_area": true,
+  "a_after": [
+   459.5,
+   654.0,
+   64.0,
+   "bridge_6m/col_deck",
+   "crossing:1"
+  ],
+  "a_contact_levels": [
+   [
+    64.0,
+    "bridge_6m/col_deck"
+   ]
+  ],
+  "a_window": {
+   "key": "crossing",
+   "loads": [
+    "crossing:1"
+   ],
+   "own": [
+    459.5,
+    654.0,
+    64.0,
+    "bridge_6m/col_deck"
+   ]
+  },
+  "b_window": {
+   "key": "start",
+   "loads": [
+    "crossing:1",
+    "start:2"
+   ]
+  },
+  "b_after": [
+   640.0,
+   224.0,
+   null,
+   null,
+   "start:2"
+  ],
+  "a_sees": [
+   2
+  ]
+ },
+ "foreign_keys": {
+  "a": 0,
+  "b": 0
+ },
+ "history": [
+  [
+   97,
+   293810.4876175,
+   "connect",
+   1,
+   "crossing:1"
+  ],
+  [
+   97,
+   293810.4918365,
+   "connect",
+   2,
+   "crossing:1"
+  ],
+  [
+   1114,
+   293861.3169526,
+   "connect",
+   3,
+   "crossing:1"
+  ],
+  [
+   1114,
+   293861.3172608,
+   "disconnect",
+   3,
+   "crossing:1"
+  ],
+  [
+   1209,
+   293866.0925459,
+   "connect",
+   4,
+   "crossing:1"
+  ],
+  [
+   1213,
+   293866.3023143,
+   "disconnect",
+   4,
+   "crossing:1"
+  ],
+  [
+   1307,
+   293870.9588136,
+   "transfer",
+   1,
+   "crossing:1 crossing_door_to_start_480_656_0_0 moved"
+  ]
+ ],
+ "transfers": [
+  [
+   1,
+   "crossing:1 crossing_door_to_start_480_656_0_0 moved"
+  ]
+ ],
+ "workers": []
+}

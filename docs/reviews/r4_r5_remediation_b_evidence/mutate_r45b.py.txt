@@ -1,0 +1,75 @@
+"""R4/R5 remediation B fault injection, on the combined tree: each mutation undoes one correction; the tests must
+fail. Each file is put back byte for byte (checked).
+
+    py -3.13 mutate_r45b.py REPO OUT_JSON"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+TESTS = ["tests/test_project_ownership_root.py", "tests/test_ai_write_paths_remediation_b.py",
+         "tests/test_mcp_project_ownership_remediation_b.py", "tests/test_ai_write_paths_project_root.py",
+         "tests/test_mcp_project_ownership_root.py"]
+OWN, SAVE, SESSION = "engine/editor/project_ownership.py", "engine/studio_project.py", "engine/authoring_session.py"
+EXE, CON, MCP = "engine/tooling/plan_executor.py", "engine/console_runtime/handlers_ai.py", "engine/mcp_server/tools.py"
+MUTATIONS = [
+    ("finding 3: identity rediscovered from the held root", OWN,
+     "project_root(resolved) == (Path(project).resolve() if project else None)", "project_root(resolved) == project_root(owned)"),
+    ("finding 3: a released lock still covers files", OWN,
+     "        return self.held and in_project(self.root, target, self.project)",
+     "        return in_project(self.root, target, self.project)"),
+    ("finding 1: Project.save checks nothing", SAVE,
+     "foreign = [rel for rel, _kind, _doc in documents if owner is not None and not owner.owns(self.root / rel)]",
+     "foreign: list[str] = []"),
+    ("finding 1: authoring_session doesn't pass its lock to the save", SESSION,
+     "        written = project.save(owner=held)", "        written = project.save()"),
+    ("finding 2: a folder accepted where a file is deleted or restored", EXE,
+     "                if dst.is_dir() or (os.path.lexists(dst) and not dst.is_file()):", "                if False:"),
+    ("finding 2: a file accepted where a folder is needed above a restored file", EXE,
+     "                    if blocked is not None:", "                    if False:"),
+    ("finding 3: undo doesn't check again before each write", EXE,
+     "                if owner is None or owner.owns(path):", "                if True:"),
+    ("finding 3: the plan's records written after the project changed", EXE,
+     '        if self.owner is None or self.owner.owns(Path(".mesh") / "plan_history"):', "        if True:"),
+    ("finding 3: plan writes not checked against the lock", EXE,
+     "        if self.owner is not None and not self.owner.owns(path):", "        if False:"),
+    ("ai_job: AIOps without the lock", CON, 'AIOps(".", owner=held)', 'AIOps(".")'),
+    ("MCP fallback: AIOps without the lock", MCP, "return AIOps(base_dir=root, owner=held)", "return AIOps(base_dir=root)"),
+]
+
+
+def main() -> None:
+    results = []
+    for name, rel, old, new in MUTATIONS:
+        path = REPO / rel
+        original = path.read_bytes()
+        text = original.decode("utf-8")
+        if "\r\n" in text:
+            old, new = old.replace("\n", "\r\n"), new.replace("\n", "\r\n")
+        assert text.count(old) == 1, (name, text.count(old))
+        path.write_bytes(text.replace(old, new).encode("utf-8"))
+        try:
+            run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-W", "error",
+                                  "--tb=no", "-rf", *TESTS], cwd=REPO, env=dict(os.environ), capture_output=True,
+                                 text=True, timeout=2400)
+        finally:
+            path.write_bytes(original)
+        assert path.read_bytes() == original
+        summary = [line for line in run.stdout.splitlines() if " passed" in line or " failed" in line][-1:]
+        failed = sorted({line.split(" ")[1].split("[")[0] for line in run.stdout.splitlines() if line.startswith("FAILED")})
+        results.append({"mutation": name, "file": rel, "caught": run.returncode != 0, "summary": summary,
+                        "failed": failed or None})
+        print(json.dumps(results[-1])[:300], flush=True)
+    report = {"caught": sum(r["caught"] for r in results), "of": len(results), "mutations": results}
+    OUT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(f"{report['caught']}/{report['of']} caught")
+
+
+if __name__ == "__main__":
+    main()

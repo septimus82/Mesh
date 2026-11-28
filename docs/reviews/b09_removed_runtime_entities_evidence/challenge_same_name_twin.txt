@@ -1,0 +1,15 @@
+Owner challenge (same-name id-less room object + runtime twin, either list order), run on 639f1561 (before the correction):
+tests\test_b09_removed_runtime_entities.py:120: AssertionError
+tests\test_b09_removed_runtime_entities.py:141: AssertionError
+tests\test_b09_removed_runtime_entities.py:150: AssertionError
+tests\test_b09_removed_runtime_entities_gpu.py:69: AssertionError
+FAILED tests/test_b09_removed_runtime_entities.py::test_carried_is_only_what_the_room_has_no_name_for_and_leaves_ided_objects_alone
+FAILED tests/test_b09_removed_runtime_entities.py::test_a_sprite_less_runtime_twin_never_costs_the_room_file_object_whichever_comes_first[True]
+FAILED tests/test_b09_removed_runtime_entities.py::test_the_ambiguous_same_name_case_is_warned_not_dropped
+FAILED tests/test_b09_removed_runtime_entities_gpu.py::test_a_same_named_runtime_twin_of_an_id_less_room_object_never_costs_the_room_object[True]
+4 failed, 11 passed in 67.35s (0:01:07)
+
+Reversed order failed on base: case (1) kept the expired runtime entry / case (2) dropped the room-file entry (order-based carried()). The other two failures are the old order-based unit tests, rewritten for the new rule.
+
+Mutation: order-based pairing restored in carried() -> caught by default-lane and GPU (reversed) tests.
+Behaviour kept for the ambiguous case: an expired same-named twin lingers (warned), never a room-file object dropped.

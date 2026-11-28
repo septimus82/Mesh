@@ -221,6 +221,7 @@ def test_f7_launches_trainer_battle_when_debug_mode_enabled() -> None:
     window = types.SimpleNamespace()
     window.engine_config = load_config("config.json")
     window.engine_config.debug_mode = True
+    setattr(window.engine_config, "_mesh_launch_mode", "play")  # (a developer launch, mesh play: S1 D4)
     window.console_controller = _Console()
     window.editor_controller = types.SimpleNamespace(active=False)
     window.ui_controller = types.SimpleNamespace(on_key_press=lambda _key, _mods: False)
@@ -261,6 +262,7 @@ def test_f12_launches_wild_battle_when_debug_mode_enabled() -> None:
     window = types.SimpleNamespace()
     window.engine_config = load_config("config.json")
     window.engine_config.debug_mode = True
+    setattr(window.engine_config, "_mesh_launch_mode", "play")  # (a developer launch, mesh play: S1 D4)
     window.console_controller = _Console()
     window.editor_controller = types.SimpleNamespace(active=False)
     window.ui_controller = types.SimpleNamespace(on_key_press=lambda _key, _mods: False)

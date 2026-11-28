@@ -21,8 +21,9 @@ class MockRow:
 @pytest.fixture
 def mock_controller(tmp_path):
     mc = MagicMock()
-    mc.window.repo_root = tmp_path
+    mc._get_repo_root.return_value = tmp_path  # (the project root file ops act in: #641)
     mc.project_explorer = MagicMock()
+    mc.project_explorer.repo_root = tmp_path
     mc.state = MagicMock()
     mc.state.current_scene_path = None
     mc.state.current_scene_data = None
@@ -51,6 +52,7 @@ def test_rename_workflow_v2(file_ops, tmp_path):
     # Mock Selection
     mock_row = MagicMock()
     mock_row.entry.path = str(old)
+    mock_row.entry.rel_path = old.relative_to(tmp_path).as_posix()  # (what a Project panel row carries)
     mock_row.entry.is_dir = False
 
     with patch.object(file_ops, "_get_selected_project_row", return_value=mock_row):
@@ -83,6 +85,7 @@ def test_rollback_on_json_failure(file_ops, tmp_path):
 
     mock_row = MagicMock()
     mock_row.entry.path = str(old)
+    mock_row.entry.rel_path = old.relative_to(tmp_path).as_posix()  # (what a Project panel row carries)
 
     with patch.object(file_ops, "_get_selected_project_row", return_value=mock_row):
         file_ops.request_safe_rename_refactor("b.png")
@@ -122,6 +125,7 @@ def test_rollback_on_fs_failure(file_ops, tmp_path):
 
     mock_row = MagicMock()
     mock_row.entry.path = str(old)
+    mock_row.entry.rel_path = old.relative_to(tmp_path).as_posix()  # (what a Project panel row carries)
 
     # Need mocks for validation phases inside request_safe_rename
     with patch.object(file_ops, "_get_selected_project_row", return_value=mock_row):
@@ -129,8 +133,8 @@ def test_rollback_on_fs_failure(file_ops, tmp_path):
 
     assert file_ops._pending_refactor_plan is not None
 
-    # Mock os.replace to fail
-    with patch("os.replace", side_effect=OSError("Access Denied")):
+    # Make the file step fail (the no-clobber move every file step goes through, #618)
+    with patch("engine.editor.asset_ops.editor_file_ops_controller._move_no_clobber", side_effect=OSError("Access Denied")):
         file_ops.execute_pending_refactor()
 
     # Verify Rollback
@@ -155,12 +159,12 @@ def test_delete_workflow(file_ops, tmp_path):
     plan = file_ops._pending_refactor_plan
     assert plan.op_kind == "delete"
     op_id = plan.op_id
-    trash_path = tmp_path / ".mesh_trash" / op_id / "assets/junk.png"
 
     file_ops.execute_pending_refactor()
 
     assert not target.exists()
-    assert trash_path.exists()
+    [trash_path] = (tmp_path / ".mesh_trash").glob("*/assets/junk.png")
+    assert trash_path.parent.parent.name.startswith(f"{op_id}-")  # (one folder per staging: #632)
 
     # Check scene ref cleared?
     # Our mapping was "junk" -> ""
@@ -174,16 +178,13 @@ def test_delete_rollback_on_json_failure(file_ops, tmp_path):
     scene = tmp_path / "scenes/s.json"
     scene.write_text(json.dumps({"entities": [{"id": "e_del", "sprite": "assets/junk.png"}]}), encoding="utf-8")
     file_ops.request_safe_delete_refactor(["assets/junk.png"])
-    plan = file_ops._pending_refactor_plan
-    op_id = plan.op_id
-    trash_path = tmp_path / ".mesh_trash" / op_id / "assets/junk.png"
 
     with patch("engine.editor.persistence_utils.write_atomic_utf8", side_effect=IOError("Disk Full")):
         file_ops.execute_pending_refactor()
 
     # Restore original file
     assert target.exists()
-    assert not trash_path.exists()
+    assert not list((tmp_path / ".mesh_trash").glob("*/assets/junk.png"))
     data = json.loads(scene.read_text(encoding="utf-8"))
     assert data["entities"][0]["sprite"] == "assets/junk.png"
 
@@ -195,7 +196,7 @@ def test_delete_staging_failure_does_not_change_json(file_ops, tmp_path):
     scene.write_text(json.dumps({"entities": [{"id": "e_del", "sprite": "assets/junk.png"}]}), encoding="utf-8")
     file_ops.request_safe_delete_refactor(["assets/junk.png"])
 
-    with patch("os.replace", side_effect=OSError("Locked")), patch("shutil.move", side_effect=OSError("Locked")):
+    with patch("engine.editor.asset_ops.editor_file_ops_controller._move_no_clobber", side_effect=OSError("Locked")):
         file_ops.execute_pending_refactor()
 
     assert target.exists()
@@ -208,14 +209,19 @@ def test_purge_trash_removes_op_folder(file_ops, tmp_path):
     target.write_text("junk", encoding="utf-8")
     scene = tmp_path / "scenes/s.json"
     scene.write_text(json.dumps({"entities": [{"id": "e_del", "sprite": "assets/junk.png"}]}), encoding="utf-8")
+    old_layout = tmp_path / ".mesh_trash" / "0123456789ab" / "assets/old.png"  # (an entry from before #632)
+    old_layout.parent.mkdir(parents=True)
+    old_layout.write_text("old", encoding="utf-8")
     file_ops.request_safe_delete_refactor(["assets/junk.png"])
-    plan = file_ops._pending_refactor_plan
-    op_id = plan.op_id
-    trash_root = tmp_path / ".mesh_trash" / op_id
     file_ops.execute_pending_refactor()
-    assert trash_root.exists()
-    file_ops.purge_trash(op_id)
+    [trash_root] = [p.parent.parent for p in (tmp_path / ".mesh_trash").glob("*/assets/junk.png")]
+    file_ops.purge_trash("..")  # (only an entry's name: never a path out of the trash)
+    assert tmp_path.exists() and trash_root.exists()
+    file_ops.purge_trash(trash_root.name)
     assert not trash_root.exists()
+    assert old_layout.exists()
+    file_ops.purge_trash("0123456789ab")
+    assert not old_layout.exists()
 
 def test_move_workflow(file_ops, tmp_path):
     setup_repo(tmp_path)

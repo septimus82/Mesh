@@ -1,0 +1,99 @@
+"""R4 fault injection: each mutation removes or weakens one part of the protection; the named tests must fail.
+
+    py -3.13 mutate.py REPO OUT_JSON
+
+Each file is put back byte for byte after its mutation (checked)."""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(sys.argv[1]).resolve()
+OUT = Path(sys.argv[2])
+T = "tests/test_ai_write_paths.py::"
+GPU = "tests/test_ai_write_paths_gpu.py"
+NOT_HELD = '__import__("engine.editor.project_ownership", fromlist=["x"]).Ownership(Path.cwd(), "x", -1)'
+
+MUTATIONS = [
+    ("ai_job: no refusal inside an editing window", "engine/console_runtime/handlers_ai.py",
+     "editing = _editing_here(controller.window)", 'editing = ""',
+     [T + "test_ai_job_is_refused_in_a_window_that_edits_the_project", GPU]),
+    ("ai_job: the window's own hold on the project taken as a pass", "engine/console_runtime/handlers_ai.py",
+     'return "the editor" if getattr(held, "held", False) is True or getattr(editor',
+     'return "the editor" if getattr(editor',
+     [T + "test_ai_job_is_refused_in_a_window_that_edits_the_project"]),
+    ("ai_job: the legacy editor being active not checked", "engine/console_runtime/handlers_ai.py",
+     ' or getattr(editor, "active", False) is True else ""', ' else ""',
+     [T + "test_ai_job_is_refused_in_a_window_that_edits_the_project"]),
+    ("ai_job: writes without owning the project", "engine/console_runtime/handlers_ai.py",
+     "held = project_ownership.acquire(Path.cwd(), project_ownership.AUTHORING, wait=0.5)",
+     f"held = {NOT_HELD}",
+     [T + "test_ai_job_in_a_game_window_is_refused_while_studio_has_the_project_and_works_once_closed",
+      T + "test_ai_job_holds_the_project_while_it_writes_and_lets_it_go_however_it_ends"]),
+    ("ai_job: lets the project go before writing", "engine/console_runtime/handlers_ai.py",
+     "    with held:\n        result = AIOps", "    held.release()\n    if held:\n        result = AIOps",
+     [T + "test_ai_job_holds_the_project_while_it_writes_and_lets_it_go_however_it_ends"]),
+    ("ai_job: never lets the project go", "engine/console_runtime/handlers_ai.py",
+     "    with held:\n        result = AIOps", "    if held:\n        result = AIOps",
+     [T + "test_ai_job_in_a_game_window_is_refused_while_studio_has_the_project_and_works_once_closed",
+      T + "test_ai_job_holds_the_project_while_it_writes_and_lets_it_go_however_it_ends"]),
+    ("apply-plan: writes without owning the project", "mesh_cli/ai.py",
+     'held = _own_project("apply-plan")', f"held = {NOT_HELD}",
+     [T + "test_apply_plan_and_undo_are_refused_while_mesh_studio_has_the_project",
+      T + "test_a_competing_writer_or_an_editor_holding_the_project_stops_the_plan",
+      T + "test_mesh_studio_opening_during_a_plan_is_turned_away_until_it_is_written"]),
+    ("undo-last-plan: writes without owning the project", "mesh_cli/ai.py",
+     'held = _own_project("undo-last-plan")', f"held = {NOT_HELD}",
+     [T + "test_apply_plan_and_undo_are_refused_while_mesh_studio_has_the_project",
+      T + "test_a_competing_writer_or_an_editor_holding_the_project_stops_the_plan"]),
+    ("apply-plan: never lets the project go", "mesh_cli/ai.py",
+     "    with held:\n        return _apply_plan(args, held.root)", "    return _apply_plan(args, held.root)",
+     [T + "test_apply_plan_with_studio_closed_writes_and_lets_the_project_go",
+      T + "test_failed_plans_and_unavailable_ownership_leave_no_hold_and_no_change"]),
+    ("apply-plan --dry-run made to own the project (read-only refused)", "mesh_cli/ai.py",
+     'if getattr(args, "dry_run", False):\n        return _apply_plan(args, None)',
+     'if False:\n        return _apply_plan(args, None)',
+     [T + "test_apply_plan_and_undo_are_refused_while_mesh_studio_has_the_project"]),
+    ("plan executor: writes outside the owned project", "engine/tooling/plan_executor.py",
+     "        if self.root is None:\n            return\n        target", "        if True:\n            return\n        target",
+     [T + "test_a_plan_writes_only_inside_the_project_it_owns"]),
+    ("plan executor: writes into another project inside the owned one", "engine/tooling/plan_executor.py",
+     ' or any((d / "config.json").is_file() for d in inner)', "",
+     [T + "test_a_plan_writes_only_inside_the_project_it_owns"]),
+]
+
+
+def main() -> None:
+    results = []
+    env = {**os.environ, "MESH_GL_SMOKE": "1"}
+    for name, rel, old, new, tests in MUTATIONS:
+        path = REPO / rel
+        original = path.read_bytes()
+        text = original.decode("utf-8")
+        if "\r\n" in text:  # (the working tree is CRLF here: autocrlf)
+            old, new = old.replace("\n", "\r\n"), new.replace("\n", "\r\n")
+        assert text.count(old) == 1, (name, text.count(old))
+        path.write_bytes(text.replace(old, new).encode("utf-8"))
+        try:
+            run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-W", "error",
+                                  "-o", "addopts=", "--strict-markers", "--tb=no", "-rf", *tests], cwd=REPO, env=env,
+                                 capture_output=True, text=True, timeout=1200)
+        finally:
+            path.write_bytes(original)
+        assert path.read_bytes() == original
+        summary = [line for line in run.stdout.splitlines() if " passed" in line or " failed" in line][-1:]
+        failed = [line.split(" ")[1] for line in run.stdout.splitlines() if line.startswith("FAILED")]
+        results.append({"mutation": name, "file": rel, "caught": run.returncode != 0, "summary": summary,
+                        "failed": failed or None})
+        print(json.dumps(results[-1]), flush=True)
+    report = {"caught": sum(r["caught"] for r in results), "of": len(results), "mutations": results}
+    OUT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(f"{report['caught']}/{report['of']} caught")
+
+
+if __name__ == "__main__":
+    main()

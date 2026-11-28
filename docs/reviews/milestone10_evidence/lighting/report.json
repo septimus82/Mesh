@@ -1,0 +1,688 @@
+{
+  "passed": true,
+  "steps": [
+    {
+      "step": "open_room_1",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "room": "cellar"
+      },
+      "seconds": 6.1,
+      "screenshot": "01_open_room_1.png"
+    },
+    {
+      "step": "enable_lighting",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "settings": {
+          "lighting_enabled": true,
+          "lighting_ambient_color": [
+            60,
+            70,
+            110,
+            255
+          ]
+        },
+        "live": {
+          "available": true,
+          "enabled": true,
+          "shadows_mode": "hard",
+          "clock": 0.88,
+          "ambient": [
+            60,
+            70,
+            110,
+            255
+          ],
+          "ambient_tint": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "static_lights": 0,
+          "static": [],
+          "occluders": 5,
+          "dynamic": []
+        }
+      },
+      "seconds": 2.1,
+      "screenshot": "02_enable_lighting.png"
+    },
+    {
+      "step": "change_ambient",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "settings": {
+          "lighting_enabled": true,
+          "lighting_ambient_color": [
+            30,
+            30,
+            40,
+            255
+          ]
+        },
+        "ambient": [
+          30,
+          30,
+          40,
+          255
+        ]
+      },
+      "seconds": 1.4,
+      "screenshot": "03_change_ambient.png"
+    },
+    {
+      "step": "two_coloured_lights",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "lights": [
+          {
+            "x": 209.0,
+            "y": 240.0,
+            "radius": 160.0,
+            "color": "#ff5555",
+            "mode": "soft"
+          },
+          {
+            "x": 529.0,
+            "y": 80.0,
+            "radius": 160.0,
+            "color": "#88bbff",
+            "mode": "soft"
+          }
+        ],
+        "live": [
+          {
+            "at": [
+              209.0,
+              240.0
+            ],
+            "radius": 160.0,
+            "color": [
+              255,
+              85,
+              85
+            ]
+          },
+          {
+            "at": [
+              529.0,
+              80.0
+            ],
+            "radius": 160.0,
+            "color": [
+              136,
+              187,
+              255
+            ]
+          }
+        ]
+      },
+      "seconds": 5.5,
+      "screenshot": "04_two_coloured_lights.png"
+    },
+    {
+      "step": "move_and_resize",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "before": {
+          "x": 209.0,
+          "y": 240.0,
+          "radius": 160.0,
+          "color": "#ff5555",
+          "mode": "soft"
+        },
+        "after": {
+          "x": 241.0,
+          "y": 240.0,
+          "radius": 280.0,
+          "color": "#ff5555",
+          "mode": "soft"
+        },
+        "drawn": {
+          "at": [
+            241.0,
+            240.0
+          ],
+          "radius": 280.0,
+          "color": [
+            255,
+            85,
+            85
+          ]
+        }
+      },
+      "seconds": 3.4,
+      "screenshot": "05_move_and_resize.png"
+    },
+    {
+      "step": "flicker",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "light": {
+          "x": 529.0,
+          "y": 80.0,
+          "radius": 160.0,
+          "color": "#88bbff",
+          "mode": "soft",
+          "flicker_enabled": true,
+          "flicker_amount": 0.2,
+          "flicker_speed": 5.0
+        }
+      },
+      "seconds": 2.1,
+      "screenshot": "06_flicker.png"
+    },
+    {
+      "step": "shadows",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "behind_pillar": 13.1,
+        "open_same_distance": 43.8,
+        "far_dark": 20.5,
+        "light": [
+          241.0,
+          240.0
+        ]
+      },
+      "seconds": 6.3,
+      "screenshot": "07_shadows.png"
+    },
+    {
+      "step": "undo_redo",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "lights": [
+          {
+            "x": 241.0,
+            "y": 240.0,
+            "radius": 280.0,
+            "color": "#ff5555",
+            "mode": "soft"
+          },
+          {
+            "x": 529.0,
+            "y": 80.0,
+            "radius": 160.0,
+            "color": "#88bbff",
+            "mode": "soft",
+            "flicker_enabled": true,
+            "flicker_amount": 0.2,
+            "flicker_speed": 5.0
+          }
+        ],
+        "settings": {
+          "lighting_enabled": true,
+          "lighting_ambient_color": [
+            30,
+            30,
+            40,
+            255
+          ],
+          "lighting_shadows_mode": "hard"
+        }
+      },
+      "seconds": 2.5,
+      "screenshot": "08_undo_redo.png"
+    },
+    {
+      "step": "second_room",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "cellar": {
+          "lights": [
+            {
+              "color": "#ff5555",
+              "mode": "soft",
+              "radius": 280.0,
+              "x": 241.0,
+              "y": 240.0
+            },
+            {
+              "color": "#88bbff",
+              "flicker_amount": 0.2,
+              "flicker_enabled": true,
+              "flicker_speed": 5.0,
+              "mode": "soft",
+              "radius": 160.0,
+              "x": 529.0,
+              "y": 80.0
+            }
+          ],
+          "settings": {
+            "lighting_ambient_color": [
+              30,
+              30,
+              40,
+              255
+            ],
+            "lighting_enabled": true,
+            "lighting_shadows_mode": "hard"
+          }
+        },
+        "garden": {
+          "lights": [
+            {
+              "color": "#66ff77",
+              "mode": "soft",
+              "radius": 160.0,
+              "x": 337.0,
+              "y": 240.0
+            }
+          ],
+          "settings": {
+            "lighting_ambient_color": [
+              150,
+              120,
+              140,
+              255
+            ],
+            "lighting_enabled": true
+          }
+        }
+      },
+      "seconds": 5.0,
+      "screenshot": "09_second_room.png"
+    },
+    {
+      "step": "play_between_rooms",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "visits": [
+          {
+            "room": "cellar.json",
+            "enabled": true,
+            "ambient": [
+              30,
+              30,
+              40,
+              255
+            ],
+            "shadows": "hard",
+            "static": 2,
+            "dynamic": 0,
+            "occluders": 5,
+            "radii": [
+              280.0,
+              184.1
+            ]
+          },
+          {
+            "room": "garden.json",
+            "enabled": true,
+            "ambient": [
+              150,
+              120,
+              140,
+              255
+            ],
+            "shadows": "hard",
+            "static": 1,
+            "dynamic": 0,
+            "occluders": 4,
+            "radii": [
+              160.0
+            ]
+          },
+          {
+            "room": "cellar.json",
+            "enabled": true,
+            "ambient": [
+              30,
+              30,
+              40,
+              255
+            ],
+            "shadows": "hard",
+            "static": 2,
+            "dynamic": 0,
+            "occluders": 5,
+            "radii": [
+              280.0,
+              154.4
+            ]
+          },
+          {
+            "room": "garden.json",
+            "enabled": true,
+            "ambient": [
+              150,
+              120,
+              140,
+              255
+            ],
+            "shadows": "hard",
+            "static": 1,
+            "dynamic": 0,
+            "occluders": 4,
+            "radii": [
+              160.0
+            ]
+          },
+          {
+            "room": "cellar.json",
+            "enabled": true,
+            "ambient": [
+              30,
+              30,
+              40,
+              255
+            ],
+            "shadows": "hard",
+            "static": 2,
+            "dynamic": 0,
+            "occluders": 5,
+            "radii": [
+              280.0,
+              138.8
+            ]
+          },
+          {
+            "room": "garden.json",
+            "enabled": true,
+            "ambient": [
+              150,
+              120,
+              140,
+              255
+            ],
+            "shadows": "hard",
+            "static": 1,
+            "dynamic": 0,
+            "occluders": 4,
+            "radii": [
+              160.0
+            ]
+          },
+          {
+            "room": "cellar.json",
+            "enabled": true,
+            "ambient": [
+              30,
+              30,
+              40,
+              255
+            ],
+            "shadows": "hard",
+            "static": 2,
+            "dynamic": 0,
+            "occluders": 5,
+            "radii": [
+              280.0,
+              180.1
+            ]
+          }
+        ],
+        "flicker_radii": [
+          147.5,
+          157.0,
+          190.8,
+          159.2,
+          173.4,
+          175.2,
+          140.9,
+          171.0
+        ],
+        "shadow": {
+          "behind_pillar": 13.1,
+          "open_same_distance": 44.0
+        }
+      },
+      "seconds": 28.7,
+      "screenshot": "10_play_between_rooms.png"
+    },
+    {
+      "step": "no_leaks",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "cellar.json": [
+          [
+            2,
+            0,
+            5
+          ]
+        ],
+        "garden.json": [
+          [
+            1,
+            0,
+            4
+          ]
+        ]
+      },
+      "seconds": 0.0,
+      "screenshot": "11_no_leaks.png"
+    },
+    {
+      "step": "zoomed_map",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "zoom": 1.5647568750000003,
+        "moved_world_px": 26.0,
+        "glow_vs_dark": [
+          188.3,
+          42.7
+        ]
+      },
+      "seconds": 5.5,
+      "screenshot": "12_zoomed_map.png"
+    },
+    {
+      "step": "save_close_reopen",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "cellar": {
+          "lights": [
+            {
+              "color": "#ff5555",
+              "mode": "soft",
+              "radius": 280.0,
+              "x": 241.0,
+              "y": 240.0
+            },
+            {
+              "color": "#88bbff",
+              "flicker_amount": 0.2,
+              "flicker_enabled": true,
+              "flicker_speed": 5.0,
+              "mode": "soft",
+              "radius": 160.0,
+              "x": 529.0,
+              "y": 80.0
+            }
+          ],
+          "settings": {
+            "lighting_ambient_color": [
+              30,
+              30,
+              40,
+              255
+            ],
+            "lighting_enabled": true,
+            "lighting_shadows_mode": "hard"
+          }
+        },
+        "garden": {
+          "lights": [
+            {
+              "color": "#66ff77",
+              "mode": "soft",
+              "radius": 160.0,
+              "x": 337.0,
+              "y": 240.0
+            }
+          ],
+          "settings": {
+            "lighting_ambient_color": [
+              150,
+              120,
+              140,
+              255
+            ],
+            "lighting_enabled": true
+          }
+        }
+      },
+      "seconds": 6.0,
+      "screenshot": "13_save_close_reopen.png"
+    },
+    {
+      "step": "preserved",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "cellar": {
+          "lights": [
+            {
+              "color": "#ff5555",
+              "mode": "soft",
+              "radius": 280.0,
+              "x": 241.0,
+              "y": 240.0
+            },
+            {
+              "color": "#88bbff",
+              "flicker_amount": 0.2,
+              "flicker_enabled": true,
+              "flicker_speed": 5.0,
+              "mode": "soft",
+              "radius": 160.0,
+              "x": 529.0,
+              "y": 80.0
+            }
+          ],
+          "settings": {
+            "lighting_ambient_color": [
+              30,
+              30,
+              40,
+              255
+            ],
+            "lighting_enabled": true,
+            "lighting_shadows_mode": "hard"
+          }
+        },
+        "live": {
+          "available": true,
+          "enabled": true,
+          "shadows_mode": "hard",
+          "clock": 1.75,
+          "ambient": [
+            30,
+            30,
+            40,
+            255
+          ],
+          "ambient_tint": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "static_lights": 2,
+          "static": [
+            {
+              "at": [
+                241.0,
+                240.0
+              ],
+              "radius": 280.0,
+              "color": [
+                255,
+                85,
+                85
+              ]
+            },
+            {
+              "at": [
+                529.0,
+                80.0
+              ],
+              "radius": 167.54445379034388,
+              "color": [
+                136,
+                187,
+                255
+              ]
+            }
+          ],
+          "occluders": 5,
+          "dynamic": []
+        }
+      },
+      "seconds": 2.1,
+      "screenshot": "14_preserved.png"
+    },
+    {
+      "step": "play_stop_keeps_authoring",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "room": "cellar",
+        "live": {
+          "available": true,
+          "enabled": true,
+          "shadows_mode": "hard",
+          "clock": 22.15,
+          "ambient": [
+            30,
+            30,
+            40,
+            255
+          ],
+          "ambient_tint": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "static_lights": 2,
+          "static": [
+            {
+              "at": [
+                241.0,
+                240.0
+              ],
+              "radius": 280.0,
+              "color": [
+                255,
+                85,
+                85
+              ]
+            },
+            {
+              "at": [
+                529.0,
+                80.0
+              ],
+              "radius": 184.71419808773481,
+              "color": [
+                136,
+                187,
+                255
+              ]
+            }
+          ],
+          "occluders": 5,
+          "dynamic": []
+        }
+      },
+      "seconds": 20.4,
+      "screenshot": "15_play_stop_keeps_authoring.png"
+    }
+  ]
+}

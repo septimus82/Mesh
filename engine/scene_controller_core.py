@@ -30,7 +30,6 @@ from .behaviours.utils import (
 from .constants import EVENT_COLLECTIBLE_PICKED, EVENT_DAMAGE_APPLIED
 from .culling import Rect
 from .depth_tint_model import DEFAULT_DEPTH_TINT_SETTINGS, DepthTintSettings
-from .editor.sprite_outline_model import DEFAULT_OUTLINE_SETTINGS, OutlineSettings
 from .elite_labeling import format_elite_label
 from .encounter_cost import (
     get_effective_encounter_cost,
@@ -118,6 +117,7 @@ from .scene_runtime.spawn import find_spawn_marker as _find_spawn_marker_runtime
 from .scene_runtime.spawn import get_spawn as _get_spawn_runtime
 from .scene_update_controller import SceneUpdateController
 from .sensors_runtime import SensorRuntime
+from .sprite_outline_model import DEFAULT_OUTLINE_SETTINGS, OutlineSettings
 from .tilemap import TilemapDrawLayer, TilemapInstance, compute_parallax_camera_position
 from .tilemap_batch import TilemapBatchState, TilemapBatchStats
 from .tilemap_batch_arcade import TilemapBatcher
@@ -245,6 +245,8 @@ class SceneController:
             source: optional_arcade.arcade.Sprite,
             target: optional_arcade.arcade.Sprite,
             amount: float,
+            *,
+            emit: bool = True,
         ) -> None: ...
         def set_tile(self, *args: Any, **kwargs: Any) -> Any: ...
         def request_scene_reload(self, clear_assets: bool = False) -> None: ...
@@ -288,6 +290,7 @@ class SceneController:
         self.scene_settings: Dict[str, Any] = {}
         self.current_scene_path: str | None = None
         self._pending_scene_path: str | None = None
+        self._carry_player_hp: bool = False  # set by a door: the next room load keeps the player's HP (N1)
         self._pending_scene_change: dict[str, Any] | None = None
         self._clear_assets_on_next_load: bool = False
         self._suppress_spawn_toasts: bool = False
@@ -297,6 +300,7 @@ class SceneController:
         self._preserved_camera_state: Dict[str, Any] | None = None
         self._last_hot_reload_error_message: str = ""
         self._last_hot_reload_error_scene: str = ""
+        self.last_reload_result: Dict[str, Any] | None = None  # the last hot reload's outcome (scene_runtime.reload_check)
 
         # Tilemap state
         self.tilemap_instance: TilemapInstance | None = None

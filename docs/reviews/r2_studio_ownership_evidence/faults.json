@@ -1,0 +1,184 @@
+{
+ "none": {
+  "file": null,
+  "caught": false,
+  "failing": [],
+  "summary": "20 passed in 63.39s (0:01:03) | 27 passed in 57.66s",
+  "wall_s": 126.1
+ },
+ "the lock is never taken (every owner is let in: the defect itself)": {
+  "file": "engine/editor/project_ownership.py",
+  "caught": true,
+  "failing": [
+   "test_a_project_has_one_owner_and_asking_takes_nothing",
+   "test_a_project_whose_ownership_cant_be_established_is_not_taken_as_free",
+   "test_a_running_studio_whose_session_cant_be_confirmed_is_never_written_behind[a malformed record]",
+   "test_a_running_studio_whose_session_cant_be_confirmed_is_never_written_behind[a record nobody answers at]",
+   "test_a_second_session_in_the_same_process_is_refused_and_touches_nothing",
+   "test_a_second_studio_opening_and_closing_never_lets_outside_changes_past_the_first",
+   "test_a_studio_opening_during_an_outside_write_opens_on_what_was_written",
+   "test_a_studio_without_a_live_session_still_owns_its_project",
+   "test_letting_go_never_fails_and_a_bridge_keeps_a_hold_it_was_given",
+   "test_mesh_author_recover_says_what_it_did",
+   "test_mesh_edit_refuses_a_project_another_studio_has_before_it_opens_a_window",
+   "test_of_several_studios_started_at_once_one_owns_the_project",
+   "test_recovery_takes_nothing_from_a_studio_that_is_running",
+   "test_waiting_gets_the_project_when_a_brief_owner_lets_it_go",
+   "test_an_editor_opening_between_the_check_and_the_write_stops_the_write[another editor]",
+   "test_an_editor_opening_between_the_check_and_the_write_stops_the_write[another tool writing]",
+   "test_an_editor_opening_between_the_check_and_the_write_stops_the_write[studio]"
+  ],
+  "summary": "14 failed, 6 passed in 50.24s | 3 failed, 24 passed in 57.09s",
+  "wall_s": 109.4
+ },
+ "the bridge publishes its record without owning the project": {
+  "file": "engine/editor/live_session_bridge.py",
+  "caught": true,
+  "failing": [
+   "test_a_second_session_in_the_same_process_is_refused_and_touches_nothing"
+  ],
+  "summary": "1 failed, 19 passed in 61.13s (0:01:01)",
+  "wall_s": 62.3
+ },
+ "a bridge that stops lets go of a project it was only given": {
+  "file": "engine/editor/live_session_bridge.py",
+  "caught": true,
+  "failing": [
+   "test_letting_go_never_fails_and_a_bridge_keeps_a_hold_it_was_given"
+  ],
+  "summary": "1 failed, 19 passed in 63.86s (0:01:03)",
+  "wall_s": 65.0
+ },
+ "a bridge that took the project itself keeps it when it stops": {
+  "file": "engine/editor/live_session_bridge.py",
+  "caught": true,
+  "failing": [
+   "test_a_second_session_in_the_same_process_is_refused_and_touches_nothing",
+   "test_a_session_that_fails_to_publish_leaves_nothing_behind",
+   "test_a_studio_that_stopped_answering_is_not_taken_for_closed_and_recovers",
+   "test_with_the_other_editor_closed_the_files_are_changed_again"
+  ],
+  "summary": "2 failed, 18 passed in 63.71s (0:01:03) | 2 failed, 25 passed in 57.99s",
+  "wall_s": 124.0
+ },
+ "a session that fails to publish keeps the project and its server": {
+  "file": "engine/editor/live_session_bridge.py",
+  "caught": true,
+  "failing": [
+   "test_a_session_that_fails_to_publish_leaves_nothing_behind"
+  ],
+  "summary": "1 failed, 19 passed in 62.86s (0:01:02)",
+  "wall_s": 64.0
+ },
+ "outside tools take a project with no record as free whoever owns it": {
+  "file": "engine/mcp_server/live_session_client.py",
+  "caught": true,
+  "failing": [
+   "test_a_studio_without_a_live_session_still_owns_its_project"
+  ],
+  "summary": "1 failed, 19 passed in 61.87s (0:01:01)",
+  "wall_s": 63.0
+ },
+ "ownership that can't be told is taken as free": {
+  "file": "engine/mcp_server/live_session_client.py",
+  "caught": true,
+  "failing": [
+   "test_a_project_whose_ownership_cant_be_established_is_not_taken_as_free"
+  ],
+  "summary": "1 failed, 19 passed in 63.76s (0:01:03)",
+  "wall_s": 65.0
+ },
+ "an abandoned record is reported as a running Studio's": {
+  "file": "engine/mcp_server/live_session_client.py",
+  "caught": true,
+  "failing": [
+   "test_a_crashed_studios_record_authorizes_nothing_until_it_is_recovered_on_purpose"
+  ],
+  "summary": "1 failed, 19 passed in 59.50s",
+  "wall_s": 60.7
+ },
+ "a direct write does not own the project": {
+  "file": "engine/authoring_session.py",
+  "caught": true,
+  "failing": [
+   "test_a_project_whose_ownership_cant_be_established_is_not_taken_as_free",
+   "test_a_studio_opening_during_an_outside_write_opens_on_what_was_written",
+   "test_an_editor_opening_between_the_check_and_the_write_stops_the_write[another editor]",
+   "test_an_editor_opening_between_the_check_and_the_write_stops_the_write[another tool writing]",
+   "test_an_editor_opening_between_the_check_and_the_write_stops_the_write[studio]"
+  ],
+  "summary": "2 failed, 18 passed in 63.72s (0:01:03) | 3 failed, 24 passed in 56.87s",
+  "wall_s": 122.9
+ },
+ "recovery removes the record without owning the project": {
+  "file": "engine/authoring_session.py",
+  "caught": true,
+  "failing": [
+   "test_a_running_studio_whose_session_cant_be_confirmed_is_never_written_behind[a malformed record]",
+   "test_a_running_studio_whose_session_cant_be_confirmed_is_never_written_behind[a record nobody answers at]",
+   "test_mesh_author_recover_says_what_it_did",
+   "test_recovery_takes_nothing_from_a_studio_that_is_running"
+  ],
+  "summary": "4 failed, 16 passed in 60.49s (0:01:00)",
+  "wall_s": 61.7
+ },
+ "asking whether a project is owned takes it (exclusive)": {
+  "file": "engine/editor/project_ownership.py",
+  "caught": true,
+  "failing": [
+   "test_someone_asking_is_not_an_owner_to_anyone_else_who_asks"
+  ],
+  "summary": "1 failed, 20 passed in 63.93s (0:01:03)",
+  "wall_s": 65.1,
+  "note": "first run: not caught (20 passed); the test it now fails was added for it"
+ },
+ "asking makes the lock file": {
+  "file": "engine/editor/project_ownership.py",
+  "caught": true,
+  "failing": [
+   "test_a_project_has_one_owner_and_asking_takes_nothing",
+   "test_a_project_whose_ownership_cant_be_established_is_not_taken_as_free"
+  ],
+  "summary": "2 failed, 18 passed in 64.02s (0:01:04)",
+  "wall_s": 65.3
+ },
+ "an owner never waits (a tool's one write, or someone asking, refuses a Studio at once)": {
+  "file": "engine/editor/project_ownership.py",
+  "caught": true,
+  "failing": [
+   "test_a_project_whose_ownership_cant_be_established_is_not_taken_as_free",
+   "test_a_studio_opening_during_an_outside_write_opens_on_what_was_written",
+   "test_many_may_ask_at_once_and_an_owner_being_made_waits_for_them",
+   "test_waiting_gets_the_project_when_a_brief_owner_lets_it_go"
+  ],
+  "summary": "4 failed, 16 passed in 55.43s",
+  "wall_s": 56.6
+ },
+ "letting go leaves the file open (the lock held)": {
+  "file": "engine/editor/project_ownership.py",
+  "caught": true,
+  "failing": [
+   "test_a_crashed_studios_record_authorizes_nothing_until_it_is_recovered_on_purpose",
+   "test_a_project_has_one_owner_and_asking_takes_nothing",
+   "test_a_project_whose_ownership_cant_be_established_is_not_taken_as_free",
+   "test_a_second_session_in_the_same_process_is_refused_and_touches_nothing",
+   "test_a_session_that_fails_to_publish_leaves_nothing_behind",
+   "test_a_studio_opening_during_an_outside_write_opens_on_what_was_written",
+   "test_letting_go_never_fails_and_a_bridge_keeps_a_hold_it_was_given",
+   "test_many_may_ask_at_once_and_an_owner_being_made_waits_for_them",
+   "test_mesh_author_recover_says_what_it_did",
+   "test_waiting_gets_the_project_when_a_brief_owner_lets_it_go"
+  ],
+  "summary": "10 failed, 10 passed, 1 error in 114.14s (0:01:54)",
+  "wall_s": 115.6
+ },
+ "mesh edit opens its window before it owns the project": {
+  "file": "engine/game_launch.py",
+  "caught": true,
+  "failing": [
+   "test_mesh_edit_refuses_a_project_another_studio_has_before_it_opens_a_window"
+  ],
+  "summary": "1 failed, 19 passed in 63.82s (0:01:03)",
+  "wall_s": 65.0
+ }
+}

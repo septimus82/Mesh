@@ -1,10 +1,11 @@
-"""Policy test: event subscriptions must have a teardown path.
+"""Policy test: a behaviour subscribes to the event bus only while it is built (``__init__``).
 
-Any Behaviour that calls ``event_bus.subscribe()`` in ``__init__`` or
-``on_added()`` MUST store the returned unsubscribe callable and release
-it in ``destroy()`` or ``on_removed()``.
+The scene records every subscription made while an entity's behaviours are constructed and ends them when the
+entity is removed (killed, collected, despawned, deleted) or the room is left (#637). A subscription made anywhere
+else is not recorded and outlives its entity: EventLogger's ``on_added``, which nothing calls, logged nothing
+(#638 NEW-4). ``destroy()``/``on_removed()`` are not teardown hooks either: nothing in the runtime calls them.
 
-This AST-based test scans engine/behaviours/ for violations.
+This AST-based test scans engine/behaviours/ for ``event_bus`` subscriptions outside ``__init__``.
 """
 
 from __future__ import annotations
@@ -14,82 +15,52 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = [pytest.mark.fast]
+
 _BEHAVIOURS_ROOT = Path(__file__).resolve().parent.parent / "engine" / "behaviours"
 
 
-def _collect_python_files(root: Path) -> list[Path]:
-    return sorted(root.rglob("*.py"))
+def _mentions_event_bus(node: ast.AST) -> bool:
+    return any((isinstance(n, ast.Attribute) and n.attr == "event_bus") or (isinstance(n, ast.Constant) and n.value == "event_bus")
+               for n in ast.walk(node))
 
 
-def _check_subscription_lifecycle(filepath: Path) -> list[str]:
-    """Return violation messages for classes that subscribe without cleanup."""
-    try:
-        source = filepath.read_text(encoding="utf-8")
-    except Exception:
-        return []
-
-    try:
-        tree = ast.parse(source, filename=str(filepath))
-    except SyntaxError:
-        return []
-
-    violations: list[str] = []
-
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.ClassDef):
-            continue
-
-        # Check if this class calls event_bus.subscribe anywhere
-        subscribes = False
-        stores_unsubscribe = False
-        has_cleanup = False
-
-        for child in ast.walk(node):
-            # Look for event_bus.subscribe(...) calls
-            if isinstance(child, ast.Call):
-                func = child.func
-                if isinstance(func, ast.Attribute) and func.attr == "subscribe":
-                    if isinstance(func.value, ast.Attribute) and func.value.attr == "event_bus":
-                        subscribes = True
-
-            # Look for self._unsubscribe = ... or self._unsubscribers = ...
-            if isinstance(child, ast.Assign):
-                for target in child.targets:
-                    if isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name):
-                        if target.value.id == "self" and "unsubscrib" in target.attr.lower():
-                            stores_unsubscribe = True
-
-        # Check for destroy() or on_removed() method
-        for item in node.body:
-            if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if item.name in ("destroy", "on_removed"):
-                    has_cleanup = True
-
-        if subscribes and not (stores_unsubscribe and has_cleanup):
-            rel = filepath.relative_to(_BEHAVIOURS_ROOT.parent.parent)
-            parts = []
-            if not stores_unsubscribe:
-                parts.append("does not store unsubscribe callable")
-            if not has_cleanup:
-                parts.append("has no destroy()/on_removed() method")
-            detail = "; ".join(parts)
-            violations.append(f"  {rel}: {node.name} — {detail}")
-
-    return violations
+def _late_subscriptions(source: str) -> list[str]:
+    """``Class.method`` for each event-bus subscribe/subscribe_all made outside ``__init__``."""
+    found: list[str] = []
+    for cls in (n for n in ast.walk(ast.parse(source)) if isinstance(n, ast.ClassDef)):
+        for fn in (n for n in cls.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))):
+            if fn.name == "__init__":
+                continue
+            bus_names = {t.id for a in ast.walk(fn) if isinstance(a, ast.Assign) and _mentions_event_bus(a.value)
+                         for t in a.targets if isinstance(t, ast.Name)}  # (bus = getattr(window, "event_bus"))
+            for call in (n for n in ast.walk(fn) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)):
+                if call.func.attr not in ("subscribe", "subscribe_all"):
+                    continue
+                receiver = call.func.value
+                if _mentions_event_bus(receiver) or (isinstance(receiver, ast.Name) and receiver.id in bus_names):
+                    found.append(f"{cls.name}.{fn.name}")
+    return found
 
 
-class TestEventSubscriptionLifecycle:
-    """Behaviours that subscribe to the event bus must clean up."""
+def test_behaviours_subscribe_only_while_built() -> None:
+    late = [f"{path.relative_to(_BEHAVIOURS_ROOT)}: {where}" for path in sorted(_BEHAVIOURS_ROOT.rglob("*.py"))
+            for where in _late_subscriptions(path.read_text(encoding="utf-8"))]
+    assert not late, "subscribe in __init__, where the scene records it and ends it on removal: " + ", ".join(late)
 
-    def test_all_subscriptions_have_cleanup(self) -> None:
-        all_violations: list[str] = []
-        for pyfile in _collect_python_files(_BEHAVIOURS_ROOT):
-            all_violations.extend(_check_subscription_lifecycle(pyfile))
 
-        if all_violations:
-            detail = "\n".join(all_violations)
-            pytest.fail(
-                f"Event subscription(s) without cleanup path:\n{detail}\n\n"
-                "Store the unsubscribe callable and release it in "
-                "destroy() or on_removed()."
-            )
+def test_the_policy_sees_a_late_subscription() -> None:
+    late = '''
+class Logger:
+    def __init__(self, window):
+        window.event_bus.subscribe("a", print)
+    def on_added(self):
+        self.window.event_bus.subscribe_all(print)
+    def later(self):
+        bus = getattr(self.window, "event_bus", None)
+        bus.subscribe("b", print)
+    def gameplay(self):
+        bus = getattr(self.window, "gameplay_event_bus", None)
+        bus.subscribe("c", print)
+'''
+    assert _late_subscriptions(late) == ["Logger.on_added", "Logger.later"]

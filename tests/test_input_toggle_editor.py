@@ -17,7 +17,7 @@ class StubEditorController:
 
 def test_toggle_editor_action_calls_editor_toggle() -> None:
     window = types.SimpleNamespace(
-        engine_config=types.SimpleNamespace(input_bindings=None),
+        engine_config=types.SimpleNamespace(input_bindings=None, _mesh_launch_mode="editor"),  # an editor launch
         config_path="config.json",
         editor_controller=StubEditorController(),
     )

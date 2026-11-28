@@ -1,0 +1,55 @@
+"""GAME-1 / U-01 measurement: unresolved records and slot size per save cycle, each cycle in a fresh process.
+
+    py -3.13 docs/reviews/game1_persistence_evidence/game1_measure.py.txt SCRATCH_DIR > output.txt
+
+(a .py.txt on purpose: evidence is not code.) Nothing is discarded or changed by this script; it only reads what the
+production SaveManager wrote. Needs a hidden GL window (MESH_GL_SMOKE=1 is set for the child processes).
+"""
+from __future__ import annotations
+
+import shutil
+import sys
+from pathlib import Path
+
+REPO = next(p for p in Path(__file__).resolve().parents if (p / "tests" / "_game1_worker.py").exists())
+sys.path.insert(0, str(REPO))
+from tests._game1_worker import run_step  # noqa: E402
+
+
+def row(label: str, cycle: int, result: dict) -> None:
+    slot = result["slot"]
+    print(f"{label:<28} {cycle:>5} {slot['records']:>8} {slot['unresolved']:>11} {slot['scene_entities']:>10} {slot['size']:>10}")
+
+
+def cycles(label: str, work: Path, setup: list[str], per_cycle: callable, count: int) -> None:  # type: ignore[valid-type]
+    shutil.rmtree(work, ignore_errors=True)
+    row(label, 0, run_step(work, *setup, "--save", "slot1"))
+    for n in range(1, count + 1):
+        row(label, n, run_step(work, "--load", "slot1", *per_cycle(n), "--save", "slot1"))
+
+
+def main() -> None:
+    scratch = Path(sys.argv[1])
+    print(f"{'scenario':<28} {'cycle':>5} {'records':>8} {'unresolved':>11} {'scene ents':>10} {'slot bytes':>10}")
+    # step 3: the main scenario, then no-change cycles
+    work = scratch / "s3"
+    shutil.rmtree(work, ignore_errors=True)
+    row("step3 no-change", 0, run_step(work, "--mutate", "first", "--save", "slot1"))
+    row("step3 no-change", 1, run_step(work, "--load", "slot1", "--mutate", "second", "--save", "slot1"))
+    for n in range(2, 9):
+        row("step3 no-change", n, run_step(work, "--load", "slot1", "--save", "slot1"))
+    # step 5: two entities, one id, one place
+    cycles("step5 ambiguous", scratch / "s5", ["--room", "dup", "--mutate", "dup"], lambda n: [], 8)
+    # projectile-heavy: each cycle the old projectiles expire and 5 new id-less ones (new names) are spawned
+    cycles("projectiles new names", scratch / "pn", ["--mutate", "spawn:5:0"],
+           lambda n: ["--mutate", "expire", "--mutate", f"spawn:5:{n}"], 8)
+    # the same, but the projectiles keep the same names and places every cycle
+    cycles("projectiles same names", scratch / "ps", ["--mutate", "spawn:5:0"],
+           lambda n: ["--mutate", "expire", "--mutate", "spawn:5:0"], 8)
+    # expire only: five projectiles saved once, then they are gone and nothing is spawned
+    cycles("projectiles expire only", scratch / "pe", ["--mutate", "spawn:5:0"],
+           lambda n: ["--mutate", "expire"] if n == 1 else [], 8)
+
+
+if __name__ == "__main__":
+    main()

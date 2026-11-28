@@ -1,0 +1,367 @@
+{
+  "entities": [
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {},
+      "behaviours": [
+        {
+          "params": {},
+          "type": "PlayerController"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "hero",
+      "layer": "entities",
+      "name": "Hero",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/placeholder.png",
+      "sprite_sheet": {},
+      "tag": "player",
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 40.0,
+      "y": 100.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {},
+      "behaviours": [
+        {
+          "params": {},
+          "type": "FactProbe"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "lamp",
+      "layer": "entities",
+      "name": "Lamp",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/placeholder.png",
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 100.0,
+      "y": 100.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {},
+      "behaviours": [],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "coin",
+      "layer": "entities",
+      "name": "Coin",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/placeholder.png",
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 140,
+      "y": 100
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {},
+      "behaviours": [
+        {
+          "params": {},
+          "type": "FactProbe"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "layer": "entities",
+      "name": "Loose",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/placeholder.png",
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 180.0,
+      "y": 100.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {},
+      "behaviours": [
+        {
+          "params": {},
+          "type": "FactProbe"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "twin",
+      "layer": "entities",
+      "name": "Twin",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/placeholder.png",
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 220.0,
+      "y": 100.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {},
+      "behaviours": [
+        {
+          "params": {},
+          "type": "FactProbe"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "twin",
+      "layer": "entities",
+      "name": "Twin",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/placeholder.png",
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 260.0,
+      "y": 100.0
+    }
+  ],
+  "game_state": {
+    "chapter": 1,
+    "counters": {},
+    "equipment": {
+      "accessory": null,
+      "armor": null,
+      "weapon": null
+    },
+    "flags": {},
+    "level": 1,
+    "main_quest_id": null,
+    "perks": [],
+    "playtime_seconds": 0.0,
+    "quests": {
+      "quests": {},
+      "schema_version": 1
+    },
+    "values": {
+      "quests": {},
+      "room_memory": {
+        "rooms/yard.json": {
+          "removed": [
+            "coin"
+          ]
+        }
+      }
+    },
+    "variables": {
+      "quests": {},
+      "room_memory": {
+        "rooms/yard.json": {
+          "removed": [
+            "coin"
+          ]
+        }
+      }
+    },
+    "xp": 0
+  },
+  "layers": [],
+  "meta": {
+    "music": {
+      "path": null
+    },
+    "room_entity_ids": [
+      "hero",
+      "lamp",
+      "twin"
+    ],
+    "scene_path": "rooms/yard.json",
+    "slot": "slot",
+    "timestamp": "2026-11-26T02:56:53.502494",
+    "version": 2
+  },
+  "name": "Yard",
+  "save_format_version": 1,
+  "save_schema_version": 3,
+  "saved_entities": {
+    "counters": {
+      "id": 4,
+      "name": 1
+    },
+    "entities": [
+      {
+        "entity_id": "Hero",
+        "keying": "id",
+        "mesh_id": "hero",
+        "occurrence": 0,
+        "primary_tag": "player",
+        "tags": [
+          "player"
+        ],
+        "x": 40.0,
+        "y": 100.0
+      },
+      {
+        "entity_id": "Lamp",
+        "keying": "id",
+        "mesh_id": "lamp",
+        "occurrence": 0,
+        "x": 100.0,
+        "y": 100.0
+      },
+      {
+        "entity_id": "Twin",
+        "keying": "id",
+        "mesh_id": "twin",
+        "occurrence": 0,
+        "x": 220.0,
+        "y": 100.0
+      },
+      {
+        "entity_id": "Twin",
+        "keying": "id",
+        "mesh_id": "twin",
+        "occurrence": 1,
+        "x": 260.0,
+        "y": 100.0
+      },
+      {
+        "entity_id": "Loose",
+        "keying": "name",
+        "x": 180.0,
+        "y": 100.0
+      }
+    ],
+    "scene_path": "rooms/yard.json",
+    "schema_version": 2,
+    "unresolved": []
+  },
+  "saved_flags": {},
+  "saved_quests": {
+    "quests": {},
+    "schema_version": 1
+  },
+  "saved_runners": {},
+  "saved_time": {},
+  "schema_version": 1,
+  "settings": {
+    "camera": {
+      "zoom": {
+        "initial": 1.0,
+        "max": 4.0,
+        "min": 0.25,
+        "speed": 5.0,
+        "target": 1.0
+      }
+    }
+  },
+  "spawn_zone_id": null,
+  "state": {
+    "chapter": 1,
+    "counters": {},
+    "equipment": {
+      "accessory": null,
+      "armor": null,
+      "weapon": null
+    },
+    "flags": {},
+    "level": 1,
+    "main_quest_id": null,
+    "perks": [],
+    "playtime_seconds": 0.0,
+    "quests": {
+      "quests": {},
+      "schema_version": 1
+    },
+    "values": {
+      "quests": {},
+      "room_memory": {
+        "rooms/yard.json": {
+          "removed": [
+            "coin"
+          ]
+        }
+      }
+    },
+    "variables": {
+      "quests": {},
+      "room_memory": {
+        "rooms/yard.json": {
+          "removed": [
+            "coin"
+          ]
+        }
+      }
+    },
+    "xp": 0
+  },
+  "version": 1
+}

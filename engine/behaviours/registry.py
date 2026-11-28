@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Iterable, List, Optional, Type, TypeVar
 
-from .base import Behaviour, ParamDef
+from .base import AUTHORED_PARAMS, Behaviour, ParamDef
 
 _B = TypeVar("_B", bound=Behaviour)
 
@@ -171,13 +171,15 @@ def register_behaviour(
         BEHAVIOUR_PARAM_DEFS[canonical] = param_defs
 
         parsed_fields: list[dict[str, Any]] = []
-        if config_fields:
-            for entry in config_fields:
-                spec = _normalize_field_spec(entry)
-                if spec is not None:
-                    parsed_fields.append(spec)
-        elif param_defs:
-            for field_name, param in param_defs.items():
+        for entry in config_fields or ():
+            spec = _normalize_field_spec(entry)
+            if spec is not None:
+                parsed_fields.append(spec)
+        # Explicit fields win (richer copy); declared params they don't mention still
+        # appear, so a form built from this list can set every real parameter.
+        listed = {spec["name"] for spec in parsed_fields}
+        for field_name, param in (param_defs or {}).items():
+            if field_name not in listed:
                 parsed_fields.append(_field_spec_from_param(field_name, param))
 
         info = BehaviourInfo(
@@ -227,6 +229,9 @@ def create_behaviour(
         config or {},
         fill_defaults=fill_defaults,
     )
+    # Built from every default (the values behaviours have always had), but only what the author wrote counts as
+    # explicit: Behaviour.__init__ reads this (#651).
+    authored = AUTHORED_PARAMS.set(frozenset(k for k in (config or {}) if k != "type"))
 
     try:
         instance = cls(entity, window, **normalized_config)
@@ -243,6 +248,8 @@ def create_behaviour(
     except Exception as exc:  # noqa: BLE001  # REASON: behaviour constructor failures should be reported without breaking scene load
         print(f"[Mesh][Behaviour] ERROR: Failed to instantiate '{canonical}': {exc}")
         return None
+    finally:
+        AUTHORED_PARAMS.reset(authored)
 
     if instance is not None:
         setattr(instance, "config", dict(normalized_config))
@@ -290,6 +297,33 @@ def reload_behaviour_modules() -> int:
         raise RuntimeError(f"Behaviour package reload failed: {exc}") from exc
 
     return reloaded
+
+
+_PARAM_TYPES: dict[str, type] = {t.__name__: t for t in (int, float, bool, str, list, tuple, dict)}
+
+
+def validation_metadata() -> dict[str, Any]:
+    """What validating a scene's entities reads from this registry (engine.scene_loader.SceneLoader.validate_entity),
+    as JSON: each behaviour's config fields (name, type) and params (type, required), by canonical name. The
+    graphics-free net authority keeps a copy (mesh_net/behaviours.json; loading the behaviours themselves imports
+    Arcade) so it keeps exactly the entities the game keeps. Only behaviours whose class is loaded: never an entry
+    register_validation_metadata put there (a stale copy would otherwise describe itself)."""
+    return {name: {"fields": [{k: f[k] for k in ("name", "type") if k in f} for f in info.config_fields],
+                   "params": {k: [p.type if isinstance(p.type, str) else p.type.__name__, p.default is None]
+                              for k, p in BEHAVIOUR_PARAM_DEFS.get(name, {}).items()}}
+            for name, info in sorted(_BEHAVIOUR_INFO.items()) if name in BEHAVIOUR_REGISTRY}
+
+
+def register_validation_metadata(metadata: dict[str, Any]) -> None:
+    """Make validation see the behaviours ``metadata`` (validation_metadata's JSON) describes, without their classes:
+    those not registered already. (Loading the behaviours later registers each in full, as always.)"""
+    for name, entry in metadata.items():
+        if name in _BEHAVIOUR_INFO:
+            continue
+        _NAME_ALIASES[name.lower()] = name
+        BEHAVIOUR_PARAM_DEFS[name] = {k: ParamDef(_PARAM_TYPES.get(kind, kind), None if required else ...)
+                                      for k, (kind, required) in entry["params"].items()}  # (... : has a default)
+        _BEHAVIOUR_INFO[name] = BehaviourInfo(name=name, description="", config_fields=list(entry["fields"]))
 
 
 def list_behaviours() -> list[BehaviourInfo]:

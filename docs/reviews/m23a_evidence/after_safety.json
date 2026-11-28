@@ -1,0 +1,152 @@
+{
+ "tab_valid": {
+  "before": {
+   "shown": true,
+   "text": "Elder Ash",
+   "focused": false,
+   "message": "Click an object to edit it. Right-click for actions. F4 plays your game.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder"
+  },
+  "after_tab": {
+   "shown": false,
+   "text": null,
+   "focused": false,
+   "message": "The view alone: Tab (or Focus) brings the panels back.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    0,
+    0
+   ],
+   "record": "Elder Ash"
+  },
+  "after_tab_again": {
+   "shown": true,
+   "text": "Elder Ash",
+   "focused": false,
+   "message": "Panels back.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder Ash"
+  }
+ },
+ "tab_refused": {
+  "before": {
+   "shown": true,
+   "text": "   ",
+   "focused": false,
+   "message": "Undone.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder"
+  },
+  "after_tab": {
+   "shown": true,
+   "text": "   ",
+   "focused": false,
+   "message": "A name can't be empty. Correct the box, or click it and press Esc to put back what it was; until then nothing else is done.",
+   "message_ok": false,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder"
+  },
+  "after_tab_again": {
+   "shown": true,
+   "text": "   ",
+   "focused": false,
+   "message": "A name can't be empty. Correct the box, or click it and press Esc to put back what it was; until then nothing else is done.",
+   "message_ok": false,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder"
+  }
+ },
+ "category_refused": {
+  "after_switch": {
+   "shown": true,
+   "text": "big",
+   "focused": false,
+   "message": "Type a number. Correct the box, or click it and press Esc to put back what it was; until then nothing else is done.",
+   "message_ok": false,
+   "left_tab": "terrain",
+   "panels": [
+    230,
+    330
+   ]
+  },
+  "after_save": {
+   "message": "Type a number. Correct the box, or click it and press Esc to put back what it was; until then nothing else is done.",
+   "message_ok": false
+  },
+  "back_on_terrain": {
+   "shown": true,
+   "text": "big",
+   "focused": false,
+   "message": "Type a number.",
+   "message_ok": false,
+   "left_tab": "terrain",
+   "panels": [
+    230,
+    330
+   ]
+  },
+  "radius": [
+   64.0,
+   64.0
+  ]
+ },
+ "category_valid": {
+  "left_tab": "objects",
+  "radius": 96.0
+ },
+ "resize_valid": {
+  "after_resize": {
+   "shown": true,
+   "text": "Elder Birch",
+   "focused": false,
+   "message": "Put back as it was.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder"
+  }
+ },
+ "resize_refused": {
+  "after_resize": {
+   "shown": true,
+   "text": "   ",
+   "focused": false,
+   "message": "Renamed.",
+   "message_ok": true,
+   "left_tab": "rooms",
+   "panels": [
+    230,
+    330
+   ],
+   "record": "Elder Birch"
+  }
+ }
+}

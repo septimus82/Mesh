@@ -7,6 +7,8 @@ from json import dumps as _format_structured_value
 from pathlib import Path
 from typing import Any
 
+from engine.quest_runtime.normalize import quest_entries
+
 DEFAULT_QUESTS_FILE_PATH: Path = Path("assets") / "data" / "quests.json"
 
 QUEST_SCALAR_FIELD_ORDER: tuple[str, ...] = (
@@ -48,10 +50,7 @@ class QuestEditorModel:
     def reload(self) -> None:
         payload = json.loads(self._data_path.read_text(encoding="utf-8"))
         raw_quests = payload.get("quests") if isinstance(payload, dict) else None
-        if isinstance(raw_quests, list):
-            quests = [dict(quest) for quest in raw_quests if isinstance(quest, dict)]
-        else:
-            quests = []
+        quests = [dict(quest) for quest in quest_entries(raw_quests)]
         self._quests = quests
         self._selected_index = self._clamp_index(self._selected_index)
 
@@ -179,6 +178,14 @@ def validate_quest_entries(entries: list[dict[str, Any]], target_path: str | Pat
     return [error.message for error in errors]
 
 
+def _is_dict_form(path: Path) -> bool:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(payload, dict) and isinstance(payload.get("quests"), dict)
+
+
 def save_quests(entries: list[dict[str, Any]], target_path: str | Path) -> None:
     """Persist quest dictionaries to assets/data/quests.json shape."""
     from engine.persistence_io import write_json_atomic  # noqa: PLC0415
@@ -186,4 +193,10 @@ def save_quests(entries: list[dict[str, Any]], target_path: str | Path) -> None:
     errors = validate_quest_entries(entries, target_path)
     if errors:
         raise ValueError("; ".join(errors))
+    if _is_dict_form(Path(target_path)):
+        # ponytail: refuse rather than convert; preserving dict form on save is a follow-up.
+        raise ValueError(
+            "quests.json uses the dict form ({\"quests\": {\"<id>\": {...}}}); the editor cannot save it without "
+            "converting it to a list, so nothing was written. Edit the file by hand or convert it to the list form."
+        )
     write_json_atomic(Path(target_path), {"quests": entries}, sort_keys=False, trailing_newline=True)

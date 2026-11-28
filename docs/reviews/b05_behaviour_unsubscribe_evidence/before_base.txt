@@ -1,0 +1,35 @@
+# BASE d525eea3 (fix reverted): 8 failed, 8 passed. Teardown logs "ERROR unsubscribing: MeshEventBus object has no attribute unsubscribe"; subscriber count stays baseline+1 after on_destroy (assert 1 == 0); after re-adding, the old callback also fires (effect count 2, not 1)
+
+E       assert 1 == 0
+tests\test_behaviour_unsubscribe_on_end.py:73: AssertionError
+[Mesh][GrantExperience] ERROR unsubscribing: 'MeshEventBus' object has no attribute 'unsubscribe'
+E       assert 1 == 0
+tests\test_behaviour_unsubscribe_on_end.py:73: AssertionError
+[Mesh][QuestGiver] ERROR unsubscribing: 'MeshEventBus' object has no attribute 'unsubscribe'
+E       assert 1 == 0
+tests\test_behaviour_unsubscribe_on_end.py:73: AssertionError
+[Mesh][CutsceneTrigger] ERROR unsubscribing: 'MeshEventBus' object has no attribute 'unsubscribe'
+E       assert 1 == 0
+tests\test_behaviour_unsubscribe_on_end.py:73: AssertionError
+[Mesh][SceneExit] ERROR unsubscribing: 'MeshEventBus' object has no attribute 'unsubscribe'
+E       AssertionError: assert 2 == 1
+tests\test_behaviour_unsubscribe_on_end.py:102: AssertionError
+[Mesh][GrantExperience] ERROR unsubscribing: 'MeshEventBus' object has no attribute 'unsubscribe'
+E       AssertionError: assert 2 == 1
+tests\test_behaviour_unsubscribe_on_end.py:102: AssertionError
+[Mesh][QuestGiver] ERROR unsubscribing: 'MeshEventBus' object has no attribute 'unsubscribe'
+E       AssertionError: assert 2 == 1
+tests\test_behaviour_unsubscribe_on_end.py:102: AssertionError
+[Mesh][CutsceneTrigger] ERROR unsubscribing: 'MeshEventBus' object has no attribute 'unsubscribe'
+E       AssertionError: assert 2 == 1
+tests\test_behaviour_unsubscribe_on_end.py:102: AssertionError
+[Mesh][SceneExit] ERROR unsubscribing: 'MeshEventBus' object has no attribute 'unsubscribe'
+FAILED tests/test_behaviour_unsubscribe_on_end.py::test_removed_entity_callback_stops_and_count_returns_to_baseline[xp]
+FAILED tests/test_behaviour_unsubscribe_on_end.py::test_removed_entity_callback_stops_and_count_returns_to_baseline[quest]
+FAILED tests/test_behaviour_unsubscribe_on_end.py::test_removed_entity_callback_stops_and_count_returns_to_baseline[cutscene]
+FAILED tests/test_behaviour_unsubscribe_on_end.py::test_removed_entity_callback_stops_and_count_returns_to_baseline[exit]
+FAILED tests/test_behaviour_unsubscribe_on_end.py::test_readding_after_removal_works[xp]
+FAILED tests/test_behaviour_unsubscribe_on_end.py::test_readding_after_removal_works[quest]
+FAILED tests/test_behaviour_unsubscribe_on_end.py::test_readding_after_removal_works[cutscene]
+FAILED tests/test_behaviour_unsubscribe_on_end.py::test_readding_after_removal_works[exit]
+8 failed, 8 passed in 3.87s

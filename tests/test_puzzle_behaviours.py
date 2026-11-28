@@ -1,22 +1,25 @@
 import unittest
 from unittest.mock import MagicMock
 
+import pytest
+
 from engine.behaviours.puzzle_behaviours import DoorLock, RewardChest, SwitchInteract
 from engine.events import MeshEvent
+from engine.game_state_controller import GameStateController
+from tests._fake_window import fake_sprite, fake_window
+
+pytestmark = pytest.mark.fast
 
 
 class TestPuzzleBehaviours(unittest.TestCase):
     def setUp(self):
-        self.window = MagicMock()
-        self.window.event_bus = MagicMock()
-        self.entity = MagicMock()
-        self.entity.mesh_entity_data = {}
-        # Mock id for door
-        self.entity.id = "door_1"
+        # (spec'd: only what a real window and a real entity sprite have, S1 5.6 (c))
+        self.window = fake_window(event_bus=MagicMock())
+        self.entity = fake_sprite(mesh_entity_data={}, mesh_id="door_1", mesh_name="Door")
 
     def test_switch_interact(self):
         switch = SwitchInteract(self.entity, self.window, event_id="test_event")
-        switch.on_interact(MagicMock())
+        switch.on_interact(fake_sprite(mesh_name="Player"))
 
         # Check if emit was called with correct event
         # We can't easily check the exact object equality of MeshEvent without __eq__,
@@ -27,24 +30,32 @@ class TestPuzzleBehaviours(unittest.TestCase):
 
     def test_switch_one_shot(self):
         switch = SwitchInteract(self.entity, self.window, event_id="test_event", one_shot=True)
-        switch.on_interact(MagicMock())
+        switch.on_interact(fake_sprite(mesh_name="Player"))
         self.assertEqual(self.window.event_bus.emit.call_count, 1)
 
-        switch.on_interact(MagicMock())
+        switch.on_interact(fake_sprite(mesh_name="Player"))
         self.assertEqual(self.window.event_bus.emit.call_count, 1)
 
-    def test_door_lock(self):
+    def _unlocked_door(self):
         door = DoorLock(self.entity, self.window, unlock_event="unlock_me")
         self.assertTrue(door.locked)
 
         # Simulate event
         door._on_unlock_event(MeshEvent("unlock_me", {}))
         self.assertFalse(door.locked)
+        return self.window.event_bus.emit.call_args[0][0]
 
-        # Check emission of door_unlocked
-        args = self.window.event_bus.emit.call_args[0][0]
-        self.assertEqual(args.type, "door_unlocked")
-        self.assertEqual(args.payload["door_id"], "door_1")
+    def test_door_lock(self):
+        self.assertEqual(self._unlocked_door().type, "door_unlocked")
+
+    # A real entity sprite has mesh_id, not id: door_id comes from mesh_id (#710; it was always "unknown" in a game).
+    # (The MagicMock entity this test had answered .id; the spec'd one, like the game, doesn't.)
+    def test_door_unlocked_names_the_door(self):
+        self.assertEqual(self._unlocked_door().payload["door_id"], "door_1")
+
+    def test_door_unlocked_without_a_mesh_id_says_unknown(self):
+        self.entity = fake_sprite(mesh_entity_data={}, mesh_name="Door")
+        self.assertEqual(self._unlocked_door().payload["door_id"], "unknown")
 
     def test_reward_chest(self):
         chest = RewardChest(self.entity, self.window, unlock_event="reveal_me", gold=100)
@@ -54,10 +65,9 @@ class TestPuzzleBehaviours(unittest.TestCase):
         chest._on_unlock_event(MeshEvent("reveal_me", {}))
         self.assertTrue(chest.enabled)
 
-        # Interact
-        player = MagicMock()
-        player.inventory = MagicMock()
-        chest.on_interact(player)
+        # Interact: the gold goes to the game's counter (#636), not to the player sprite
+        self.window.game_state_controller = GameStateController(self.window)
+        chest.on_interact(fake_sprite(mesh_name="Player"))
 
-        player.inventory.add_gold.assert_called_with(100)
+        self.assertEqual(self.window.game_state_controller.get_counter("gold"), 100)
         self.assertTrue(chest.looted)

@@ -121,11 +121,11 @@ class MonsterEncounterZoneBehaviour(Behaviour):
             self.cooldown_remaining = self.cooldown_seconds
             return
 
-        player_monster = self._player_monster(catalog)
-        if player_monster is None:
+        own_monster = self._player_monster(catalog)
+        if own_monster is None:
             return
         starter(
-            player_monster=player_monster,
+            player_monster=own_monster,
             opponent_monster=roll.monster,
             moves=catalog.moves,
             type_chart=catalog.type_chart,
@@ -266,4 +266,4 @@ class MonsterEncounterZoneBehaviour(Behaviour):
         if hasattr(injected, "random"):
             return injected
         seed = raw_config.get("seed", raw_config.get("encounter_seed"))
-        return random.Random(int(seed)) if seed not in (None, "") else random.Random()
+        return random.Random() if seed is None or seed == "" else random.Random(int(seed))

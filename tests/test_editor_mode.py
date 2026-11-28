@@ -23,6 +23,7 @@ class MockWindow:
 def test_editor_toggle():
     window = MockWindow()
     controller = EditorModeController(window)
+    window.engine_config = SimpleNamespace(_mesh_launch_mode="editor")  # an editor launch: F4 may open the editor (#660)
 
     assert not controller.active
     assert not window.paused

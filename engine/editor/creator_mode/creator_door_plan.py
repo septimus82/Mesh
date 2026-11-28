@@ -68,7 +68,7 @@ def build_creator_door_plan(request: CreatorDoorPlanRequest) -> CreatorDoorPlan:
             warnings=warnings,
         )
 
-    operations = (
+    operations: tuple[CreatorDoorPlanOperation, ...] = (
         _operation("ensure_door_entity", normalized["source_entity_id"], normalized),
         _operation("configure_door_transition", normalized["source_entity_id"], normalized),
     )

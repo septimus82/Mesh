@@ -7,6 +7,14 @@ import pytest
 pytestmark = [pytest.mark.slow, pytest.mark.integration]
 
 
+@pytest.fixture(autouse=True)
+def _synthetic_repo_skips(monkeypatch):
+    """These verify-alls run on a synthetic repo without the checkout's step inputs: allow exactly its skips (#624)."""
+    from tests._verify_skips import allow_synthetic_repo_skips
+
+    allow_synthetic_repo_skips(monkeypatch)
+
+
 def test_verify_all_steps_are_canonical(monkeypatch, tmp_path, capsys) -> None:
     import mesh_cli
     import mesh_cli.legacy_impl as mesh_cli_legacy

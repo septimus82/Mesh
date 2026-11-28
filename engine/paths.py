@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 from typing import List, Optional
 
@@ -6,7 +5,7 @@ from engine.swallowed_exceptions import _log_swallow
 
 from .config import EngineConfig, load_config
 from .content_index import ContentIndex
-from .repo_root import find_repo_root
+from .repo_root import bundled_data_roots, find_repo_root
 
 _CACHED_CONFIG: Optional[EngineConfig] = None
 _CONFIG_PINNED: bool = False
@@ -22,25 +21,8 @@ _ENGINE_BUNDLED_PREFIXES: tuple[str, ...] = (
 
 
 def _engine_install_roots() -> list[Path]:
-    installed_roots: list[Path] = []
-    try:
-        installed_roots.append(Path(sys.prefix))
-    except Exception:
-        _log_swallow("PATH-002", "engine/paths.py pass-only blanket swallow")
-    try:
-        installed_roots.append(Path(__file__).resolve().parent.parent)
-    except Exception:
-        _log_swallow("PATH-003", "engine/paths.py pass-only blanket swallow")
-
-    seen: set[str] = set()
-    unique: list[Path] = []
-    for root in installed_roots:
-        key = str(root)
-        if key in seen:
-            continue
-        seen.add(key)
-        unique.append(root)
-    return unique
+    """The source tree, then a pip install's share/mesh-engine (see repo_root.bundled_data_roots)."""
+    return bundled_data_roots()
 
 
 def _is_engine_bundled_path(path_str: str) -> bool:
@@ -79,6 +61,14 @@ def pin_config(config: EngineConfig) -> None:
     _CONTENT_ROOTS_SIG = None
     _CONTENT_INDEX = None
     _CONTENT_INDEX_ROOTS = None
+    _project_changed()
+
+
+def _project_changed() -> None:
+    """The project may be another now: what was read from the last one is read again (#623: the item database)."""
+    from engine.inventory import clear_item_database_cache  # noqa: PLC0415
+
+    clear_item_database_cache()
 
 
 def _config_signature(config: EngineConfig) -> tuple[str, str]:
@@ -87,6 +77,17 @@ def _config_signature(config: EngineConfig) -> tuple[str, str]:
     base_key = str(Path(str(base_dir)).resolve()) if base_dir else ""
     path_key = str(Path(str(cfg_path)).resolve()) if cfg_path else ""
     return base_key, path_key
+
+
+def project_root() -> Path:
+    """The selected game project's root folder, whatever the current folder is (#623, owner decision D5: one
+    resolver). The folder holding the pinned project config (a GameWindow pins its own config: ``main.py``, ``mesh
+    edit``, ``run_game(project_root=)``, a main-menu project switch); with nothing pinned, the project found from
+    ``MESH_REPO_ROOT`` or above the current folder, else the current folder. A game's project files (its saves,
+    ``cutscenes.json``, the item database, ``.mesh/``) resolve against this, never against the bare current folder."""
+    if _CONFIG_PINNED and _CACHED_CONFIG is not None:
+        return Path(getattr(_CACHED_CONFIG, "_config_base_dir", None) or Path.cwd()).resolve()
+    return (find_repo_root() or Path.cwd()).resolve()
 
 
 def get_content_roots() -> List[Path]:
@@ -100,16 +101,13 @@ def get_content_roots() -> List[Path]:
     # Cache is sensitive to the discovered repo root and config path.
     # Pytest (and some tooling) frequently changes cwd; without a keyed cache,
     # we can end up resolving paths against the wrong repo.
-    cwd = Path.cwd()
     config = get_config()
+    cwd_base_dir = project_root()
     if _CONFIG_PINNED:
         sig = _config_signature(config)
-        cwd_base_dir = Path(getattr(config, "_config_base_dir", cwd)).resolve()
     else:
-        cwd_base_dir = find_repo_root() or cwd
-        desired_root = cwd_base_dir
-        desired_cfg_path = ((desired_root / "config.json") if desired_root else Path("config.json")).resolve()
-        sig = (str(desired_root.resolve()), str(desired_cfg_path))
+        desired_cfg_path = (cwd_base_dir / "config.json").resolve()
+        sig = (str(cwd_base_dir), str(desired_cfg_path))
 
     if _CONTENT_ROOTS is not None and _CONTENT_ROOTS_SIG == sig:
         return _CONTENT_ROOTS
@@ -161,6 +159,7 @@ def reset_path_caches() -> None:
     _CONTENT_ROOTS_SIG = None
     _CONTENT_INDEX = None
     _CONTENT_INDEX_ROOTS = None
+    _project_changed()
 
 def get_content_index(refresh: bool = False) -> ContentIndex:
     """Get or create the content index."""

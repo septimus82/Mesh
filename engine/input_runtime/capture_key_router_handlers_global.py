@@ -61,8 +61,8 @@ def dispatch_global_action(
         return _handle_encounter_debug_toggle(window)
     if action_id == "capture.overlay.scene_inspector.toggle":
         return _handle_scene_inspector_toggle(window)
-    if action_id == "capture.debug.copy_coords_or_pause":
-        return _handle_copy_coords_or_pause(window)
+    if action_id == "capture.savegame.quickload_or_copy_coords":
+        return _handle_quickload_or_copy_coords(window)
     if action_id == "capture.debug.copy_hover_coords":
         return _handle_copy_hover_coords(window)
     if action_id == "capture.debug.toggle_selection_lock":
@@ -143,6 +143,13 @@ def _handle_profiler_toggle(window: Any) -> bool:
 
 
 def _handle_debug_toggle(window: Any, controller: Any) -> bool:
+    from engine.action_runtime.registry import dev_tools_allowed  # noqa: PLC0415  # registry imports UI modules
+
+    # F3 debug mode unlocks every scene-writing tool (save, save as, create, tile/entity paint, capture): never in a
+    # game launch (#664). It can always be turned off.
+    if not window.show_debug and not dev_tools_allowed(window):
+        controller._log_debug("[Mesh][Debug] debug mode ignored: developer tools are off in a game launch")
+        return True
     window.show_debug = not window.show_debug
     controller._log_debug(f"[Mesh][Debug] show_debug = {window.show_debug}")
     return True
@@ -229,7 +236,17 @@ def _handle_editor_toggle(window: Any) -> bool:
     return False
 
 
+QUICKSAVE_SLOT = "quicksave"
+
+
 def _handle_savegame_save(window: Any) -> bool:
+    # One save system: the quick save is a SaveManager slot, so it also appears under
+    # the pause menu's Load Game (SaveManager shows the "Game Saved" toast).
+    manager = getattr(window, "save_manager", None)
+    if manager is not None:
+        manager.save_game(QUICKSAVE_SLOT)
+        return True
+
     from engine import savegame  # noqa: PLC0415
 
     save = savegame.capture_savegame_from_window(window)
@@ -262,10 +279,17 @@ def _handle_savegame_load_or_play(window: Any) -> bool:
             starter()
             return True
 
+    manager = getattr(window, "save_manager", None)
+    if manager is not None:
+        # The quick save F5 writes (F9 loads it too). save_1.json is written only without a SaveManager, so
+        # loading it here brought back a stale or missing save.
+        manager.load_game(QUICKSAVE_SLOT)
+        return True
+
     from engine import savegame  # noqa: PLC0415
 
     try:
-        save_path = savegame.resolve_savegame_path()
+        save_path = savegame.resolve_savegame_path(reading=True)
         save = savegame.load_savegame(save_path)
         if save is None:
             logger = getattr(window, "console_log", None)
@@ -314,7 +338,7 @@ def _handle_scene_inspector_toggle(window: Any) -> bool:
     return False
 
 
-def _handle_copy_coords_or_pause(window: Any) -> bool:
+def _handle_quickload_or_copy_coords(window: Any) -> bool:
     overlay = getattr(window, "scene_inspector_overlay", None)
     debug_active = bool(getattr(window, "show_debug", False)) or bool(getattr(overlay, "visible", False))
 
@@ -333,8 +357,10 @@ def _handle_copy_coords_or_pause(window: Any) -> bool:
         try_copy_to_clipboard(snippet)
         return True
 
-    new_state = window._toggle_paused_state()
-    window.console_log(f"Paused = {new_state}")
+    # Outside debugging, F9 is quick load (F5 is quick save).
+    manager = getattr(window, "save_manager", None)
+    if manager is not None:
+        manager.load_game(QUICKSAVE_SLOT)
     return True
 
 

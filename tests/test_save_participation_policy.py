@@ -27,9 +27,6 @@ from engine.behaviours.base import Behaviour
 # --------------------------------------------------------------------------- #
 _SAVE_EXEMPT: dict[str, str] = {
     # Render-only / transient state — re-derived from scene on load
-    "SwitchInteract": "Visual toggle state is re-initialised from scene JSON",
-    "DoorLock": "Lock state is re-initialised from scene JSON (TODO: add save)",
-    "RewardChest": "Loot state is re-initialised from scene JSON (TODO: add save)",
     "EventLogger": "Debug-only; no gameplay state",
     "DamageOnTouch": "Transient collision helper; no meaningful state",
     "Hitbox": "Transient collision helper; no meaningful state",
@@ -42,7 +39,6 @@ _SAVE_EXEMPT: dict[str, str] = {
     "EnemyAI": "Re-derived from scene + patrol data on load",
     "FollowBehaviour": "Transient chase; target re-acquired each frame",
     "FollowPathBehaviour": "Transient path following; re-derived from scene",
-    "DropTable": "Config-only loot table reference",
     "CameraFollowBehaviour": "Re-derived from scene config",
     "PlayerController": "Input handler; state is in GameState + Health",
     "SceneExit": "Config-only zone trigger",
@@ -56,7 +52,6 @@ _SAVE_EXEMPT: dict[str, str] = {
     "GrantExperience": "One-shot grant; state is in GameState",
     "OfferPerkChoice": "UI-only behaviour; no persistent state",
     "ToggleSwitch": "Visual toggle state; re-initialised from scene JSON",
-    "TriggerZoneBehaviour": "Transient zone trigger; re-initialised from scene",
     "MonsterEncounterZoneBehaviour": "Transient encounter trigger; cooldown/roll state is re-derived from scene",
     "SequencePlayer": "Transient animation sequence; re-derived on load",
     "ParticleEmitter": "Transient visual effect; no persistent state",
@@ -119,6 +114,8 @@ def _has_mutable_gameplay_state(cls: type) -> bool:
 
 
 def _has_saveable(cls: type) -> bool:
+    if getattr(cls, "FACT_FIELDS", ()):  # (per-entity facts in room memory, which saves carry: S1 4.1, D6)
+        return True
     return (
         hasattr(cls, "saveable_state")
         and callable(getattr(cls, "saveable_state", None))

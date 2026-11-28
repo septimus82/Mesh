@@ -11,14 +11,135 @@ Example::
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
 
+def _engine_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def _inside_engine(path: Path) -> bool:
+    root = _engine_root().resolve()
+    return path == root or root in path.parents
+
+
+def default_dest(dest: str | Path) -> Path:
+    """Where to create a project when the user gave ``dest`` (``"."`` unless they chose one).
+
+    New games stay out of the engine folder: run from inside it without a destination,
+    they go to Documents/Mesh Projects instead.
+    """
+    chosen = Path(dest).resolve()
+    if str(dest) == "." and _inside_engine(chosen):
+        from engine.projects import default_projects_dir  # noqa: PLC0415
+
+        return default_projects_dir()
+    return chosen
+
+
+def _is_link(path: Path) -> bool:
+    """A symlink, or a Windows junction (any reparse point); ``lstat`` never follows it."""
+    try:
+        st = path.lstat()
+    except OSError:
+        return False
+    return path.is_symlink() or bool(getattr(st, "st_file_attributes", 0) & 0x400)  # FILE_ATTRIBUTE_REPARSE_POINT
+
+
+def _bad_name(name: str) -> str | None:
+    """Why ``name`` is not a single plain folder name, or None. Runs before anything is deleted."""
+    if not name or name in {".", ".."}:
+        return "it must be a folder name, not '.' or '..'"
+    if "/" in name or "\\" in name or "\0" in name:
+        return "it must not contain path separators"
+    if os.name == "nt" and (":" in name or name != name.rstrip(" .")):
+        return "it must not contain ':' or end in a dot or space on Windows"
+    return None
+
+
+def _nested_project(root: Path) -> Path | None:
+    """The first independent Mesh project below ``root`` (a folder with a config.json), or None; links are not followed."""
+    from engine.editor.project_ownership import PROJECT_MARKER  # noqa: PLC0415
+
+    pending = [root]
+    while pending:
+        for child in sorted(pending.pop().iterdir()):
+            if child.is_dir() and not _is_link(child):
+                if (child / PROJECT_MARKER).is_file():
+                    return child
+                pending.append(child)
+    return None
+
+
+def _replace_owned(project_dir: Path) -> bool:
+    """Empty an existing project while owning it; False (nothing deleted) if another process owns it (#462 RV-3).
+
+    The lock file lives in ``.mesh/``, so it is kept until everything else is gone, then released and removed.
+    ponytail: in the instant between release and the last rmtree an opener sees an already-empty project, never a
+    half-deleted one.
+    """
+    import shutil  # noqa: PLC0415
+
+    from engine.editor import project_ownership as po  # noqa: PLC0415
+
+    try:
+        held = po.acquire(project_dir, po.AUTHORING, wait=0.5)
+    except (po.OwnedElsewhere, po.OwnershipUnavailable) as exc:
+        print("[mesh] Error: " + po.refused_write("new --force", exc), file=sys.stderr)
+        return False
+    lock = po.lock_path(project_dir)
+
+    def _remove(child: Path) -> None:
+        if child.is_dir() and not _is_link(child):
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+
+    try:
+        for child in project_dir.iterdir():
+            if child.name != ".mesh":
+                _remove(child)
+        for child in lock.parent.iterdir():
+            if child != lock:
+                _remove(child)
+    finally:
+        held.release()
+    shutil.rmtree(project_dir)
+    return True
+
+
 def create_blank_project(name: str, dest: Path, *, template_id: str = "blank", force: bool = False) -> int:
-    project_dir = (dest / name).resolve()
+    problem = _bad_name(name)
+    if problem:
+        print(f"[mesh] Error: invalid project name {name!r}: {problem}.", file=sys.stderr)
+        return 1
+    from engine.project_templates import list_templates
+
+    known = [t.id for t in list_templates()]
+    if template_id not in known:  # (demo_slice was retired in #656)
+        print(f"[mesh] Error: no template {template_id!r}; templates: {', '.join(known)}.", file=sys.stderr)
+        return 1
+    # Exactly DEST/NAME: only DEST is resolved, so a link at NAME is seen, never followed.
+    resolved_dest = dest.resolve()
+    project_dir = resolved_dest / name
+    if project_dir.parent != resolved_dest:
+        print(f"[mesh] Error: '{project_dir}' is not directly inside '{resolved_dest}'.", file=sys.stderr)
+        return 1
+    if _is_link(project_dir):
+        print(f"[mesh] Error: '{project_dir}' is a symlink or junction; refusing to use or replace it.", file=sys.stderr)
+        return 1
+    if _inside_engine(project_dir):
+        print(f"[mesh] Error: '{project_dir}' is inside the Mesh engine folder. Keep games separate: "
+              "pass --dest with a folder outside it (or run without --dest to use Documents/Mesh Projects).",
+              file=sys.stderr)
+        return 1
 
     if project_dir.exists():
+        if not project_dir.is_dir():
+            print(f"[mesh] Error: '{project_dir}' exists and is not a folder.", file=sys.stderr)
+            return 1
         if any(project_dir.iterdir()):
             if not force:
                 print(
@@ -27,9 +148,23 @@ def create_blank_project(name: str, dest: Path, *, template_id: str = "blank", f
                     file=sys.stderr,
                 )
                 return 1
-            import shutil
-
-            shutil.rmtree(project_dir)
+            if not (project_dir / "config.json").is_file():
+                print(
+                    f"[mesh] Error: '{project_dir}' is not a Mesh project (no config.json), "
+                    "so --force will not delete it. Remove it yourself or pick another name.",
+                    file=sys.stderr,
+                )
+                return 1
+            nested = _nested_project(project_dir)
+            if nested is not None:
+                print(
+                    f"[mesh] Error: '{project_dir}' contains another Mesh project at '{nested}'; "
+                    "--force will not delete it. Move that project out first. Nothing was changed.",
+                    file=sys.stderr,
+                )
+                return 1
+            if not _replace_owned(project_dir):
+                return 1
 
     from engine.project_scaffold import create_project, validate_new_project_target
 
@@ -80,7 +215,7 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
 
 
 def handle(args: argparse.Namespace) -> int:
-    dest = Path(getattr(args, "dest", ".")).resolve()
+    dest = default_dest(getattr(args, "dest", "."))
     return create_blank_project(
         str(args.name),
         dest,

@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from tooling.export_bundle import (
+from engine.tooling.export_bundle import (
     BundleDiff,
     BundleManifest,
     ExportFile,
@@ -529,3 +529,177 @@ class TestEndToEndWorkflow:
         assert loaded is not None
         assert loaded.version == 1
         assert loaded.file_count > 0
+
+
+# --------------------------------------------------------------------------- #
+# A creator's project (Milestone 16 Stage 6B: mesh export from a pip install)
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.integration  # (#422 F13-D: integration)
+def test_a_project_exports_as_a_standalone_game(tmp_path: Path) -> None:
+    import engine
+    from engine.project_scaffold import create_project
+    from engine.tooling.export_bundle import is_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    assert is_project(project) and not is_project(Path(engine.__file__).resolve().parent.parent)
+    code, manifest = build_bundle(project, project / "dist" / "bundle")
+    assert code == 0 and manifest is not None
+    bundle = project / "dist" / "bundle"
+    shipped = {f["path"] for f in manifest.files}
+    assert {"main.py", "config.json", "engine/__init__.py", "engine/self_test.py", "engine/schemas/scene.schema.json",
+            "packs/core_regions/worlds/main.json", "packs/core_regions/scenes/start.json"} <= shipped
+    assert {p.relative_to(project).as_posix() for p in (project / "assets").rglob("*") if p.is_file()} <= shipped, \
+        "every file of the project's own assets"
+    assert not any("__pycache__" in f or f.endswith(".pyc") for f in shipped)
+    assert manifest.repo_root == "." and (bundle / "engine" / "hd2d" / "renderer.py").is_file()
+
+
+@pytest.mark.integration  # (#422 F13-D: integration)
+def test_an_export_never_replaces_a_folder_that_is_not_an_earlier_bundle(tmp_path: Path) -> None:
+    from engine.project_scaffold import create_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    keep = tmp_path / "my documents"
+    keep.mkdir()
+    (keep / "letter.txt").write_text("mine", encoding="utf-8")
+    assert build_bundle(project, keep)[0] == 1 and (keep / "letter.txt").read_text(encoding="utf-8") == "mine"
+    assert build_bundle(project, tmp_path / "bundle")[0] == 0 and build_bundle(project, tmp_path / "bundle")[0] == 0
+
+
+@pytest.mark.integration  # (#422 F13-D: integration)
+def test_an_exported_game_starts_its_game_not_meshs_project_browser(tmp_path: Path) -> None:
+    """The bundle carries Mesh's engine beside its own files, so the engine's source folder is the game's folder:
+    it must still count as a project (pinned at launch), or the game opens Mesh's project browser (it did, listing
+    the player's recent Mesh projects) instead of its start room."""
+    import os
+    import subprocess
+    import sys
+
+    from engine.project_scaffold import create_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    bundle = tmp_path / "bundle"
+    assert build_bundle(project, bundle)[0] == 0
+    probe = ("import sys; sys.path.insert(0, '.'); from pathlib import Path; import engine.repo_root as r; "
+             "print(r.engine_source_root().resolve() == Path.cwd().resolve(), r.is_standalone_project_root(Path.cwd()))")
+    out = subprocess.run([sys.executable, "-c", probe], cwd=bundle, capture_output=True, text=True, timeout=120,
+                         env={k: v for k, v in os.environ.items() if k not in ("MESH_REPO_ROOT", "PYTHONPATH")})
+    assert out.stdout.split() == ["True", "True"], out.stdout + out.stderr
+    from engine.repo_root import engine_source_root, is_standalone_project_root
+
+    assert not is_standalone_project_root(engine_source_root())  # (Mesh's own checkout: still not a project)
+
+
+@pytest.mark.fast
+def test_a_game_runs_from_its_own_folder_wherever_it_is_started(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """#422 H7: `python <game>/main.py` started from another folder looked for config.json from that folder upward, so
+    an exported game found none (and started the engine's default room) or another's (a checkout's). main.py now
+    changes to its own folder before the engine starts."""
+    import runpy
+
+    from engine.project_scaffold import create_project
+
+    project = tmp_path / "game"
+    create_project(project, "Game", "blank")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    class Started(Exception):
+        pass
+
+    def started() -> None:  # (the first thing main() does with the engine)
+        raise Started(Path.cwd())
+
+    monkeypatch.setattr("engine.dpi_bootstrap.set_process_dpi_unaware", started)
+    with pytest.raises(Started) as at:
+        runpy.run_path(str(project / "main.py"), run_name="__main__")
+    assert Path(at.value.args[0]).resolve() == project.resolve()
+
+
+@pytest.mark.fast
+@pytest.mark.parametrize("template", ["blank", "adventure", "starter"])
+def test_a_new_2d_game_has_the_sounds_its_menus_play(tmp_path: Path, template: str) -> None:
+    """#422 H9.1: every game's pause menu and dialogue play assets/sounds/ui_*.wav; only the HD-2D starter shipped
+    them, so a 2D game's menus were silent and logged "Failed to load sound" at every step (seen exporting the
+    adventure game). A project made before keeps its files as they are."""
+    from engine.project_scaffold import create_project, ensure_starter_files
+
+    project = tmp_path / "game"
+    create_project(project, "Game", template)
+    sounds = {f"assets/sounds/ui_{name}.wav" for name in ("open", "close", "click", "hover")}
+    assert all((project / rel).is_file() for rel in sounds)
+    for rel in sounds:
+        (project / rel).unlink()
+    ensure_starter_files(project)  # (what Mesh Studio does to a project it edits)
+    assert not any((project / rel).exists() for rel in sounds), "an existing project is left as it is"
+
+
+@pytest.mark.integration  # (#737: writes folders in tmp_path)
+@pytest.mark.parametrize("command", ["build", "plan"])
+def test_export_outside_a_project_refuses_and_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], command: str
+) -> None:
+    """#737: `export build` run from a folder that isn't a Mesh project (a home folder) said OK and wrote an empty
+    dist/bundle there. It now refuses, names the folder, and leaves it as it was; a project still exports."""
+    import shutil
+
+    import mesh_cli
+
+    def tree() -> list[str]:
+        return sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*"))
+
+    home, game = tmp_path / "home", tmp_path / "game"
+    (home / "notes").mkdir(parents=True)
+    (home / "notes" / "todo.txt").write_text("mine", encoding="utf-8")
+    shutil.copytree(FIXTURES_GOOD, game)
+    before = tree()
+    report = ["--out", "plan.json"] if command == "plan" else []  # (relative: it would land in the refused folder)
+
+    monkeypatch.chdir(home)  # the issue: run from a home folder, --repo-root defaulting to "."
+    assert mesh_cli.main(["export", command, *report]) == 1
+    assert f"{home.resolve()} is not a Mesh project" in capsys.readouterr().out
+    monkeypatch.chdir(game)  # a non-project --repo-root, run from inside a project
+    assert mesh_cli.main(["export", command, "--repo-root", str(home), *report]) == 1
+    assert f"{home.resolve()} is not a Mesh project" in capsys.readouterr().out
+    if command == "plan":
+        assert mesh_cli.main(["export", "plan", "--repo-root", str(home), "--out", str(tmp_path / "plan.json")]) == 1
+    assert tree() == before, "nothing written in either folder"
+
+    monkeypatch.chdir(home)  # a project --repo-root, run from a non-project folder
+    assert mesh_cli.main(["export", command, "--repo-root", str(game), *report]) == 0
+    assert (game / "dist" / "bundle" / "bundle_manifest.json").is_file() == (command == "build")
+    assert (game / "plan.json").is_file() == (command == "plan")
+    assert sorted(p.relative_to(home).as_posix() for p in home.rglob("*")) == ["notes", "notes/todo.txt"]
+
+
+@pytest.mark.integration  # (#744: writes a project and its export in tmp_path)
+def test_an_exported_game_keeps_its_cutscenes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """#744: `export build` left out the project's root cutscenes.json (MCP add_cutscene writes it, the game loads it
+    from its root), so an exported game played none of its cutscenes. The export's own game finds them now."""
+    import shutil
+
+    import mesh_cli
+    from engine.ai_ops import AIOps
+    from engine.config import load_config
+    from engine.cutscene_controller import CutsceneController
+    from engine.paths import pin_config
+    from engine.project_scaffold import create_project
+
+    game = tmp_path / "game"
+    create_project(game, "Game", "blank")
+    assert AIOps(base_dir=game).add_or_update_cutscene("intro", [{"type": "wait", "duration": 0.5}]).ok
+    assert mesh_cli.main(["export", "build", "--repo-root", str(game), "--deterministic"]) == 0
+
+    assert (game / "dist" / "bundle" / "cutscenes.json").read_bytes() == (game / "cutscenes.json").read_bytes()
+    bundle = Path(shutil.copytree(game / "dist" / "bundle", tmp_path / "shipped"))  # (stands alone: no project above)
+    shutil.rmtree(game)
+    monkeypatch.chdir(bundle)  # what the exported main.py does, then its GameWindow pins its config
+    pin_config(load_config(str(bundle / "config.json")))
+    controller = CutsceneController(None)
+    controller.load_project_cutscenes()
+    assert set(controller.cutscenes) == {"intro"}

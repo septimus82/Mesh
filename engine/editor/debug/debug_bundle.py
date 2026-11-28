@@ -12,7 +12,7 @@ from engine.combat_constants import (
     is_combat_death_event,
 )
 from engine.editor.behaviour_inspector import build_entity_behaviour_summary
-from engine.hud_model import build_hud_view_model, merge_event_histories
+from engine.hud_model import build_hud_view_model, find_player, merge_event_histories
 from engine.persistence_io import dumps_json_deterministic
 from engine.save_runtime.io import get_save_runtime_diagnostics_snapshot
 from engine.swallowed_exceptions import _log_swallow
@@ -446,7 +446,7 @@ def _build_event_snapshot(event_vm, window: Any | None) -> dict[str, Any]:
 
 
 def _build_hud_snapshot(window: Any | None) -> dict[str, Any]:
-    player = getattr(window, "player", None) if window is not None else None
+    player = find_player(window)
     gameplay_history = _collect_gameplay_history(window)
     mesh_history = _collect_mesh_history(window)
     merged_history = merge_event_histories(gameplay_history, mesh_history)

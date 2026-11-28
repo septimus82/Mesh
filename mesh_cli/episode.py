@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import hashlib
 import inspect
 import json
@@ -11,6 +12,8 @@ import re
 import sys
 import time
 from collections import Counter, defaultdict
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -43,9 +46,12 @@ from .replay_digest_projection import (
 from .replay_digest_projection import (
     project_world_digests_for_digest as _project_world_digests_for_digest,
 )
+from .replay_digest_projection import scope_quest_state
 
 SCHEMA_VERSION = 1
 DEFAULT_SEED = 123
+# Most executions (run_1, run_2 and timing-only repeats) one replay-check may run to reach its tick-sample minimum.
+MAX_TIMING_EXECUTIONS = 10
 PREFIX_PATTERN = re.compile(r"^([a-z]+[0-9]+)_")
 
 DEFAULT_PREFABS_PATH = Path("assets/prefabs.json")
@@ -113,6 +119,8 @@ class ReplayRunResult:
     tick_ms_p95: float
     tick_ms_max: float
     save_restore_diagnostics: dict[str, Any]
+    # #612: report-only per-tick breakdown (never judged, never replay state); see _run_replay_once.
+    tick_details: list[dict[str, Any]] = field(default_factory=list)
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
@@ -202,7 +210,12 @@ def _handle_replay_check(args: argparse.Namespace) -> int:
             outro_cutscene_id=outro_cutscene_id,
         )
 
-        with suppress_stdout():
+        # Timing-only repeats (T-07): extra fresh executions when run_1 + run_2 give too few tick samples. Their
+        # digests/events/final state must equal run_1's, but nothing from them is ever written as replay state.
+        timing_min_samples = int(getattr(args, "timing_min_samples", 0) or 0)
+        repeats_consistent = True
+        # Every timed execution runs with the host process's existing heap frozen (#612).
+        with _host_heap_frozen(), suppress_stdout():
             run_1 = _run_replay_once(spec, script_payload)
             run_2 = _run_replay_once(spec, script_payload) if run_1.ok else ReplayRunResult(
                 ok=False,
@@ -220,13 +233,38 @@ def _handle_replay_check(args: argparse.Namespace) -> int:
                 tick_ms_max=0.0,
                 save_restore_diagnostics={"counts": {"total": 0, "errors": 0, "warnings": 0, "infos": 0}, "diagnostics": []},
             )
+            timing_runs: list[ReplayRunResult] = [run_1, run_2]
+            if timing_min_samples > 0 and run_1.ok and run_2.ok:
+                while (
+                    sum(len(r.tick_ms_list) for r in timing_runs) < timing_min_samples
+                    and len(timing_runs) < MAX_TIMING_EXECUTIONS
+                ):
+                    repeat = _run_replay_once(spec, script_payload)
+                    timing_runs.append(repeat)
+                    if not (
+                        repeat.ok
+                        and repeat.digests == run_1.digests
+                        and repeat.events == run_1.events
+                        and repeat.final_state_bundle == run_1.final_state_bundle
+                    ):
+                        repeats_consistent = False
+                        break
+        pooled_timing = (
+            pooled_timing_summary(
+                [r.tick_ms_list for r in timing_runs],
+                min_samples=timing_min_samples,
+                tick_details=[r.tick_details for r in timing_runs],
+            )
+            if timing_min_samples > 0 and run_1.ok and run_2.ok
+            else None
+        )
 
         determinism = {
             "digests_match": run_1.ok and run_2.ok and run_1.digests == run_2.digests,
             "events_match": run_1.ok and run_2.ok and run_1.events == run_2.events,
             "final_state_match": run_1.ok and run_2.ok and run_1.final_state_bundle == run_2.final_state_bundle,
         }
-        ok = run_1.ok and run_2.ok and all(bool(v) for v in determinism.values())
+        ok = run_1.ok and run_2.ok and all(bool(v) for v in determinism.values()) and repeats_consistent
         digest_triplet = {
             "expected_event_digest": "",
             "expected_world_digest": "",
@@ -275,7 +313,7 @@ def _handle_replay_check(args: argparse.Namespace) -> int:
             },
             "provenance": provenance_to_dict(get_provenance(deterministic=True)),
         }
-        _write_replay_artifacts(out_dir=out_dir, report=report, run=run_1)
+        _write_replay_artifacts(out_dir=out_dir, report=report, run=run_1, pooled_timing=pooled_timing)
 
         if json_stdout:
             sys.stdout.write(dumps_json_deterministic(report))
@@ -677,7 +715,7 @@ def _build_context(spec: RuntimeSpec, *, start_quest: bool) -> ReplayContext:
         entity.mesh_tags = list(tags) if isinstance(tags, list) else []
         entity.center_x = float(raw.get("x", 0.0))
         entity.center_y = float(raw.get("y", 0.0))
-        entity.behaviours = []
+        entity.mesh_behaviours_runtime = []
         entity.mesh_entity_data = {
             **(prefab_entity if isinstance(prefab_entity, dict) else {}),
             "require_flags": list(prefab.get("require_flags", [])) if isinstance(prefab.get("require_flags"), list) else [],
@@ -708,7 +746,7 @@ def _build_context(spec: RuntimeSpec, *, start_quest: bool) -> ReplayContext:
                         if isinstance(start_node, str) and start_node:
                             cfg["start_node"] = start_node
             instance = builder(entity, window, **cfg)
-            entity.behaviours.append(instance)
+            entity.mesh_behaviours_runtime.append(instance)
             per_entity[name] = instance
             if name == "ActionListRunner":
                 action_runners.append(instance)
@@ -899,7 +937,7 @@ def _start_dialogue_from_cutscene_event(ctx: ReplayContext, payload: dict[str, A
         target = _resolve_entity(ctx, target_id)
     except ValueError:
         return
-    for behaviour in getattr(target, "behaviours", []):
+    for behaviour in getattr(target, "mesh_behaviours_runtime", None) or []:
         if type(behaviour).__name__ != "DialogueRunnerBehaviour":
             continue
         if dialogue_id and getattr(behaviour, "dialogue_id", "") != dialogue_id:
@@ -1151,7 +1189,7 @@ def _compute_digest(ctx: ReplayContext, frame: int) -> str:
             "y": 0.0,
             "behaviour_state": {
                 "flags": dict(sorted(ctx.window.game_state_controller.state.flags.items())),
-                "quest_state": ctx.quest_runner.get_state(),
+                "quest_state": _scoped_quest_state(ctx),
                 "cutscenes": {
                     cutscene_id: _unwrap_state_wrapper(runner.saveable_state())
                     for cutscene_id, runner in sorted(ctx.cutscene_runners.items())
@@ -1161,6 +1199,12 @@ def _compute_digest(ctx: ReplayContext, frame: int) -> str:
         }
     )
     return compute_world_digest(entities=entities_payload, quests=[], frame=frame)
+
+
+def _scoped_quest_state(ctx: ReplayContext) -> dict[str, Any]:
+    """Quest state as digested: the episode's own quest plus any quest the replay touched (R-1)."""
+    declared = (ctx.spec.quest_id,) if ctx.spec.quest_id else ()
+    return scope_quest_state(ctx.quest_runner.get_state(), declared)
 
 
 def _build_state_snapshot(ctx: ReplayContext, *, frame: int, label: str, tick: int, dt: float) -> dict[str, Any]:
@@ -1178,7 +1222,7 @@ def _build_state_snapshot(ctx: ReplayContext, *, frame: int, label: str, tick: i
         "tick": tick,
         "dt": float(dt),
         "flags": dict(sorted(ctx.window.game_state_controller.state.flags.items())),
-        "quest_state": ctx.quest_runner.get_state(),
+        "quest_state": _scoped_quest_state(ctx),
         "cutscenes": cutscene_states,
         "dialogues": dialogue_states,
     }
@@ -1210,7 +1254,7 @@ def _build_final_state_bundle(ctx: ReplayContext, *, seed: int, scene_rel: str, 
         "episode_prefix": ctx.spec.episode_prefix,
         "quest_id": ctx.spec.quest_id,
         "flags": dict(sorted(ctx.window.game_state_controller.state.flags.items())),
-        "quest_state": ctx.quest_runner.get_state(),
+        "quest_state": _scoped_quest_state(ctx),
         "cutscene_state": {
             cutscene_id: _unwrap_state_wrapper(runner.saveable_state())
             for cutscene_id, runner in sorted(ctx.cutscene_runners.items())
@@ -1269,7 +1313,51 @@ def _parse_replay_script(payload: dict[str, Any]) -> tuple[list[float], list[Par
     return dt_schedule, actions, save_actions, restore_actions
 
 
+class _GcPauseProbe:
+    """#612 (report-only): gc pause time and collections per generation while it sits in ``gc.callbacks``."""
+
+    __slots__ = ("ms", "collections", "_started")
+
+    def __init__(self) -> None:
+        self.ms = 0.0
+        self.collections = [0, 0, 0]
+        self._started = 0.0
+
+    def __call__(self, phase: str, info: dict[str, Any]) -> None:
+        now = time.perf_counter()
+        if phase == "start":
+            self._started = now
+        else:
+            self.ms += (now - self._started) * 1000.0
+            self.collections[min(int(info.get("generation", 0)), 2)] += 1
+
+
+@contextmanager
+def _host_heap_frozen() -> Iterator[None]:
+    """#612: keep the host process's existing heap out of the timed replay executions' garbage collections.
+
+    Replay harness only, never the game runtime. A long-lived host (the pytest process, ~1.5M tracked objects late in
+    a CI run) can land a full collection of its own heap inside a timed tick: CI saw one 1155 ms tick, 1145 ms of it gc.
+    Collecting first drops the host's garbage, then freezing moves its live objects to the permanent generation, so
+    collections during the run scan only what the replay itself allocates; those still happen and are still timed.
+    ``gc.unfreeze()`` releases every frozen object, so a host that froze objects of its own is left exactly as it was:
+    no collect, no freeze. Enabled state and thresholds are never touched.
+    """
+    if gc.get_freeze_count():
+        yield
+        return
+    gc.collect()
+    gc.freeze()
+    try:
+        yield
+    finally:
+        gc.unfreeze()
+
+
 def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> ReplayRunResult:
+    execution_start = time.perf_counter()
+    gc_probe = _GcPauseProbe()
+    gc.callbacks.append(gc_probe)
     try:
         dt_schedule, actions, save_actions, restore_actions = _parse_replay_script(replay_payload)
         ctx = _build_context(spec, start_quest=spec.quest_id is not None)
@@ -1279,6 +1367,7 @@ def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> Repla
         snapshots: list[dict[str, Any]] = []
         digests: list[dict[str, Any]] = []
         tick_ms_list: list[float] = []
+        tick_details: list[dict[str, Any]] = []
         save_slots: dict[str, dict[str, Any]] = {}
         frame = 0
 
@@ -1297,6 +1386,10 @@ def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> Repla
             actions_by_tick[action.tick].append(action)
 
         for tick_index, dt in enumerate(dt_schedule):
+            # #612 probes are read outside the timed window; inside it only two phase marks are added.
+            gc_ms_before, gc_collections_before = gc_probe.ms, list(gc_probe.collections)
+            modules_before = len(sys.modules)
+            cpu_before = time.thread_time()  # coarse (~15.6 ms) on Windows; wall >> cpu means the thread was not running
             tick_start = time.perf_counter()
             for action in actions_by_tick.get(tick_index, []):
                 ctx = _execute_action(
@@ -1313,10 +1406,32 @@ def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> Repla
                     dt=0.0,
                 )
 
+            actions_end = time.perf_counter()
             _advance(ctx, dt)
+            advance_end = time.perf_counter()
             _record(f"t{tick_index}:post_tick", tick=tick_index, dt=dt)
-            tick_elapsed_ms = (time.perf_counter() - tick_start) * 1000.0
+            tick_end = time.perf_counter()
+            tick_elapsed_ms = (tick_end - tick_start) * 1000.0
             tick_ms_list.append(_round_ms(tick_elapsed_ms))
+            cpu_ms = (time.thread_time() - cpu_before) * 1000.0
+            new_modules = list(sys.modules)[modules_before:] if len(sys.modules) > modules_before else []
+            tick_details.append(
+                {
+                    "tick": tick_index,
+                    "ms": _round_ms(tick_elapsed_ms),
+                    "start_ms": _round_ms((tick_start - execution_start) * 1000.0),
+                    "cpu_ms": _round_ms(cpu_ms),
+                    "phases_ms": {
+                        "actions": _round_ms((actions_end - tick_start) * 1000.0),
+                        "advance": _round_ms((advance_end - actions_end) * 1000.0),
+                        "record": _round_ms((tick_end - advance_end) * 1000.0),
+                    },
+                    "gc_ms": _round_ms(gc_probe.ms - gc_ms_before),
+                    "gc_collections": [a - b for a, b in zip(gc_probe.collections, gc_collections_before)],
+                    "modules_imported": len(new_modules),
+                    "first_modules": new_modules[:5],
+                }
+            )
 
         _drain_until_empty(ctx)
         _record("final", tick=len(dt_schedule), dt=0.0)
@@ -1346,6 +1461,7 @@ def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> Repla
             tick_ms_p95=tick_ms_p95,
             tick_ms_max=tick_ms_max,
             save_restore_diagnostics=save_restore_diags.to_json(),
+            tick_details=tick_details,
         )
     except Exception as exc:  # noqa: BLE001  # REASON: replay runner should convert unexpected execution failures into a deterministic failed result payload
         return ReplayRunResult(
@@ -1364,6 +1480,8 @@ def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> Repla
             tick_ms_max=0.0,
             save_restore_diagnostics={"counts": {"total": 0, "errors": 0, "warnings": 0, "infos": 0}, "diagnostics": []},
         )
+    finally:
+        gc.callbacks.remove(gc_probe)
 
 
 def _execute_action(
@@ -1510,7 +1628,9 @@ def _summarize_run(run: ReplayRunResult) -> dict[str, Any]:
     }
 
 
-def _write_replay_artifacts(*, out_dir: Path, report: dict[str, Any], run: ReplayRunResult) -> None:
+def _write_replay_artifacts(
+    *, out_dir: Path, report: dict[str, Any], run: ReplayRunResult, pooled_timing: dict[str, Any] | None = None
+) -> None:
     write_json_atomic(out_dir / "replay_report.json", report, indent=2, sort_keys=True, trailing_newline=True)
     write_text_atomic(out_dir / "replay_report.txt", _format_replay_report_text(report), encoding="utf-8")
 
@@ -1543,7 +1663,7 @@ def _write_replay_artifacts(*, out_dir: Path, report: dict[str, Any], run: Repla
         text += "\n"
     write_text_atomic(ndjson_path, text, encoding="utf-8")
 
-    timing_payload = {
+    timing_payload: dict[str, Any] = {
         "schema_version": 1,
         "timing": {
             "total_ms": run.total_ms,
@@ -1554,6 +1674,10 @@ def _write_replay_artifacts(*, out_dir: Path, report: dict[str, Any], run: Repla
             "tick_ms_max": run.tick_ms_max,
         },
     }
+    if pooled_timing is not None:
+        # total_ms / tick_ms_max stay the canonical (first) execution's; only p95 is judged over the pooled samples.
+        timing_payload["timing"]["tick_ms_p95"] = pooled_timing["tick_ms_p95"]
+        timing_payload["timing"]["pooled"] = pooled_timing
     write_json_atomic(out_dir / "timings.json", timing_payload, indent=2, sort_keys=True, trailing_newline=True)
 
     diagnostics_payload = run.save_restore_diagnostics
@@ -1619,6 +1743,33 @@ def _format_replay_report_text(report: dict[str, Any]) -> str:
 
 def _round_ms(value: float, *, decimals: int = 3) -> float:
     return float(f"{float(value):.{decimals}f}")
+
+
+def pooled_timing_summary(
+    tick_lists: list[list[float]], *, min_samples: int, tick_details: list[list[dict[str, Any]]] | None = None
+) -> dict[str, Any]:
+    """Pool comparable tick samples from several executions of one replay (timing-only; never replay state).
+
+    ``tick_details`` (#612, report-only) adds each execution's 3 slowest ticks; it never changes any judged number.
+    """
+    pooled = [float(v) for ticks in tick_lists for v in ticks]
+    summary: dict[str, Any] = {
+        "min_samples": min_samples,
+        "executions": len(tick_lists),
+        "repeats": max(0, len(tick_lists) - 2),
+        "samples_per_execution": [len(ticks) for ticks in tick_lists],
+        "total_ms_per_execution": [_round_ms(sum(ticks)) for ticks in tick_lists],
+        "pooled_count": len(pooled),
+        "min_samples_met": len(pooled) >= min_samples,
+        "tick_ms_p50": _compute_percentile_ms(pooled, 0.50),
+        "tick_ms_p95": _compute_percentile_ms(pooled, 0.95),
+        "tick_ms_max": _round_ms(max(pooled)) if pooled else 0.0,
+    }
+    if tick_details is not None:
+        summary["slowest_ticks_per_execution"] = [
+            sorted(details, key=lambda d: (-float(d["ms"]), int(d["tick"])))[:3] for details in tick_details
+        ]
+    return summary
 
 
 def _compute_percentile_ms(values: list[float], percentile: float) -> float:

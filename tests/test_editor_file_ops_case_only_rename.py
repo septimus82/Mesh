@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from engine.editor.asset_ops import editor_file_ops_controller as efoc
 from engine.editor.editor_file_ops_controller import (
     EditorFileOpsController,
     compute_temp_rename_rel,
@@ -23,7 +24,8 @@ class _Entry:
 
 
 class _ProjectExplorer:
-    def __init__(self, entry: _Entry) -> None:
+    def __init__(self, repo_root: Path, entry: _Entry) -> None:
+        self.repo_root = repo_root
         self._row = SimpleNamespace(entry=entry)
 
     def get_selected_row(self) -> object:
@@ -34,16 +36,16 @@ class _ProjectExplorer:
 
 
 class _Window:
-    def __init__(self, repo_root: Path) -> None:
-        self.repo_root = repo_root
+    def __init__(self) -> None:
         self.scene_controller = SimpleNamespace(_loaded_scene_data={"entities": []})
         self.player_hud = SimpleNamespace(enqueue_toast=lambda *args, **kwargs: None)
 
 
 class _Controller:
     def __init__(self, repo_root: Path, entry: _Entry) -> None:
-        self.window = _Window(repo_root)
-        self.project_explorer = _ProjectExplorer(entry)
+        self.window = _Window()
+        self.project_explorer = _ProjectExplorer(repo_root, entry)
+        self._get_repo_root = lambda: repo_root
 
     def _push_command(self, _payload: dict) -> None:
         pass
@@ -57,13 +59,13 @@ def _make_controller(tmp_path: Path, rel_path: str) -> EditorFileOpsController:
 
 def _recording_replace(monkeypatch: pytest.MonkeyPatch):
     calls: list[tuple[Path, Path]] = []
-    real_replace = os.replace
+    real_replace = efoc._move_no_clobber
 
     def _wrapped(src: str | Path, dst: str | Path) -> None:
         calls.append((Path(src), Path(dst)))
         real_replace(src, dst)
 
-    monkeypatch.setattr("engine.editor.editor_file_ops_controller.os.replace", _wrapped)
+    monkeypatch.setattr(efoc, "_move_no_clobber", _wrapped)  # (every file step's move since #618)
     return calls
 
 

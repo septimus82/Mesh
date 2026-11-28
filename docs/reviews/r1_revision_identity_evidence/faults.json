@@ -1,0 +1,44 @@
+[
+ {
+  "fault": "the session is never compared",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_ai_base_revision_policy.py::test_a_revision_of_another_session_or_project_is_refused[another session, the current number]"
+  ]
+ },
+ {
+  "fault": "a bare number is taken (as it was)",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_ai_base_revision_policy.py::test_a_bare_revision_number_is_refused_because_it_cant_say_which_session"
+  ]
+ },
+ {
+  "fault": "every opening has the same identity",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_revision_identity.py::test_a_revision_read_before_studio_restarted_never_passes_for_the_reopened_project"
+  ]
+ },
+ {
+  "fault": "a future number of this session is taken as current",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_ai_base_revision_policy.py::test_something_that_isnt_a_revision_id_of_this_session_is_refused[a future revision]"
+  ]
+ },
+ {
+  "fault": "a refusal hands out the current id",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_ai_base_revision_policy.py::test_a_revision_of_another_session_or_project_is_refused[another session, the current number]"
+  ]
+ },
+ {
+  "fault": "an unbased proposal reports a verified base",
+  "caught": true,
+  "by": [
+   "FAILED tests/test_studio_ai_base_revision.py::test_without_a_base_revision_it_is_proposed_against_the_project_as_it_is_now"
+  ]
+ }
+]

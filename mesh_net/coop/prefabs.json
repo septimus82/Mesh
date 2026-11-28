@@ -1,0 +1,267 @@
+[
+  {
+    "display_name": "Player",
+    "entity": {
+      "behaviour_config": {
+        "Animator": {
+          "animation_state": "idle_down",
+          "animations": {
+            "idle_down": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 0
+            },
+            "idle_left": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 4
+            },
+            "idle_right": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 8
+            },
+            "idle_up": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 12
+            },
+            "walk_down": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 0
+            },
+            "walk_left": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 4
+            },
+            "walk_right": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 8
+            },
+            "walk_up": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_hero.png",
+              "start": 12
+            }
+          },
+          "directional_mode": "4-way",
+          "enable_auto_state": true,
+          "facing_default": "down",
+          "idle_clip": "idle_down",
+          "speed_threshold": 5.0,
+          "walk_clip": "walk_down"
+        },
+        "CameraFollow": {
+          "padding": 12,
+          "zoom": 1.0
+        },
+        "Combat": {
+          "attack_anim": "attack",
+          "attack_sound": "assets/sounds/attack.wav",
+          "cooldown": 0.5,
+          "damage": 1.0,
+          "hitbox_size": 32.0,
+          "range": 32.0,
+          "target_tag": "enemy"
+        }
+      },
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow",
+        "Animator",
+        "Combat"
+      ],
+      "components": {
+        "collider": {
+          "auto": true,
+          "kind": "box"
+        }
+      },
+      "name": "Player",
+      "sprite": "assets/sprites/starter_hero.png",
+      "tag": "player"
+    },
+    "id": "player",
+    "metadata": {
+      "note": "the game's player: every room uses it",
+      "shared_player": true
+    },
+    "tags": [
+      "player"
+    ]
+  },
+  {
+    "display_name": "Person",
+    "entity": {
+      "behaviour_config": {
+        "Animator": {
+          "animation_state": "idle_down",
+          "animations": {
+            "idle_down": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 0
+            },
+            "idle_left": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 4
+            },
+            "idle_right": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 8
+            },
+            "idle_up": {
+              "fps": 2.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 1,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 12
+            },
+            "walk_down": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 0
+            },
+            "walk_left": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 4
+            },
+            "walk_right": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 8
+            },
+            "walk_up": {
+              "fps": 8.0,
+              "frame_height": 48,
+              "frame_width": 32,
+              "frames": 4,
+              "sheet": "assets/sprites/starter_villager.png",
+              "start": 12
+            }
+          },
+          "directional_mode": "4-way",
+          "enable_auto_state": true,
+          "facing_default": "down",
+          "idle_clip": "idle_down",
+          "speed_threshold": 5.0,
+          "walk_clip": "walk_down"
+        },
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "text": "Hello!"
+              }
+            },
+            "speaker": "Person",
+            "start": "root"
+          },
+          "once": false
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "Animator"
+      ],
+      "components": {
+        "collider": {
+          "auto": true,
+          "kind": "box"
+        }
+      },
+      "name": "Person",
+      "sprite": "assets/sprites/starter_villager.png",
+      "tag": "npc"
+    },
+    "id": "person",
+    "tags": [
+      "npc",
+      "person"
+    ]
+  },
+  {
+    "display_name": "Sign",
+    "entity": {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "text": "Read me! Change what I say in Talk."
+              }
+            },
+            "speaker": "",
+            "start": "root"
+          },
+          "once": false
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "components": {
+        "collider": {
+          "auto": true,
+          "kind": "box"
+        }
+      },
+      "name": "Sign",
+      "sprite": "assets/sprites/starter_sign.png",
+      "tag": "sign"
+    },
+    "id": "sign",
+    "tags": [
+      "sign"
+    ]
+  }
+]

@@ -29,6 +29,7 @@ def test_editor_viewport_drag_moves_entity_through_input_capture() -> None:
             main_menu.close()
 
         editor = window.editor_controller
+        setattr(window.engine_config, "_mesh_launch_mode", "editor")  # an editor launch: F4 may open the editor (#660)
         editor.toggle()
         assert editor.active is True
 
@@ -93,6 +94,7 @@ def test_ai_chat_overlay_does_not_consume_viewport_clicks_when_inactive_tab() ->
     try:
         window.scene_controller.load_scene("scenes/showcase_hub.json")
         editor = window.editor_controller
+        setattr(window.engine_config, "_mesh_launch_mode", "editor")  # an editor launch: F4 may open the editor (#660)
         editor.toggle()
         overlay = window.ai_chat_overlay
         assert overlay.on_mouse_press(680.0, 400.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is False

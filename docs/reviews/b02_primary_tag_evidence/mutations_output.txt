@@ -1,0 +1,5 @@
+restore ignores primary_tag -> CAUGHT 1 failed, 7 passed in 6.69s
+always tags[0] when absent -> CAUGHT 3 failed, 5 passed in 6.85s
+no diagnostic on fallback -> CAUGHT 1 failed, 7 passed in 6.75s
+to_dict drops primary_tag -> CAUGHT 2 failed, 6 passed in 6.91s
+from_dict drops primary_tag -> CAUGHT 1 failed, 7 passed in 6.86s

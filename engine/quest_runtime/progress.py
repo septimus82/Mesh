@@ -21,13 +21,21 @@ def handle_event(manager: Any, event: MeshEvent) -> None:
         return
     # Two passes ensure quests that depend on flags/counters set by other quests completing
     # on the same event get a chance to start deterministically, regardless of definition order.
+    # One event completes at most one stage of a quest: the second pass must not complete the stage the first pass
+    # just moved on to (#640: two stages on the same entered_zone both completed on one entry).
+    progressed: set[str] = set()
     for _ in range(2):
         for quest in manager._definitions.values():
             state = manager._ensure_state(quest["id"])
             if state.get("status") == "completed":
                 continue
             check_start_triggers(manager, quest, state, event)
+            if quest["id"] in progressed:
+                continue
+            before = state.get("current_stage")
             check_completion_triggers(manager, quest, state, event)
+            if state.get("current_stage") != before:
+                progressed.add(quest["id"])
 
     # Also check requirements since state might have changed
     manager.check_requirements()
@@ -218,18 +226,15 @@ def complete_quest(manager: Any, quest: dict[str, Any], state: dict[str, Any], *
     for counter, amount in reward.get("inc_counters", {}).items():
         manager.window.inc_counter(counter, float(amount))
 
-    # Apply Gold and XP rewards with perk bonuses
+    # Gold goes to the counter vendors spend; add_counter applies the gold perk bonus (once). (#755: it went to
+    # values["gold"], which nothing reads.) XP goes through the progression's add_xp, which applies the XP perk bonus.
     gold = reward.get("gold", 0)
     if gold > 0:
-        bonus = manager.window.game_state_controller.get_perk_bonus("gold_bonus_pct")
-        amount = int(gold * (1.0 + bonus))
-        current_gold = manager.window.game_state.values.get("gold", 0)
-        manager.window.game_state.values["gold"] = current_gold + amount
-        print(f"[Mesh][Quests] Rewarded {amount} gold (base {gold} + {int(bonus*100)}%)")
+        manager.window.inc_counter("gold", float(gold))
+        print(f"[Mesh][Quests] Rewarded {gold} gold")
 
     xp = reward.get("xp", 0)
     if xp > 0:
-        # Let add_xp handle the bonus
         manager.window.game_state_controller.add_xp(xp)
         print(f"[Mesh][Quests] Rewarded {xp} XP")
 
@@ -262,6 +267,9 @@ def maybe_start_pending(manager: Any, quest: dict[str, Any], state: dict[str, An
         state["awaiting_stage"] = None
         return
     if pending_stage.get("start_event"):
+        return
+    # Explicit auto_start false: the first stage waits for its trigger or an explicit start (docs/quests.md).
+    if quest.get("auto_start") is False and state.get("status") == "inactive":
         return
     start_stage(manager, quest, pending_stage, state, source="auto")
 

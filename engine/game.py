@@ -71,6 +71,8 @@ See Also:
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Sequence
 
@@ -119,6 +121,7 @@ from .repo_root import is_standalone_project_root, pin_launched_project_root
 from .save_manager import SaveManager
 from .scene_controller import SceneController
 from .scene_loader import SceneLoader
+from .schema_validation import SchemaValidationError
 from .services import (
     InputService,
     PersistenceService,
@@ -147,6 +150,18 @@ _BEHAVIOUR_META_EXPLICIT = "__explicit_behaviour_keys__"
 _OPTIONAL_BEHAVIOUR_DEFAULTS: tuple[tuple[str, str], ...] = ()
 _MISSING = object()
 logger = get_logger(__name__)
+
+
+def _debug_cheats_allowed(window: Any) -> bool:
+    """Debug battles and breeding change the game state: a developer launch only (S1 D4). Every route to them, F3's
+    keys or any other, comes through here; a game as players run it (``main.py``, an export) is refused."""
+    from engine.action_runtime.registry import dev_tools_allowed  # noqa: PLC0415  # registry imports UI modules
+
+    if dev_tools_allowed(window):
+        return True
+    window.console_log("[Debug] Debug battles and breeding need a developer launch (mesh play)")
+    return False
+
 
 class GameWindow(engine.optional_arcade.arcade.Window):
     """Main game window and central facade for the Mesh Engine.
@@ -315,6 +330,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             source: engine.optional_arcade.arcade.Sprite,
             target: engine.optional_arcade.arcade.Sprite,
             amount: float,
+            *,
+            emit: bool = True,
         ) -> None: ...
         def on_key_press(self, key: int, modifiers: int) -> None: ...
         def on_key_release(self, key: int, modifiers: int) -> None: ...
@@ -446,7 +463,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
                 _log_swallow("GAME-000", "engine/game.py set_minimum_size", once=True)
                 logger.warning("[Mesh][GameWindow] WARNING: Failed to set minimum size: %r", exc)
         try:
-            engine.optional_arcade.arcade.set_background_color(engine.optional_arcade.arcade.color.DARK_BLUE_GRAY)
+            engine.optional_arcade.arcade.set_background_color(engine.optional_arcade.arcade.color.BLACK)
         except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
             _log_swallow("GAME-001", "engine/game.py blanket swallow", once=True)
             logger.warning("[Mesh][GameWindow] WARNING: Failed to set background color: %r", exc)
@@ -473,6 +490,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         pin_config(self.engine_config)
         config_base_dir = getattr(self.engine_config, "_config_base_dir", None)
         self.standalone_launch = False
+        self.launched_project_root: str | None
         if config_base_dir:
             launch_root = Path(str(config_base_dir))
             resolved_launch = launch_root.resolve()
@@ -544,6 +562,9 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.hot_reload_error_scene_path: str = ""
         self.hot_reload_error_visible: bool = False
         self.scene_persist_armed: bool = False
+        # (#721) a main-menu project switch asked for the new project's start room, which hasn't loaded yet: the
+        # previous project's room is still the one built, so saving and loading wait (engine.save_manager)
+        self.switch_room_pending: bool = False
         self.entity_snap_to_tile: bool = False
         self.last_duplicate_count: int = 0
         self.last_duplicate_primary: str = ""
@@ -584,10 +605,17 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self._undo_ts_counter: int = 0
         self._undo_suppress_count: int = 0
         self.cutscene_controller = CutsceneController(self)
+        # A cutscenes.json the game can't read is set aside, said in the log and on screen (a toast; Mesh Studio's
+        # status line): the game and the editors still start, so the file can be repaired (#642).
+        self.cutscenes_error: str | None = None
         try:
             self.cutscene_controller.load_from_file("cutscenes.json")
         except FileNotFoundError:
             pass
+        except (SchemaValidationError, ValueError) as exc:
+            detail = f"at {exc.json_pointer or '/'}: {exc.message}" if isinstance(exc, SchemaValidationError) else str(exc)
+            self.cutscenes_error = f"cutscenes.json is set aside, so no cutscene plays: {detail}"
+            logger.error("[Mesh][Cutscene] %s", self.cutscenes_error)
         ambient = list(getattr(self.engine_config, "lighting_ambient_color", [10, 10, 10, 255]))
         ambient_alpha = getattr(self.engine_config, "ambient_darkness_alpha", None)
         if ambient_alpha is not None and len(ambient) >= 4:
@@ -605,6 +633,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             shadows_mode=getattr(self.engine_config, "lighting_shadows_mode", "hard"),
             debug_shadows=getattr(self.engine_config, "lighting_debug_shadows", False),
         )
+        self.lighting.base_ambient_color = getattr(self.lighting, "ambient_color", None)  # the project's; day/night changes ambient_color
         ambient_tint = getattr(self.engine_config, "ambient_light_rgba", None)
         if ambient_tint is not None:
             self.lighting.set_ambient_tint(ambient_tint)
@@ -618,6 +647,9 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         )
 
         _init_ui_dispatcher(self)
+        enqueue_toast = getattr(getattr(self, "player_hud", None), "enqueue_toast", None)
+        if self.cutscenes_error and callable(enqueue_toast):
+            enqueue_toast(self.cutscenes_error, seconds=10.0)
 
         self.paused: bool = False
         self.game_over: bool = False
@@ -625,7 +657,10 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.monster_battle_mode_active: bool = False
         self.world_width: int | None = None
         self.world_height: int | None = None
-        self.show_debug: bool = bool(self.engine_config.debug_on_start)
+        from engine.action_runtime.registry import dev_tools_allowed  # noqa: PLC0415  # registry imports UI modules
+
+        # (a project's debug_on_start ships in its export's config.json: a game launch never starts in debug, #664)
+        self.show_debug: bool = bool(self.engine_config.debug_on_start) and dev_tools_allowed(self)
         self._debug_text = engine.optional_arcade.arcade.Text(
             text="",
             x=10,
@@ -707,7 +742,20 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def run(self) -> None:
         """Start Arcade's main loop."""
         logger.info("[Mesh][GameWindow] Starting Arcade loop...")
-        engine.optional_arcade.arcade.run()
+        try:
+            engine.optional_arcade.arcade.run()
+        except Exception:
+            crash_log = os.environ.get("MESH_CRASH_LOG")  # started from the launcher, without a console
+            if crash_log:
+                import traceback  # noqa: PLC0415
+
+                from engine.launcher import show_crash  # noqa: PLC0415
+
+                traceback.print_exc()  # into the log now, so it's there while the message is up
+                sys.stderr.flush()
+                show_crash("Mesh Studio", crash_log)
+                raise SystemExit(1) from None
+            raise
 
     def start_monster_battle(self, **kwargs: Any) -> Any:
         """Start the runtime monster battle mode."""
@@ -729,6 +777,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def start_debug_monster_battle(self) -> Any:
         """Start a fixture monster battle for MON-0f dogfooding."""
 
+        if not _debug_cheats_allowed(self):
+            return None
         from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
         from engine.monster.collection import load_battle_party_from_values  # noqa: PLC0415
         from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
@@ -771,6 +821,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def start_debug_trainer_monster_battle(self) -> Any:
         """Start a fixture trainer battle with a multi-monster opponent team."""
 
+        if not _debug_cheats_allowed(self):
+            return None
         from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
         from engine.monster.collection import load_battle_party_from_values  # noqa: PLC0415
         from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
@@ -819,6 +871,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def start_debug_companion_monster_battle(self) -> Any:
         """Start a companion battle where the monster acts autonomously."""
 
+        if not _debug_cheats_allowed(self):
+            return None
         from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
         from engine.monster.collection import (  # noqa: PLC0415
             add_caught_monster,
@@ -900,7 +954,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         )
         from engine.paths import resolve_monster_data_dir  # noqa: PLC0415
 
-        if not bool(getattr(self.engine_config, "debug_mode", False)):
+        if not bool(getattr(self.engine_config, "debug_mode", False)) or not _debug_cheats_allowed(self):
             return False
 
         catalog, validation = load_monster_catalog(resolve_monster_data_dir())
@@ -966,14 +1020,48 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             base_on_close(self)
 
     def close(self) -> None:
+        if getattr(self, "closed", False):
+            return  # (pyglet closes a window again when it is collected: nothing to release, no active window to keep)
         editor = getattr(self, "editor_controller", None)
         stop_live_bridge = getattr(editor, "stop_live_bridge", None) if editor is not None else None
         if callable(stop_live_bridge):
             stop_live_bridge()
+        release_project = getattr(getattr(self, "studio", None), "release_project", None)
+        if callable(release_project):
+            release_project()  # (#462 R2: Mesh Studio's session ends and the project is let go, however it closed)
+        held = getattr(self, "project_ownership", None)
+        if held is not None:
+            held.release()  # (the launch's own hold, for an editor that isn't Studio)
         self._stop_asset_hot_reload_watcher()
-        base_close = getattr(engine.optional_arcade.arcade.Window, "close", None)
+        audio = getattr(self, "audio", None)
+        if audio is not None and callable(getattr(audio, "shutdown", None)):
+            audio.shutdown()  # every music and ambience player stopped and released
+        if getattr(self, "hd2d_renderer", None) is not None:  # free its GPU objects while the context still exists
+            from engine.hd2d.runtime import release  # noqa: PLC0415
+
+            release(self)
+        if getattr(self, "scene_particles", None) is not None:  # a 2D room's particles: likewise
+            from engine.scene_particles import release as release_particles  # noqa: PLC0415
+
+            release_particles(self)
+        if getattr(self, "scene_water", None) is not None:  # a 2D room's water: likewise
+            from engine.water import release as release_water  # noqa: PLC0415
+
+            release_water(self)
+        arcade = engine.optional_arcade.arcade
+        try:
+            active = arcade.get_window() if callable(getattr(arcade, "get_window", None)) else None
+        except RuntimeError:  # no active window
+            active = None
+        base_close = getattr(arcade.Window, "close", None)
         if callable(base_close):
             base_close(self)
+        # Arcade forgets the active window whenever any window closes, even one that isn't active (pyglet also
+        # closes a window when it is garbage-collected, at an unpredictable moment): the window in use then
+        # lost its context mid-frame ("No window is active"). Closing another window keeps the active one.
+        set_window = getattr(arcade, "set_window", None)
+        if active is not None and active is not self and callable(set_window):
+            set_window(active)
 
     def on_resize(self, width: int, height: int) -> None:
         super().on_resize(width, height)

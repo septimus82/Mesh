@@ -11,6 +11,11 @@ Three families:
 * **action** tools (the AI's hands): ``create_scene``,
   ``add_entity_from_prefab`` — thin wrappers over :class:`engine.ai_ops.AIOps`.
 * **safety**: ``validate_scene`` so writes can be checked.
+* **runtime debugging** (D1, D3A): ``debug_runtime_snapshot`` reads the game running in a
+  Mesh Studio play-test; ``debug_start_playtest`` / ``debug_stop_playtest`` start and
+  stop one, once the person allows it in Studio; ``debug_play_action`` (D2) plays it
+  with the player's own controls, once the person allows that too; ``debug_interaction``
+  (D3A) explains why the player can or can't use one object.
 * **context**: ``engine_overview`` — instant expertise as a resource.
 
 All functions take a ``root`` base directory (default ``"."``) so they can be
@@ -28,6 +33,16 @@ def _root_path(root: str) -> Path:
     return Path(root)
 
 
+# What a cutscene step may be (engine/schemas/cutscene.schema.json; a test keeps the two in step). "a | b": at least
+# one of them; "?": optional. A step with another type or field is refused, nothing written (#642).
+CUTSCENE_STEP_FORMAT = (
+    "Each step is {type, ...fields}: wait {duration}; start_dialogue {text | lines | entries | dialogue_id | target, "
+    "speaker?, node_id?} (lines/entries: [{text, speaker?}]); wait_dialogue_end {}; "
+    "move_entity {entity | target, x?, y?, duration?}; camera_focus {entity | target}; camera_pan {x, y, duration?}; "
+    "set_flag {flag | name, value?}; add_counter {counter | name, delta?}; emit_event {event | name, payload?, reason?}. "
+    "No other step types or fields."
+)
+
 # Catalog of every operation `apply_ops` can run, mirroring the dispatch in
 # engine.ai_ops.AIOps.apply_job. "required" fields are accessed via op["..."]
 # (a KeyError if missing); "optional" via op.get(...). A drift-guard test
@@ -44,32 +59,44 @@ OP_CATALOG: dict[str, dict[str, Any]] = {
     "delete_quest_definition": {"required": ["quest_id"], "optional": ["quests_path"], "summary": "Delete a quest definition."},
     "paint_tiles": {"required": ["scene_path"], "optional": ["ops"], "summary": "Apply tile paint operations to a scene."},
     "add_light": {"required": ["scene_path"], "optional": ["light"], "summary": "Add a light to a scene."},
-    "update_light": {"required": ["scene_path"], "optional": ["index", "patch"], "summary": "Patch a light by index."},
+    "update_light": {"required": ["scene_path"], "optional": ["index", "patch"],
+                     "summary": "Patch a light by index (HD-2D rooms: intensity 0-10 and elevation are read; "
+                                "flicker is not)."},
     "delete_light": {"required": ["scene_path"], "optional": ["index"], "summary": "Delete a light by index."},
     "run_validation": {"required": [], "optional": ["scene_path"], "summary": "Validate a scene (or the whole world)."},
     "add_world_scene": {"required": ["scene_key", "path"], "optional": ["world_path", "label", "tags"], "summary": "Register a scene in the world."},
     "link_world_scenes": {"required": ["from_key", "to_key"], "optional": ["world_path", "via", "bidirectional"], "summary": "Link two world scenes."},
     "set_world_start": {"required": [], "optional": ["world_path", "start_scene", "start_spawn"], "summary": "Set the world start scene/spawn."},
-    "add_cutscene": {"required": ["id"], "optional": ["steps", "cutscenes_path"], "summary": "Add a cutscene."},
-    "update_cutscene": {"required": ["id"], "optional": ["steps", "cutscenes_path"], "summary": "Update a cutscene."},
+    "add_cutscene": {"required": ["id"], "optional": ["steps", "cutscenes_path"], "summary": "Add a cutscene.",
+                     "step_format": CUTSCENE_STEP_FORMAT},
+    "update_cutscene": {"required": ["id"], "optional": ["steps", "cutscenes_path"], "summary": "Update a cutscene.",
+                        "step_format": CUTSCENE_STEP_FORMAT},
     "delete_cutscene": {"required": ["id"], "optional": ["cutscenes_path"], "summary": "Delete a cutscene."},
-    "insert_cutscene_step": {"required": ["id"], "optional": ["step", "index", "cutscenes_path"], "summary": "Insert a step into a cutscene."},
-    "update_cutscene_step": {"required": ["id"], "optional": ["index", "patch", "cutscenes_path"], "summary": "Patch a cutscene step by index."},
+    "insert_cutscene_step": {"required": ["id"], "optional": ["step", "index", "cutscenes_path"], "summary": "Insert a step into a cutscene.",
+                             "step_format": CUTSCENE_STEP_FORMAT},
+    "update_cutscene_step": {"required": ["id"], "optional": ["index", "patch", "cutscenes_path"], "summary": "Patch a cutscene step by index.",
+                             "step_format": CUTSCENE_STEP_FORMAT},
     "delete_cutscene_step": {"required": ["id"], "optional": ["index", "cutscenes_path"], "summary": "Delete a cutscene step by index."},
 }
 
 
 # ---------------------------------------------------------------- read tools
 def list_scenes(root: str = ".") -> list[str]:
-    """List scene file paths (relative to ``root``) under ``scenes/``."""
+    """List scene file paths (relative to ``root``): the rooms of the project's world (``config.json``'s
+    ``world_file``, start room first), then any other ``scenes/*.json``."""
+    from engine.project_ops import world_rooms  # noqa: PLC0415
+
     base = _root_path(root)
+    rooms: list[str] = []
+    try:
+        world_file = json.loads((base / "config.json").read_text(encoding="utf-8")).get("world_file")
+        world = json.loads((base / str(world_file)).read_text(encoding="utf-8")) if world_file else {}
+        rooms = [path for _key, _label, path in world_rooms(world) if path and (base / path).is_file()]
+    except (OSError, ValueError, AttributeError):  # (no project, or an unreadable one: only scenes/)
+        pass
     scenes_dir = base / "scenes"
-    if not scenes_dir.is_dir():
-        return []
-    return sorted(
-        str(path.relative_to(base).as_posix())
-        for path in scenes_dir.glob("*.json")
-    )
+    loose = sorted(path.relative_to(base).as_posix() for path in scenes_dir.glob("*.json")) if scenes_dir.is_dir() else []
+    return list(dict.fromkeys(rooms + loose))
 
 
 def read_scene(scene_path: str, root: str = ".") -> dict[str, Any]:
@@ -204,8 +231,10 @@ def _load_quests(root: str) -> list[dict[str, Any]]:
         return []
     if isinstance(raw, dict):
         quests = raw.get("quests")
-        if isinstance(quests, list):
-            return [q for q in quests if isinstance(q, dict)]
+        if isinstance(quests, (list, dict)):
+            from engine.quest_runtime.normalize import quest_entries  # noqa: PLC0415
+
+            return quest_entries(quests)
         # Legacy {quest_id: {...}} mapping.
         result: list[dict[str, Any]] = []
         for key, value in raw.items():
@@ -271,29 +300,54 @@ def list_lights(scene_path: str, root: str = ".") -> dict[str, Any]:
 
     ``index`` is the identifier the light action ops (``update_light``,
     ``delete_light``) key on, so the AI can list then refine a specific light.
+    In an HD-2D room each row also has ``hd2d_shadow``: what the room does with it
+    (``engine.hd2d.settings.scene_shadow_allocation``: ``shadow_map``, ``no_shadows``,
+    ``over_shadow_limit`` (asks for shadows, but the room's shadow maps are taken:
+    it shines through walls), ``room_shadows_off`` (the room's shadows are off),
+    ``over_light_limit``, ``off``, ``ambient``, ``unusable``), its ``intensity``
+    (brightness, 1 unless set) and ``hd2d_ignored`` (fields it has that HD-2D doesn't
+    use: ``flicker``); the result has ``hd2d_room_shadows`` (``settings.hd2d.shadows``)
+    and ``hd2d_ignored_settings`` (the room's 2D lighting settings HD-2D keeps but
+    doesn't use, ``engine.hd2d.settings.IGNORED_ROOM_SETTINGS``).
     """
     loaded = read_scene(scene_path, root)
     if not loaded.get("ok"):
         return {"ok": False, "message": loaded.get("message", "Scene not found")}
     scene = loaded.get("scene")
     lights = scene.get("lights") if isinstance(scene, dict) else None
+    settings = scene.get("settings") if isinstance(scene, dict) else None
+    hd2d = isinstance(settings, dict) and isinstance(settings.get("hd2d"), dict)
+    allocation: list[str] = []
+    if hd2d:
+        from engine.hd2d import settings as hd2d_settings  # noqa: PLC0415  # (only HD-2D rooms need it)
+
+        allocation = hd2d_settings.scene_shadow_allocation(scene)
     rows: list[dict[str, Any]] = []
     for index, light in enumerate(lights or []):
         if not isinstance(light, dict):
             continue
-        rows.append(
-            {
-                "index": index,
-                "id": light.get("id"),
-                "type": light.get("type"),
-                "x": light.get("x"),
-                "y": light.get("y"),
-                "radius": light.get("radius"),
-                "color": light.get("color"),
-                "enabled": light.get("enabled"),
-            }
-        )
-    return {"ok": True, "scene_path": scene_path, "count": len(rows), "lights": rows}
+        row = {
+            "index": index,
+            "id": light.get("id"),
+            "type": light.get("type"),
+            "x": light.get("x"),
+            "y": light.get("y"),
+            "radius": light.get("radius"),
+            "color": light.get("color"),
+            "enabled": light.get("enabled"),
+        }
+        if hd2d:
+            row["hd2d_shadow"] = allocation[index]
+            row["intensity"] = light.get("intensity", 1.0)
+            row["hd2d_ignored"] = ["flicker"] if light.get("flicker_enabled") else []
+        rows.append(row)
+    result: dict[str, Any] = {"ok": True, "scene_path": scene_path, "count": len(rows), "lights": rows}
+    if hd2d:
+        result["hd2d_shadow_maps"] = hd2d_settings.MAX_SHADOW_LIGHTS
+        result["hd2d_room_shadows"] = hd2d_settings.room_shadows(scene)
+        result["hd2d_ignored_settings"] = [k for k in hd2d_settings.IGNORED_ROOM_SETTINGS
+                                           if isinstance(settings, dict) and k in settings]
+    return result
 
 
 def read_dialogue(scene_path: str, entity_id: str, root: str = ".") -> dict[str, Any]:
@@ -470,11 +524,81 @@ def _result_to_dict(result: Any) -> dict[str, Any]:
     }
 
 
-def create_scene(name: str, template: str = "empty", root: str = ".") -> dict[str, Any]:
-    """Create a new scene from a template. Wraps ``AIOps.create_scene``."""
+def _files_blocked(root: str, tool: str) -> dict[str, Any] | None:
+    """Why ``tool`` mustn't write the project's files directly, or None only when nothing has the project open (F1):
+    Mesh Studio or another editor has it open (possibly unsaved), or that can't be told."""
+    from engine import authoring_session
+
+    state = authoring_session.studio_state(root)
+    if state["state"] == "none":
+        return None
+    if state["state"] == "uncertain":
+        return authoring_session.uncertain(state)
+    if state["host"] != authoring_session.STUDIO_HOST:
+        return authoring_session.other_editor(state["host"])
+    return {"ok": False, "reason": "studio_open", "message": (
+        f"Mesh Studio has this project open, so {tool} won't write its files (the person's unsaved work would "
+        "be overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
+
+
+def _own_for_files(root: str, tool: str) -> tuple[Any, dict[str, Any] | None]:
+    """The project at ``root`` owned for ``tool``'s direct write (``Ownership``, None), or (None, why not) (#462 R5).
+
+    The check above says no editor has it open; owning it (R2's lock, ``engine.editor.project_ownership``) is what
+    makes that still true while the tool reads and writes: a Studio opening meanwhile waits, then is turned away.
+    Owned elsewhere (a Studio that opened since the check, another editor, another writer), or ownership that can't
+    be established for any reason: refused, nothing read or written.
+
+    The project is the one ``root`` is in (``project_ownership.ownership_root``, #462 R4/R5 remediation): a ``root``
+    inside a project, an ordinary folder of it, is checked and owned as that project, never as a folder of its own."""
+    from engine.editor import project_ownership  # noqa: PLC0415  # (the editor package is heavy: only when writing)
+
+    try:
+        project = project_ownership.ownership_root(root)
+    except (OSError, ValueError) as exc:  # (a root that can't be resolved: whose project it is can't be told)
+        return None, {"ok": False, "reason": "ownership_unknown", "message": f"{tool} wrote nothing: {root} can't be resolved ({exc})."}
+    blocked = _files_blocked(str(project), tool)
+    if blocked is not None:
+        return None, blocked
+    try:
+        return project_ownership.acquire(project, project_ownership.AUTHORING, wait=0.5), None
+    except project_ownership.OwnedElsewhere as owned:
+        kind = owned.holder.get("kind")
+        if kind == project_ownership.AUTHORING:
+            return None, {"ok": False, "reason": "project_busy", "message": (
+                f"Another tool is writing this project's files right now, so {tool} wrote nothing. Try again in a moment.")}
+        if kind == project_ownership.EDITOR:
+            from engine import authoring_session  # noqa: PLC0415
+
+            return None, authoring_session.other_editor(project_ownership.EDITOR)
+        return None, {"ok": False, "reason": "studio_open", "message": (
+            f"Mesh Studio opened this project just now, so {tool} wrote nothing (the person's unsaved work would be "
+            "overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
+    except Exception as exc:  # noqa: BLE001  # REASON: ownership not established, however it failed, is a refusal, never a pass
+        from engine.logging_tools import get_logger  # noqa: PLC0415
+
+        logger = get_logger(__name__)  # (unexpected: kept with its traceback, and refused)
+        logger.warning("[Mesh][MCP] %s: the project's ownership couldn't be established: %s", tool, exc, exc_info=True)
+        return None, {"ok": False, "reason": "ownership_unknown",
+                      "message": f"{tool} wrote nothing: this project's ownership can't be established ({exc})."}
+
+
+def _owned_ops(root: str, held: Any) -> Any:
+    """``AIOps`` at ``root`` writing only files ``held`` covers (``AIOps(owner=...)``, ``Ownership.owns``: inside its
+    project, not in another project nested in it, and not once that project changed; #462 R5)."""
     from engine.ai_ops import AIOps
 
-    return _result_to_dict(AIOps(base_dir=root).create_scene(name, template))
+    return AIOps(base_dir=root, owner=held)
+
+
+def create_scene(name: str, template: str = "empty", root: str = ".") -> dict[str, Any]:
+    """Create a new scene from a template. Wraps ``AIOps.create_scene``; refused, writing nothing, while Mesh Studio
+    has the project open or that can't be told (F1), and done owning the project (R5: ``_own_for_files``)."""
+    held, refused = _own_for_files(root, "create_scene")
+    if refused is not None:
+        return {**refused, "data": None}
+    with held:
+        return _result_to_dict(_owned_ops(root, held).create_scene(name, template))
 
 
 def add_entity_from_prefab(
@@ -492,12 +616,13 @@ def add_entity_from_prefab(
     from (e.g. ``assets/prefabs.json``); when omitted the engine's default
     palette is used.
     """
-    from engine.ai_ops import AIOps
-
-    result = AIOps(base_dir=root).add_entity_from_prefab(
-        scene_path, prefab_name, float(x), float(y), prefab_path=prefab_path
-    )
-    return _result_to_dict(result)
+    op: dict[str, Any] = {"type": "add_entity_from_prefab", "scene_path": scene_path, "prefab_name": prefab_name,
+                          "x": float(x), "y": float(y)}
+    if prefab_path:
+        op["prefab_path"] = prefab_path
+    outcome = apply_ops([op], root=root, validate=False)  # as apply_ops: a Studio project goes the shared authoring path
+    result = (outcome.get("results") or [{"ok": False, "message": outcome.get("message", "")}])[0]
+    return {"ok": bool(result.get("ok")), "message": result.get("message", ""), "data": result.get("data") or {}}
 
 
 def live_add_entity_from_prefab(
@@ -507,8 +632,13 @@ def live_add_entity_from_prefab(
     name: str | None = None,
     scene_path: str | None = None,
     root: str = ".",
+    request_id: str = "",
 ) -> dict[str, Any]:
-    """Stage and accept one add-entity op in a running live editor session."""
+    """Stage and accept one add-entity op in a running live editor session.
+
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
     from engine.mcp_server.live_session_client import live_stage_and_accept_add_entity
 
     op: dict[str, Any] = {
@@ -521,7 +651,7 @@ def live_add_entity_from_prefab(
         op["name"] = name
     if scene_path:
         op["scene_path"] = scene_path
-    return live_stage_and_accept_add_entity(op, root=root)
+    return live_stage_and_accept_add_entity(op, root=root, request_id=request_id)
 
 
 def live_read_scene(compact: bool = False, root: str = ".") -> dict[str, Any]:
@@ -531,25 +661,25 @@ def live_read_scene(compact: bool = False, root: str = ".") -> dict[str, Any]:
     return _live_read_scene(compact=compact, root=root)
 
 
-def live_stage_proposal(ops: list[dict[str, Any]], root: str = ".") -> dict[str, Any]:
+def live_stage_proposal(ops: list[dict[str, Any]], root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Stage an AI live-op proposal in the running editor without mutating it."""
     from engine.mcp_server.live_session_client import live_stage_proposal as _live_stage_proposal
 
-    return _live_stage_proposal(ops, root=root)
+    return _live_stage_proposal(ops, root=root, request_id=request_id)
 
 
-def live_accept_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
+def live_accept_proposal(proposal_id: str, root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Accept a staged live proposal by id if it is still revision-current."""
     from engine.mcp_server.live_session_client import live_accept_proposal as _live_accept_proposal
 
-    return _live_accept_proposal(proposal_id, root=root)
+    return _live_accept_proposal(proposal_id, root=root, request_id=request_id)
 
 
-def live_reject_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
+def live_reject_proposal(proposal_id: str, root: str = ".", request_id: str = "") -> dict[str, Any]:
     """Reject and drop a staged live proposal by id."""
     from engine.mcp_server.live_session_client import live_reject_proposal as _live_reject_proposal
 
-    return _live_reject_proposal(proposal_id, root=root)
+    return _live_reject_proposal(proposal_id, root=root, request_id=request_id)
 
 
 # -------------------------------------------------------------- batch action
@@ -583,27 +713,37 @@ def apply_ops(
     failures are isolated (one bad op does not abort the rest); ``ok`` is the
     AND of every operation's success.
     """
-    from engine.ai_ops import AIOps
+    try:
+        changes = _studio_changes(list(operations), root)
+    except _RefusedOps as exc:
+        return {"ok": False, "message": str(exc), "results": [
+            {"type": op.get("type"), "ok": False, "message": str(exc), "data": {}}
+            for op in operations if isinstance(op, dict)]}
+    if changes is not None:  # a Studio project: the shared, validated authoring path
+        return _apply_ops_through_authoring(list(operations), changes, root)
+    held, refused = _own_for_files(root, "apply_ops")  # (R5: owned from before the files are read until validated)
+    if refused is not None:
+        return {**refused, "results": []}
+    with held:
+        ops_runner = _owned_ops(root, held)
+        outcome = ops_runner.apply_job({"operations": list(operations)})
 
-    ops_runner = AIOps(base_dir=root)
-    outcome = ops_runner.apply_job({"operations": list(operations)})
+        annotated: list[dict[str, Any]] = []
+        raw_results = outcome.get("results", []) if isinstance(outcome, dict) else []
+        for op, result in zip(operations, raw_results):
+            entry = dict(result) if isinstance(result, dict) else {"ok": False, "message": str(result)}
+            if isinstance(op, dict):
+                entry["type"] = op.get("type")
+            annotated.append(entry)
 
-    annotated: list[dict[str, Any]] = []
-    raw_results = outcome.get("results", []) if isinstance(outcome, dict) else []
-    for op, result in zip(operations, raw_results):
-        entry = dict(result) if isinstance(result, dict) else {"ok": False, "message": str(result)}
-        if isinstance(op, dict):
-            entry["type"] = op.get("type")
-        annotated.append(entry)
-
-    payload: dict[str, Any] = {
-        "ok": bool(outcome.get("ok", False)) if isinstance(outcome, dict) else False,
-        "results": annotated,
-    }
-    if validate:
-        payload["validation"] = _result_to_dict(
-            ops_runner.run_validation(validate_scene_path)
-        )
+        payload: dict[str, Any] = {
+            "ok": bool(outcome.get("ok", False)) if isinstance(outcome, dict) else False,
+            "results": annotated,
+        }
+        if validate:
+            payload["validation"] = _result_to_dict(
+                ops_runner.run_validation(validate_scene_path)
+            )
     return payload
 
 
@@ -808,3 +948,283 @@ def engine_overview(root: str = ".") -> dict[str, Any]:
 def engine_overview_json(root: str = ".") -> str:
     """``engine_overview`` rendered as a JSON string (for MCP resource bodies)."""
     return json.dumps(engine_overview(root), indent=2, sort_keys=True)
+
+
+# ---------------------------------------------------------------- authoring (one API for Studio, AI and CLI)
+#
+# The same validated operations Mesh Studio uses (engine.authoring over engine.project_ops). When Mesh
+# Studio has the project open, changes become a proposal the person reviews there; otherwise they
+# apply to the files. Works the same for any MCP client: nothing here is specific to one AI.
+
+
+def authoring_operations() -> dict[str, Any]:
+    """Every change you can make to a Mesh project, with its settings and what it does.
+
+    Generated from the engine's own operations, so it is always current. Use the names with
+    propose_changes or apply_changes, e.g. {"op": "place_prefab", "prefab": "person", "x": 320, "y": 224}.
+    """
+    from engine import authoring_session
+
+    return authoring_session.operations()
+
+
+def read_project(root: str = ".") -> dict[str, Any]:
+    """Every room of the project with its objects and map, and its Blender ``models`` (HD-2D structures).
+
+    If Mesh Studio has it open, this is what the person sees right now (unsaved edits included)
+    plus a ``revision_id`` to pass to propose_changes as ``base_revision_id`` (``revision`` is its
+    number within this Studio session, for showing only). Place a model with
+    {"op": "place_structure", "model": "<its id>", "x": ..., "y": ...}; models are imported by the person.
+    """
+    from engine import authoring_session
+
+    return authoring_session.read_project(root)
+
+
+def propose_changes(changes: list[dict[str, Any]], title: str = "", base_revision: int | None = None,
+                    root: str = ".", request_id: str = "", base_revision_id: str | None = None) -> dict[str, Any]:
+    """Propose changes to the project open in Mesh Studio; the person there accepts or rejects them.
+
+    ``changes`` is a list of operations (see authoring_operations). Give ``base_revision_id``: the
+    ``revision_id`` from read_project, so Studio can tell your changes from the person's since then: separate edits both
+    survive; anything your changes would write over what the person changed since is reported as a
+    conflict and nothing is applied, including a value you give that equals what you read (both x
+    and y of a move_entity, say). Invalid changes are
+    refused at once with the reason. A revision Studio no longer keeps is refused
+    (``base_revision_unavailable``: read again), as is one that isn't a revision
+    (``invalid_base_revision``) and one read in another Studio session or project
+    (``revision_from_another_session``: Studio was closed and opened again since); none is replaced
+    by another revision. ``base_revision`` alone (a number: older clients) is refused
+    (``revision_id_required``): numbers start again at 0 each time Studio opens the project, so it
+    can't say which session it was read in. Leave both out to propose against the project as it is
+    now (the proposal's ``base_revision_id`` is then null). At most 20
+    proposals wait for the person at once: more are refused (``too_many_pending``) until some are decided.
+    Returns ``{ok, proposal_id, proposal{summary, status}}``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import authoring_session
+
+    return authoring_session.propose(root, changes, title=title, base_revision=base_revision, source="an MCP client",
+                                     request_id=request_id, base_revision_id=base_revision_id)
+
+
+def apply_changes(changes: list[dict[str, Any]], root: str = ".", dry_run: bool = False,
+                  request_id: str = "") -> dict[str, Any]:
+    """Apply changes to the project files (all or nothing), or preview them with ``dry_run``.
+
+    If Mesh Studio has the project open, the changes are proposed there instead: files are never
+    written behind the person's back. Returns ``{ok, summary, created, written}`` or a refusal.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): for a proposal, send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import authoring_session
+
+    return authoring_session.apply(root, changes, dry_run=dry_run, source="an MCP client", request_id=request_id)
+
+
+def proposal_status(proposal_id: str, root: str = ".") -> dict[str, Any]:
+    """What happened to a proposal: pending, accepted (with the ids it created), rejected or conflict."""
+    from engine import authoring_session
+
+    return authoring_session.proposal_status(root, proposal_id)
+
+
+def withdraw_proposal(proposal_id: str, root: str = ".", request_id: str = "") -> dict[str, Any]:
+    """Take back a proposal that is still waiting in Mesh Studio.
+
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import authoring_session
+
+    return authoring_session.withdraw(root, proposal_id, request_id=request_id)
+
+
+def request_status(request_id: str, root: str = ".") -> dict[str, Any]:
+    """What became of a change sent to Mesh Studio that answered ``reason: "outcome_unknown"`` (with a ``request_id``).
+
+    ``state``: ``"queued"`` (not started yet), ``"started"`` (running now), ``"finished"`` (``result`` is its answer,
+    e.g. a proposal's id) or ``"cancelled"`` (it never ran and never will; nothing changed). Ask this before sending
+    the change again, so it isn't done twice. A change Studio answered ``reason: "timeout"`` was cancelled, and is
+    safe to send again. Studio remembers ended requests for 10 minutes.
+    """
+    from engine import authoring_session
+
+    return authoring_session.request_status(root, request_id)
+
+
+def debug_runtime_snapshot(events: int = 20, root: str = ".") -> dict[str, Any]:
+    """What the game running in Mesh Studio's play-test is doing now, read from the running game (not the files).
+
+    ``status`` is ``"playing"`` or ``"not_playing"`` (Studio is editing: nothing runs). While playing:
+    ``scene`` (the room running), ``player`` (its position, pixels), ``game_state`` (flags, counters
+    and the game's other values: its variables), ``quests`` (each quest's status and stages), ``events`` (the play-test's
+    events in order: ``seq``, ``type``, ``entity``, ``payload``; the last ``events``, at most 50) and
+    ``diagnostics`` (errors the engine caught since the play-test started). ``studio`` is what the
+    person has open in the editor, which play-testing never changes. A part the game doesn't have reads
+    ``{"available": false, "reason": ...}``. Reading changes nothing. Compare ``events.last_seq`` and
+    ``sequence`` between calls to see what happened in between.
+    """
+    from engine import runtime_debug
+
+    return runtime_debug.request_snapshot(root, events)
+
+
+def debug_interaction(entity_id: str, root: str = ".") -> dict[str, Any]:
+    """Why the player can or can't use one object in Mesh Studio's running play-test, from the running game.
+
+    ``entity_id``: the object's id (a snapshot's ``nearby`` lists them). Returns ``how`` it is used
+    (``interact`` or ``touch``), ``available`` (usable now; a touch door: the player is in its doorway, while
+    ``touch.on_contact`` says whether walking into it would use it), ``blocking`` (the first condition that
+    fails: ``in_room``, ``flag_gate``, ``shown``, ``behaviours``, ``distance``, ``facing``, ``selection``, or a
+    touch door's own rules, such as ``triggered_by`` and ``overlapping``), ``observed`` (every condition checked,
+    with its values), ``flags`` (their current values), ``flag_sources`` (where the project sets them: dialogue
+    choices, SetGameStateOnEvent, quest rewards), ``dialogue`` (a conversation's choices: ``conditions_met`` apart
+    from ``selectable_now``, which also needs the choice's node showing), ``not_analysed`` (behaviours whose own
+    rules aren't explained) and ``possible_causes`` (hypotheses, kept apart from what was observed).
+    Reading changes nothing and needs no permission.
+    """
+    from engine import runtime_diagnose
+
+    return runtime_diagnose.request(root, entity_id)
+
+
+def debug_start_playtest(root: str = ".", request_id: str = "") -> dict[str, Any]:
+    """Start a play-test in Mesh Studio (as its Play button), if the person allowed AI play-test control.
+
+    Refused with ``playtest_control_off`` until the person turns it on (Studio: AI panel), and with
+    ``studio_busy`` while they are typing, dragging or answering a question. Never saves or changes the
+    project. Already playing: ``status: "already_playing"``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import runtime_debug
+
+    return runtime_debug.request_play(root, request_id)
+
+
+def debug_stop_playtest(root: str = ".", request_id: str = "") -> dict[str, Any]:
+    """Stop Mesh Studio's play-test (as its Stop button): back to editing, the project as the person left it.
+
+    Needs the same permission as debug_start_playtest. Not playing: ``status: "not_playing"``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import runtime_debug
+
+    return runtime_debug.request_stop(root, request_id)
+
+
+def debug_play_action(action: str, direction: str = "", frames: int = 30, choice: int | str | None = None,
+                      root: str = ".", request_id: str = "") -> dict[str, Any]:
+    """Play the running Mesh Studio play-test with the player's own controls, one bounded action at a time.
+
+    ``action``: ``"move"`` (hold ``direction`` up/down/left/right for ``frames``, 1 to 120), ``"interact"``
+    (press the interact key: talk to or use what's in front of the player), ``"advance"`` (the next line of a
+    conversation), ``"attack"`` (press the attack key once; the game's Combat cooldown and aim apply, so standing
+    still it aims as the game aims it, and a defeated enemy is gone from the snapshot's ``nearby``) or
+    ``"choose"`` (a conversation's choice: its ``index`` or its exact words, as listed in a
+    snapshot's ``dialogue.choices``). The game's rules apply, as for a player.
+
+    Returns ``{ok, action{status, before, after, dialogue}, snapshot}``: where the player was and is, the
+    conversation now, and a snapshot of the game (``nearby`` lists what's around the player). Refused with
+    ``gameplay_control_off`` until the person allows AI play in Studio's AI panel (separate from starting
+    play-tests), and with a reason when it doesn't fit (``not_playing``, ``dialogue_open``, ``no_dialogue``,
+    ``choice_needed``, ``no_choices``, ``choice_not_available``, ``game_paused``, ``input_locked``,
+    ``person_using_controls``, ``action_running``, ``invalid_action``). An action the person interrupts
+    (taking back the permission, stopping, pausing) comes back ``cancelled``.
+    ``request_id`` (optional; 1-64 letters, digits, ``-``, ``_``): starting the action: send the same one again to retry safely, e.g. after
+    ``outcome_unknown``: it is done at most once (#462 S3).
+    """
+    from engine import runtime_play
+
+    request: dict[str, Any] = {"action": action}
+    if action == "move":
+        request.update(direction=direction, frames=frames)
+    if action == "choose":
+        request["choice"] = choice
+    return runtime_play.request_action(root, request, request_id=request_id)
+
+
+# The everyday apply_ops operations, on a Mesh Studio project, run through the same validated
+# authoring path (and so never overwrite an open Studio's unsaved work). Others keep using AIOps.
+_ADAPTED_OPS = {"add_entity_from_prefab", "delete_entity", "set_behaviour_params", "paint_tiles",
+                "add_light", "update_light", "delete_light"}
+
+
+class _RefusedOps(Exception):
+    """An apply_ops batch refused before any change was built."""
+
+
+def _studio_changes(operations: list[dict[str, Any]], root: str) -> list[dict[str, Any]] | None:
+    """apply_ops operations as authoring changes, if they all target rooms of a Studio project."""
+    if not operations or not all(isinstance(op, dict) and op.get("type") in _ADAPTED_OPS for op in operations):
+        return None
+    from engine import authoring, authoring_session
+    from engine import project_ops as ops_
+
+    try:
+        project = authoring_session.open_project(root)
+    except authoring.ChangeError:
+        return None
+    rooms = {path.replace("\\", "/").lstrip("./"): key for key, _label, path in project.rooms()}
+    changes: list[dict[str, Any]] = []
+    for op in operations:
+        room = rooms.get(str(op.get("scene_path") or "").replace("\\", "/").lstrip("./"))
+        if room is None:
+            return None
+        kind = op["type"]
+        if kind == "add_entity_from_prefab":
+            changes.append({"op": "place_prefab", "room": room, "prefab": op.get("prefab_name"),
+                            "x": op.get("x", 0), "y": op.get("y", 0)})
+        elif kind == "delete_entity":
+            changes.append({"op": "remove_entity", "room": room, "entity_id": op.get("entity_id")})
+        elif kind == "set_behaviour_params":
+            entity_ref, behaviour = op.get("entity_id"), op.get("behaviour_name")
+            scene = project.scene(room)
+            entity = next((e for e in ops_.entities(scene) if entity_ref in (e.get("id"), e.get("name"))), None)
+            if entity is not None and behaviour not in ops_.entity_behaviours(entity):
+                changes.append({"op": "add_behaviour", "room": room, "entity_id": entity_ref, "behaviour": behaviour})
+            for param, value in (op.get("params") or {}).items():
+                changes.append({"op": "set_behaviour_param", "room": room, "entity_id": entity_ref,
+                                "behaviour": behaviour, "param": param, "value": value})
+        elif kind == "add_light":
+            light = dict(op.get("light") or {})
+            changes.append({"op": "add_light", "room": room, "x": light.pop("x", 0.0), "y": light.pop("y", 0.0),
+                            "color": light.pop("color", "#ffddaa"), "radius": light.pop("radius", 160.0)})
+            if light:  # the rest as update_light takes it, on the light just added
+                changes.append({"op": "set_light", "room": room, "index": f"@{len(changes) - 1}", **light})
+        elif kind == "update_light":
+            changes.append({"op": "set_light", "room": room, "index": int(op.get("index", 0)), **(op.get("patch") or {})})
+        elif kind == "delete_light":
+            changes.append({"op": "remove_light", "room": room, "index": int(op.get("index", 0))})
+        else:  # paint_tiles: one change per (layer, tile)
+            from engine.ai_ops import validate_paint_ops
+
+            cells_in = op.get("ops") or []
+            # (out-of-map cells are ignored by project_ops.paint_tiles, so no map bound here)
+            error = validate_paint_ops(cells_in)
+            if error:
+                raise _RefusedOps(error)
+            groups: dict[tuple[str, int], list[list[int]]] = {}
+            for cell in cells_in:
+                groups.setdefault((cell.get("layer", "ground"), cell.get("gid", 0)), []).append(
+                    [cell.get("col", 0), cell.get("row", 0)])
+            for (layer, gid), cells in groups.items():
+                changes.append({"op": "paint_tiles", "room": room, "layer": layer, "cells": cells, "tile": gid})
+    return changes
+
+
+def _apply_ops_through_authoring(operations: list[dict[str, Any]], changes: list[dict[str, Any]],
+                                 root: str) -> dict[str, Any]:
+    from engine import authoring_session
+
+    outcome = authoring_session.apply(root, changes, source="an MCP client (apply_ops)")
+    message = outcome.get("message") or "; ".join(outcome.get("summary") or []) or "applied"
+    results: list[dict[str, Any]] = [{"type": op.get("type"), "ok": bool(outcome.get("ok")), "message": message, "data": {}}
+                                     for op in operations]
+    payload = {"ok": bool(outcome.get("ok")), "results": results, "mode": outcome.get("source") or outcome.get("mode"),
+               "authoring": outcome}
+    payload["validation"] = {"ok": bool(outcome.get("ok")), "message": "checked by each operation (scene schema)"}
+    return payload

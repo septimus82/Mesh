@@ -259,6 +259,18 @@ class ActionListRunnerBehaviour(Behaviour):
                 values.append(name)
         return values
 
+    def subscribed_event_types(self) -> frozenset[str] | None:
+        return frozenset(self.listen_events)
+
+    def on_event(self, event: Any) -> None:
+        """The live game's event path (the scene's per-frame delivery); without it no action list ever ran in play.
+        The episode and campaign replay harnesses own a separate gameplay bus and call ``handle_event`` themselves,
+        so this stands down there: one event, one run (as QuestHook)."""
+        if getattr(self.window, "gameplay_event_bus", None) is not None:
+            return
+        payload = getattr(event, "payload", None)
+        self.handle_event(str(getattr(event, "type", "")), payload if isinstance(payload, dict) else {})
+
     def handle_event(self, event_type: str, payload: Dict[str, Any]) -> bool:
         """Handle an incoming event.
         
@@ -401,7 +413,7 @@ class ActionListRunnerBehaviour(Behaviour):
 
         # Find timer behaviour
         timer_id = str(action.get("timer_id", "")).strip()
-        behaviours = getattr(target, "behaviours", None) or []
+        behaviours = getattr(target, "mesh_behaviours_runtime", None) or []
 
         for behaviour in behaviours:
             if type(behaviour).__name__ != "TimerBehaviour":
@@ -435,7 +447,7 @@ class ActionListRunnerBehaviour(Behaviour):
 
         # Find dialogue runner behaviour
         dialogue_id = str(action.get("dialogue_id", "")).strip()
-        behaviours = getattr(target, "behaviours", None) or []
+        behaviours = getattr(target, "mesh_behaviours_runtime", None) or []
 
         for behaviour in behaviours:
             if type(behaviour).__name__ != "DialogueRunnerBehaviour":

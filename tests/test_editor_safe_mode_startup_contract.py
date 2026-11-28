@@ -16,6 +16,7 @@ def _make_editor(repo_root: Path) -> SimpleNamespace:
     window = SimpleNamespace(
         load_scene=MagicMock(),
         scene_controller=SimpleNamespace(current_scene_path=None),
+        engine_config=SimpleNamespace(_mesh_launch_mode="editor"),  # the editor reopens its last scene
     )
     return SimpleNamespace(
         window=window,

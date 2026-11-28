@@ -1,0 +1,128 @@
+{
+ "engine": "<scratch>\\r1_new_bundle\\project",
+ "project": "<scratch>\\r1_new_bundle\\project",
+ "bundle": "<scratch>\\r1_export_fixed\\The Last Watchfire",
+ "A": {
+  "role": "A",
+  "scene_loads": [
+   "packs/core_regions/scenes/start.json"
+  ],
+  "new_game": {
+   "room": "start",
+   "story_flags": [],
+   "all_flags": [
+    "hint_shown_controls"
+   ],
+   "counters": {}
+  },
+  "opening": [
+   "Traveller! Thank the stars. The watchfire at the Old Crossing has gone dark.",
+   "Without it, anyone on the forest road tonight will lose their way. Will you light it before nightfall?",
+   "[choices: I'll light the watchfire. | Not right now.]",
+   "[chose: I'll light the watchfire.]",
+   "Bless you. Take my flint, and follow the road east, past the lamps, to the crossing."
+  ],
+  "marker": [
+   "The kindling in the firepit is dry, and you carry the steward's flint.",
+   "[choices: Strike the flint | Not yet]",
+   "[chose: Strike the flint]",
+   "Sparks catch. Flames climb the logs, and warm light spills across the crossing."
+  ],
+  "before_save": {
+   "room": "old_crossing",
+   "story_flags": [
+    "task_accepted",
+    "watchfire_lit"
+   ],
+   "fires": [
+    {
+     "name": "Watchfire",
+     "burning": true
+    }
+   ]
+  },
+  "saved": true,
+  "loaded": true,
+  "after_load": {
+   "room": "slot_a",
+   "story_flags": [
+    "task_accepted",
+    "watchfire_lit"
+   ],
+   "fires": [
+    {
+     "name": "Watchfire",
+     "burning": true
+    }
+   ]
+  }
+ },
+ "files_after_A": {
+  "saves": [
+   "slot_a.json"
+  ],
+  "session_last_scene_path": "saves/slot_a.json",
+  "workspace_last_scene_id": null
+ },
+ "B": {
+  "role": "B",
+  "scene_loads": [
+   "packs/core_regions/scenes/start.json"
+  ],
+  "new_game": {
+   "room": "start",
+   "story_flags": [],
+   "all_flags": [
+    "hint_shown_controls"
+   ],
+   "counters": {}
+  },
+  "opening": [
+   "Traveller! Thank the stars. The watchfire at the Old Crossing has gone dark.",
+   "Without it, anyone on the forest road tonight will lose their way. Will you light it before nightfall?",
+   "[choices: I'll light the watchfire. | Not right now.]",
+   "[chose: Not right now.]",
+   "Then I'll keep waiting... but the dark won't."
+  ],
+  "crossing": {
+   "room": "old_crossing",
+   "story_flags": [],
+   "fires": [
+    {
+     "name": "Cold watchfire",
+     "burning": false
+    }
+   ]
+  },
+  "loaded": true,
+  "after_load": {
+   "room": "slot_a",
+   "story_flags": [
+    "task_accepted",
+    "watchfire_lit"
+   ],
+   "fires": [
+    {
+     "name": "Watchfire",
+     "burning": true
+    }
+   ]
+  }
+ },
+ "files_after_B": {
+  "saves": [
+   "slot_a.json"
+  ],
+  "session_last_scene_path": "saves/slot_a.json",
+  "workspace_last_scene_id": null
+ },
+ "verdict": {
+  "checks": {
+   "new_game_story_flags_clear": true,
+   "opening_is_fresh_introduction": true,
+   "watchfire_starts_cold": true,
+   "explicit_load_restores_progress": true
+  },
+  "pass": true
+ }
+}

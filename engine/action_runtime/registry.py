@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from engine import savegame
 from engine.action_runtime.constants import ActionHandler
 from engine.constants import (
@@ -16,10 +18,31 @@ def _noop(_window: object) -> None:
     return
 
 
+def legacy_editor_allowed(window: object) -> bool:
+    """Whether F4 may open the legacy editor in this window. Mesh Studio is the editor: a game launch (``mesh play``,
+    a standalone game) doesn't drop into the legacy editor unless asked for with ``MESH_LEGACY_EDITOR=1``. An editor
+    launch (``mesh edit`` on a project without a world) keeps it, and an open editor can always be left."""
+    editor = getattr(window, "editor_controller", None)
+    if editor is not None and (bool(getattr(editor, "active", False))
+                               or bool(getattr(getattr(editor, "play_session", None), "is_playing", False))):
+        return True
+    if os.environ.get("MESH_LEGACY_EDITOR") == "1":
+        return True
+    return getattr(getattr(window, "engine_config", None), "_mesh_launch_mode", None) == "editor"
+
+
+def dev_tools_allowed(window: object) -> bool:
+    """Whether the developer tools are on: the console and F3 debug mode, and the scene saving, painting and
+    capture it unlocks. A game as players run it (``main.py``, an export) has none: they overwrote the game's files
+    (#664). A dev launch keeps them: ``mesh play`` (launch mode "play"), and wherever the legacy editor is allowed."""
+    mode = getattr(getattr(window, "engine_config", None), "_mesh_launch_mode", None)
+    return mode == "play" or legacy_editor_allowed(window)
+
+
 def _toggle_editor(window: object) -> None:
     editor = getattr(window, "editor_controller", None)
     toggle = getattr(editor, "toggle", None) if editor is not None else None
-    if callable(toggle):
+    if callable(toggle) and legacy_editor_allowed(window):
         toggle()
 
 
@@ -38,11 +61,17 @@ def _toggle_help(window: object) -> None:
         toggle()
 
 
-def _toggle_variant_picker(window: object) -> None:
-    overlay = getattr(window, "variant_picker_overlay", None)
+def _toggle_dev_overlay(window: object, name: str) -> None:
+    """The variant picker and the scene/world browser warp the player to any world or room: a developer launch only
+    (S1 D4). (It never opens in a game launch, so there is nothing to close there; Esc closes either.)"""
+    overlay = getattr(window, name, None)
     toggle = getattr(overlay, "toggle", None) if overlay is not None else None
-    if callable(toggle):
+    if callable(toggle) and dev_tools_allowed(window):
         toggle()
+
+
+def _toggle_variant_picker(window: object) -> None:
+    _toggle_dev_overlay(window, "variant_picker_overlay")
 
 
 def _toggle_inspector(window: object) -> None:
@@ -53,10 +82,7 @@ def _toggle_inspector(window: object) -> None:
 
 
 def _toggle_dev_browser(window: object) -> None:
-    overlay = getattr(window, "dev_browser_overlay", None)
-    toggle = getattr(overlay, "toggle", None) if overlay is not None else None
-    if callable(toggle):
-        toggle()
+    _toggle_dev_overlay(window, "dev_browser_overlay")
 
 
 def _toggle_quest_log(window: object) -> None:
@@ -168,7 +194,19 @@ def _quickload_action(window: object) -> None:
             hud.enqueue_toast("No Save Found")
 
 
+def _waiting_for_switched_room(window: object, action: str) -> bool:
+    """SaveManager's #721 refusal for the snapshot actions too (#723): they write and read quick.json themselves."""
+    if getattr(window, "switch_room_pending", False) is not True:
+        return False
+    refuse = getattr(getattr(window, "save_manager", None), "waiting_for_switched_room", None)
+    if callable(refuse):
+        refuse(action)  # (it says why, as a save or load does)
+    return True
+
+
 def _quick_save_snapshot_action(window: object) -> None:
+    if _waiting_for_switched_room(window, "Saved"):
+        return
     hud = getattr(window, "player_hud", None)
 
     ok = savegame.save_quick_snapshot(window)
@@ -177,6 +215,8 @@ def _quick_save_snapshot_action(window: object) -> None:
 
 
 def _quick_load_snapshot_action(window: object) -> None:
+    if _waiting_for_switched_room(window, "Loaded"):
+        return
     hud = getattr(window, "player_hud", None)
 
     ok = savegame.load_quick_snapshot(window)

@@ -1,9 +1,0 @@
-{
-  "events": [
-    {
-      "description": "e",
-      "name": "ep.entered",
-      "payload": {}
-    }
-  ]
-}

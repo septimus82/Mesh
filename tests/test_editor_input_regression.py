@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 import arcade
@@ -72,6 +73,7 @@ def test_selection_picks_topmost_and_arrow_nudges_and_pushes_undo(monkeypatch) -
 
     window = EditorWindowStub(scene_controller=scene)
     controller = EditorModeController(as_game_window(window))
+    window.engine_config = SimpleNamespace(_mesh_launch_mode="editor")  # an editor launch: F4 may open the editor (#660)
     controller.toggle()
     assert controller.active is True
     assert window.paused is True
@@ -80,7 +82,11 @@ def test_selection_picks_topmost_and_arrow_nudges_and_pushes_undo(monkeypatch) -
     assert ok is True
     assert controller.selected_entity is s2
     assert controller.entity_dragging is True
-    assert controller.entity_drag_start_pos == (10.0, 20.0)
+    # The drag starts from the click's world point, not the sprite's position: compute_dragged_xy moves the
+    # sprite by the mouse's travel, so it keeps the grab offset instead of jumping to the cursor. That design
+    # came in with 2909190 ("Fix editor viewport drag"); this line still expected the old one and failed since.
+    # test_viewport_entity_drag_init_contract.py pins the same contract.
+    assert controller.entity_drag_start_pos == (5.0, 5.0)
 
     controller.entity_dragging = False
     controller.entity_drag_start_pos = None

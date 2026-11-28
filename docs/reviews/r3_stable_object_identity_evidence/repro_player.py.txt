@@ -1,0 +1,101 @@
+"""R3 re-review (#462): a line of the shared player's conversation, deleted, gives its id to the line written next?
+
+    py -3.13 repro_player.py REPO OUT
+
+REPO: the checkout whose engine and tests are used. OUT: a new, empty folder. A real StudioAIHost on its loopback
+bridge; the AI through engine.authoring_session with R1's base_revision_id (same session); the person edits with the
+operations Studio's conversation editor calls, through Project.edit_scene; acceptance is StudioAIHost.accept.
+Two variants: the replacement written in the same room, and in another room (the player is one in every room).
+"""
+import copy
+import json
+import sys
+import threading
+import time
+from pathlib import Path
+
+REPO, OUT = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()
+assert not OUT.exists() or not any(OUT.iterdir()), f"{OUT} is not empty"
+OUT.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(REPO))
+
+from engine import authoring_session  # noqa: E402
+from engine import project_ops as ops  # noqa: E402
+from engine.project_scaffold import create_project  # noqa: E402
+from engine.studio_ai import StudioAIHost  # noqa: E402
+from engine.studio_project import Project  # noqa: E402
+from tests.test_studio_object_identity import _Studio  # noqa: E402
+
+
+def session(name):
+    root = OUT / name
+    create_project(root, "Game", template_id="hd2d_rpg")
+    person = _Studio(Project(root, json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"]))
+    host = StudioAIHost(person)
+    host.start()
+    stop = threading.Event()
+
+    def pump():
+        while not stop.is_set():
+            host.drain()
+            time.sleep(0.01)
+
+    threading.Thread(target=pump, daemon=True).start()
+    return root, person, host, lambda: (stop.set(), host.stop())
+
+
+def player(project, key):
+    return ops.shared_player_ids(project._room(key))[0]
+
+
+def lines(project, key):
+    return copy.deepcopy(ops.conversation(ops.find_entity(project.scene(key), player(project, key)))["nodes"])
+
+
+def add_line(project, key, text):
+    made = []
+
+    def change(scene):
+        out, node_id = ops.add_line(scene, player(project, key), text="...")
+        made.append(node_id)
+        return out
+
+    project.edit_scene(change, key)
+    project.edit_scene(lambda s: ops.set_line(s, player(project, key), made[0], text=text), key)
+    return made[0]
+
+
+def accepted(result):
+    return {k: result.get(k) for k in ("ok", "reason") if k in result} | (
+        {"conflict at": [c.get("path") or c.get("where") or str(c)[:80] for c in result.get("conflicts", [])][:2]}
+        if result.get("conflicts") else {}) | ({"message": result["message"][:160]} if result.get("message") else {})
+
+
+steps = {}
+for variant in ("same room", "another room"):
+    root, person, host, end = session(variant.replace(" ", "_"))
+    project = person.project
+    start = project.current
+    other = next(k for k, _l, _p in project.rooms() if k != start)
+    where = start if variant == "same room" else other
+    project.edit_scene(lambda s: ops.set_dialogue_text(s, player(project, start), "Morning."))  # the player talks
+    original = add_line(project, start, "The bridge is out.")
+    read = authoring_session.read_project(root)
+    staged = authoring_session.propose(root, [{"op": "set_line", "entity_id": player(project, start),
+                                               "node_id": original, "speaker": "Ghost"}],
+                                       title="An AI's change", base_revision_id=read["revision_id"])
+    assert staged["ok"], staged
+    ghost = next(p for p in host.proposals if p.proposal_id == staged["proposal"]["proposal_id"])
+    project.edit_scene(lambda s: ops.remove_line(s, player(project, start), original), start)  # deleted ...
+    replacement = add_line(project, where, "The ferry runs at dawn.")  # ... and another written
+    before = lines(project, where).get(replacement)
+    steps[f"shared player, replacement written in {variant}"] = {
+        "player in that room": player(project, where), "original": original, "AI proposal (preview)": ghost.summary,
+        "based on": read["revision_id"].split(":")[1], "replacement": replacement,
+        "replacement before accept": before, "accept": accepted(host.accept(ghost)),
+        "replacement after": lines(project, where).get(replacement),
+        "same in every room": all(lines(project, k) == lines(project, start) for k, _l, _p in project.rooms())}
+    end()
+text = json.dumps(steps, indent=1, default=str)
+print(text)
+(OUT / "repro_player.json").write_text(text + "\n", encoding="utf-8")

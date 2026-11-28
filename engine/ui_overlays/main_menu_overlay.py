@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import sys
 from dataclasses import dataclass
@@ -12,7 +13,7 @@ import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
-from ._settings_data import SETTINGS_ROWS
+from ._settings_data import SETTINGS_ROWS, toast_settings_not_saved, toast_settings_saved
 from .common import (
     UIElement,
     _draw_rectangle_filled,
@@ -71,17 +72,25 @@ def compute_menu_panel_layout(
 ) -> ProjectBrowserLayout:
     panel_width = min(720.0, max(420.0, float(width) - 96.0))
     panel_height = min(520.0, max(360.0, float(height) - 112.0))
+    row_height = 52.0
+    gap = 10.0
+    first_row = 120.0  # below the title and subtitle
+    rows = max(0, int(item_count))
+    need = first_row + rows * (row_height + gap) - gap + 48.0  # the title, the cards, the footer's room below
+    if rows and need > panel_height:  # more rows than this window shows (Settings at 640 x 480: Milestone 21B.1)
+        panel_height = max(panel_height, min(need, float(height) - 16.0))  # use more of the window first,
+        first_row, gap = 100.0, 6.0  # then close up: the cards just under the subtitle, the rows nearer
+        pitch = (panel_height - first_row - 44.0 + gap) / rows
+        row_height = max(48.0, min(row_height, pitch - gap))  # (48 px: a card's name and its value still fit)
     left = (float(width) - panel_width) / 2.0
     bottom = (float(height) - panel_height) / 2.0
     panel = ProjectBrowserRect(left=left, right=left + panel_width, bottom=bottom, top=bottom + panel_height)
 
     card_left = panel.left + 34.0
     card_width = panel.width - 68.0
-    row_height = 52.0
-    gap = 10.0
     cards: list[ProjectBrowserRect] = []
-    for index in range(max(0, int(item_count))):
-        row_top = panel.top - 120.0 - index * (row_height + gap)
+    for index in range(rows):
+        row_top = panel.top - first_row - index * (row_height + gap)
         cards.append(
             ProjectBrowserRect(
                 left=card_left,
@@ -116,6 +125,14 @@ def compute_project_browser_menu_layout(
 
 def _is_web_runtime() -> bool:
     return sys.platform == "emscripten" or os.environ.get("PYGBAG") == "1"
+
+
+def _tool_available(module: str) -> bool:
+    """Whether a developer tool (a ``tooling`` module of the engine checkout) can be imported here."""
+    try:
+        return importlib.util.find_spec(module) is not None
+    except (ImportError, ValueError):
+        return False
 
 
 def get_menu_legend(input_source: str) -> str:
@@ -225,6 +242,9 @@ class MainMenuOverlay(UIElement):
         flusher = getattr(editor, "_flush_workspace_autosave", None) if editor is not None else None
         if callable(flusher):
             flusher()
+        from ..repo_root import get_repo_root  # noqa: PLC0415
+
+        previous_project = Path(get_repo_root()).resolve()  # (what the menu lists as "Use current repo")
         os.environ["MESH_REPO_ROOT"] = root_text
         reset_path_caches()
         workspace_owner = getattr(self.window, "editor", None)
@@ -241,6 +261,29 @@ class MainMenuOverlay(UIElement):
         if is_standalone_project_root(Path(root_text)):
             pin_launched_project_root(Path(root_text), config=self.window.engine_config)
             setattr(self.window, "standalone_launch", True)
+        # The game's saves and cutscenes are the new project's now, not the folder Mesh runs in (#623); the item
+        # database follows engine.paths.project_root by itself.
+        relocate = getattr(getattr(self.window, "save_manager", None), "relocate", None)
+        if callable(relocate):
+            relocate()
+        reload_cutscenes = getattr(getattr(self.window, "cutscene_controller", None), "load_project_cutscenes", None)
+        if callable(reload_cutscenes):
+            reload_cutscenes()
+        relocate_quests = getattr(getattr(self.window, "quest_manager", None), "relocate", None)  # (#675)
+        if callable(relocate_quests):
+            relocate_quests()
+        # (#675: another project starts as New Game does: none of the previous one's progress, nor its room, goes into
+        # this one's saves. Choosing the project already open keeps the game going.)
+        if Path(root_text).expanduser().resolve() != previous_project:
+            self._reset_session()
+            # (#721: until a room of this project loads, the previous one's room is still built: no save or load)
+            setattr(self.window, "switch_room_pending", True)
+            self._request_start_scene()
+            editor = getattr(self.window, "editor_controller", None)
+            enqueue = getattr(getattr(self.window, "player_hud", None), "enqueue_toast", None)
+            if editor is not None and getattr(editor, "active", False) is True and callable(enqueue):
+                enqueue(f"Switched to {Path(root_text).name}: its start room loads when the editor closes; "
+                        "saving waits until then", seconds=6.0)
 
         # Reload workspace settings if editor is present
         if hasattr(self.window, "editor") and callable(getattr(self.window.editor, "load_workspace", None)):
@@ -333,10 +376,14 @@ class MainMenuOverlay(UIElement):
             return
 
     def _attempt_create_project(self) -> None:
+        from ..editor.project_ownership import project_root  # noqa: PLC0415
         from ..project_scaffold import create_project, validate_new_project_target  # noqa: PLC0415
 
-        path = Path(self._create_path)
+        path = Path(self._create_path).expanduser()
         valid, msg = validate_new_project_target(path)
+        enclosing = project_root(path.parent)
+        if valid and enclosing is not None:  # (#675: a project inside another's folder becomes part of that one)
+            valid, msg = False, f"That folder is inside the Mesh project {enclosing}; pick a folder outside it."
         if not valid:
             self._create_error = msg
             return
@@ -370,7 +417,7 @@ class MainMenuOverlay(UIElement):
             if os.environ.get("PYTEST_CURRENT_TEST"):
                 if not (os.environ.get("MESH_SAVEGAME_PATH") or os.environ.get("MESH_SAVE_PATH")):
                     return False
-            return load_savegame(resolve_savegame_path()) is not None
+            return load_savegame(resolve_savegame_path(reading=True)) is not None
         except Exception:
             return False
 
@@ -385,8 +432,12 @@ class MainMenuOverlay(UIElement):
             ]
         )
         if not _is_web_runtime():
-            items.append(("Run Web Demo (Local Preview)", "run_web_preview"))
-            items.append(("Export Web Demo (.zip)", "export_web"))
+            # Developer tools from the engine checkout's tooling/: shown only where they can run. In a creator's
+            # own game (or a pip install) they weren't there, and the items did nothing.
+            if _tool_available("tooling.web_preview"):
+                items.append(("Run Web Demo (Local Preview)", "run_web_preview"))
+            if _tool_available("tooling.release_web_demo"):
+                items.append(("Export Web Demo (.zip)", "export_web"))
             items.append(("Quit", "quit"))
         return items
 
@@ -541,7 +592,10 @@ class MainMenuOverlay(UIElement):
                 if self._create_name.strip():
                     self.state = "create_project_path"
                     safe_name = self._create_name.strip().replace(" ", "_").lower()
-                    self._create_path = str((Path.cwd() / safe_name).resolve())
+                    from ..projects import default_projects_dir  # noqa: PLC0415
+
+                    # (#675: Documents/Mesh Projects, as the launcher offers; the current folder can be a project's)
+                    self._create_path = str((default_projects_dir() / safe_name).resolve())
                 return True
             if key == optional_arcade.arcade.key.ESCAPE:
                 self.state = "create_project_template"
@@ -641,7 +695,7 @@ class MainMenuOverlay(UIElement):
         try:
             from ..savegame import apply_savegame, load_savegame, resolve_savegame_path  # noqa: PLC0415
 
-            save = load_savegame(resolve_savegame_path())
+            save = load_savegame(resolve_savegame_path(reading=True))
             if save is None:
                 return
             if self._confirm_unsaved_action("Load Game", lambda: apply_savegame(self.window, save.to_payload())):
@@ -667,10 +721,36 @@ class MainMenuOverlay(UIElement):
         return False
 
     def _handle_start_game_impl(self) -> None:
-        state = getattr(getattr(self.window, "game_state_controller", None), "state", None)
-        if state is not None and hasattr(state, "flags"):
+        self._reset_session()
+        if self._request_start_scene():
+            self.close()
+
+    def _request_start_scene(self) -> bool:
+        """Ask for the project's start scene on the next frame; False when it has none (or the window can't)."""
+        from ..game_runtime.scene_flow import resolve_game_start_scene  # noqa: PLC0415
+
+        target_scene = resolve_game_start_scene(
+            engine_config=getattr(self.window, "engine_config", None),
+            world_controller=getattr(self.window, "world_controller", None),
+        )
+
+        requester = getattr(self.window, "request_scene_change", None)
+        if callable(requester) and target_scene is not None:
+            requester(target_scene)
+            return True
+        return False
+
+    def _reset_session(self) -> None:
+        """What a new game starts with: a clean game state (flags, counters, values: inventory, room memory, quest
+        progress; quests restart as in a fresh game) and none of the demo hints shown. New Game, and a project switch
+        (#675: the previous project's progress was saved into the new project's saves)."""
+        controller = getattr(self.window, "game_state_controller", None)
+        if controller is not None:  # a new game starts clean: flags, counters, values and quests (Watchfire R1)
             try:
-                state.flags = {}
+                if callable(getattr(controller, "replace_state", None)):
+                    controller.replace_state({})  # (which also starts quests as in a fresh game)
+                elif hasattr(getattr(controller, "state", None), "flags"):  # (a state holder without the controller's API)
+                    controller.state.flags = {}
             except Exception:
                 _log_swallow("MAIN-001", "engine/ui_overlays/main_menu_overlay.py pass-only blanket swallow")
                 pass
@@ -685,18 +765,6 @@ class MainMenuOverlay(UIElement):
                 except Exception:
                     _log_swallow("MAIN-002", "engine/ui_overlays/main_menu_overlay.py pass-only blanket swallow")
                     pass
-
-        from ..game_runtime.scene_flow import resolve_game_start_scene  # noqa: PLC0415
-
-        target_scene = resolve_game_start_scene(
-            engine_config=getattr(self.window, "engine_config", None),
-            world_controller=getattr(self.window, "world_controller", None),
-        )
-
-        requester = getattr(self.window, "request_scene_change", None)
-        if callable(requester) and target_scene is not None:
-            requester(target_scene)
-            self.close()
 
     def _rebuild_text_cache(self, left: float, top: float) -> None:
         self._text_lines.clear()
@@ -921,10 +989,8 @@ class MainMenuOverlay(UIElement):
     def _settings_value_text(self, key: str, kind: str) -> str:
         settings = self._runtime_settings()
         if kind == "slider":
-            if key == "music_volume":
-                return f"{int(round(settings.music_volume * 100.0))}%"
-            if key == "sfx_volume":
-                return f"{int(round(settings.sfx_volume * 100.0))}%"
+            if key in ("music_volume", "sfx_volume", "ambience_volume"):
+                return f"{int(round(float(getattr(settings, key, 1.0)) * 100.0))}%"
         if kind == "toggle":
             return "ON" if bool(getattr(settings, key, False)) else "OFF"
         return ""
@@ -1186,21 +1252,19 @@ class MainMenuOverlay(UIElement):
             saver()
 
     def _save_runtime_settings(self) -> None:
-        from ..i18n import tr  # noqa: PLC0415
-
         editor = getattr(self.window, "editor", None)
         if editor is not None and hasattr(editor, "workspace"):
-            editor.workspace.save_user_settings()
+            saved = editor.workspace.save_user_settings() is not False
         else:
             from ..runtime_settings_storage import save_runtime_settings  # noqa: PLC0415
 
             path = getattr(self.window, "runtime_settings_path", None)
             settings = self._runtime_settings()
-            save_runtime_settings(path, settings)
-        hud = getattr(self.window, "player_hud", None)
-        enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(enqueue):
-            enqueue(tr("UI_SETTINGS_SAVED"), seconds=2.0)
+            saved = save_runtime_settings(path, settings)
+        if saved:
+            toast_settings_saved(self.window)
+        else:
+            toast_settings_not_saved(self.window)
 
     def _handle_settings_action(self, action: str, *, large_step: bool = False) -> bool:
         action = str(action)
@@ -1228,10 +1292,8 @@ class MainMenuOverlay(UIElement):
         settings = self._runtime_settings()
         if kind != "slider":
             return False
-        if key == "music_volume":
-            settings.music_volume = max(0.0, min(1.0, float(settings.music_volume) + delta))
-        elif key == "sfx_volume":
-            settings.sfx_volume = max(0.0, min(1.0, float(settings.sfx_volume) + delta))
+        if key in ("music_volume", "sfx_volume", "ambience_volume"):
+            setattr(settings, key, max(0.0, min(1.0, float(getattr(settings, key, 1.0)) + delta)))
         else:
             return False
         self._apply_runtime_settings()

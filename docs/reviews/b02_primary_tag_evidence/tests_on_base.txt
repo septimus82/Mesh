@@ -1,0 +1,9 @@
+PASSED tests/test_b02_primary_tag.py::test_unresolved_records_carry_primary_tag_untouched
+FAILED tests/test_b02_primary_tag.py::test_roundtrip_keeps_the_primary_tag - ...
+FAILED tests/test_b02_primary_tag.py::test_a_record_without_primary_keeps_the_live_primary[v3_before_b02]
+FAILED tests/test_b02_primary_tag.py::test_a_record_without_primary_keeps_the_live_primary[v2]
+FAILED tests/test_b02_primary_tag.py::test_no_primary_and_live_primary_not_saved_falls_back_with_a_diagnostic
+FAILED tests/test_b02_primary_tag.py::test_live_primary_among_saved_tags_is_kept_silently
+FAILED tests/test_b02_primary_tag.py::test_primary_tag_wins_over_live_and_sorted_order
+FAILED tests/test_b02_primary_tag.py::test_digest_ignores_primary_tag - KeyEr...
+7 failed, 1 passed in 6.66s

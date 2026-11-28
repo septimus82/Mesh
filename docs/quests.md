@@ -26,7 +26,7 @@ Top-level keys:
 | `id` | string | Unique identifier referenced by behaviours/UI. |
 | `title` | string | Quest name shown in the Quest Log overlay. |
 | `description` | string | Fallback text when no stage is active yet. |
-| `auto_start` | bool | When true, the first stage activates on load without requiring a trigger. |
+| `auto_start` | bool (optional) | `true`: the first stage starts at load. `false`: the quest stays inactive until its first stage's `start_on_event` fires or something starts it explicitly (quest giver, `start_quest`). Absent: legacy behaviour, the first stage starts at load when it has no `start_on_event`. |
 | `stages` | array | Ordered list of dictionaries (see below). |
 | `reward` | object | Optional payload applied when the quest completes. |
 
@@ -62,7 +62,7 @@ When the trigger is just a string (e.g., `"collectible_picked"`), the quest list
 
 ### Rewards & runtime state
 
-`reward.set_flags` flips entries inside `GameWindow.game_state.flags` and `reward.inc_counters` increments numeric counters. Helper events fire during quest progression so other behaviours can listen without coupling to the quest JSON:
+`reward.set_flags` flips entries inside `GameWindow.game_state.flags` and `reward.inc_counters` increments numeric counters. `reward.gold` (a number, 0 or more) is added to the `gold` counter, the balance vendors spend (gold perk bonuses apply), and `reward.xp` goes to the player's XP and level (XP perk bonuses apply). A quest pays its reward once, when it completes; validation rejects any other reward field. Helper events fire during quest progression so other behaviours can listen without coupling to the quest JSON:
 
 - `quest_stage_started` (`quest_id`, `stage_id`, `quest_title`, `stage_title`)
 - `quest_stage_completed` (same payload)

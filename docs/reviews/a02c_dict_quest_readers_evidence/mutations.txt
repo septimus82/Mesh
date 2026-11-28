@@ -1,0 +1,9 @@
+Mutations applied one at a time to the head (tests/test_quest_dict_form_readers.py, 10 tests), then reverted:
+1. helper: key always overrides inner id            -> 5 failed (id != key cases)
+2. helper: id-less dict entries keep no id          -> 6 failed
+3. quest_editor_model.save_quests: guard disabled   -> 1 failed (test_editor_never_converts_dict_form_to_list)
+4. mcp_server.tools._load_quests: list-only         -> 1 failed
+5. plan_tester: raw data["quests"] (keys)           -> 1 failed
+6. ai_audit._extract_quest_ids: list-only           -> 1 failed
+Base (02782bc5, reader code unchanged): 6 failed, 4 passed (MCP, PlanTester, QuestEditorModel, save_quests overwrote the
+dict form as a list, exporter, audit). List-form tests pass on both.

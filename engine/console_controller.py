@@ -31,6 +31,11 @@ class ConsoleController:
         self._hotkeys_banner_logged: bool = False
 
     def toggle(self) -> None:
+        from engine.action_runtime.registry import dev_tools_allowed  # noqa: PLC0415  # registry imports UI modules
+
+        if not self.active and not dev_tools_allowed(self.window):  # every console key lands here (#664)
+            logger.info("[Mesh][Console] console ignored: developer tools are off in a game launch")
+            return
         self.active = not self.active
 
         # Fallback for input manager access
@@ -322,6 +327,7 @@ class ConsoleController:
                     ("set volume <0..1>", ""),
                     ("set master <0..1>", ""),
                     ("set music <0..1>", ""),
+                    ("set ambience <0..1>", ""),
                     ("set sfx <0..1>", ""),
                     ("set fullscreen <on|off>", ""),
                     ("set vsync <on|off>", ""),
