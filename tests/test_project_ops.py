@@ -6,6 +6,7 @@ import math
 import pytest
 
 from engine import project_ops as ops
+from engine.physics_model import Aabb
 from engine.scene_loader import SceneLoader, document_key
 
 pytestmark = pytest.mark.fast
@@ -176,8 +177,8 @@ def test_a_door_above_a_wall_gets_its_arrival_spot_clear_of_the_wall() -> None:
     start, _house = ops.link_rooms(room, "start", "Start", (336, 304), house, key_b, "House", (200, 300))
     arrival = next(e for e in ops.entities(start) if e.get("tag") == "spawn_point")
     w, h, ox, oy = ops.player_box(_walker())
-    feet = ops.Aabb(arrival["x"] + ox, arrival["y"] + oy, w, h)
-    wall = ops.Aabb(*ops.cell_center(info, *under), 32, 32)
+    feet = Aabb(arrival["x"] + ox, arrival["y"] + oy, w, h)
+    wall = Aabb(*ops.cell_center(info, *under), 32, 32)
     assert (arrival["x"], arrival["y"]) != (336, 208) and feet.intersection(wall) is None, arrival
     assert math.dist((arrival["x"], arrival["y"]), (336, 304)) >= 96, "still clear of the walk-in door"
 
