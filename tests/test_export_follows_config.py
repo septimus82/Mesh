@@ -258,11 +258,26 @@ def _prefab_door(game: Path, outside: Path) -> None:
     _write(start, scene)
 
 
+def _inherited_prefab_door(game: Path, outside: Path) -> None:
+    """A door its prefab inherits from the prefab's ``base`` (engine.prefabs resolves it), leading to a missing room."""
+    prefabs = _json(game / "assets" / "prefabs.json")
+    prefabs += [{"id": "door_base", "display_name": "Door", "tags": ["door"],
+                 "entity": {"behaviours": ["SceneTransition"], "behaviour_config": {"SceneTransition": {"target_scene": "crypt"}}}},
+                {"id": "gate", "base": "door_base", "display_name": "Gate", "tags": ["door"], "entity": {"name": "Gate"}}]
+    _write(game / "assets" / "prefabs.json", prefabs)
+    start = game / "chapters" / "scenes" / "start.json"
+    scene = _json(start)
+    scene["entities"].append({"id": "start_gate_200_300_0_0", "prefab_id": "gate", "x": 200.0, "y": 300.0})
+    _write(start, scene)
+
+
 REFUSED: dict[str, tuple[Callable[[Path, Path], None], str]] = {
     "missing room": (_missing_room, "room 'cellar' of the world: 'chapters/scenes/cellar.json' is missing from the project"),
     "missing door room": (_door_to(lambda g, o: "attic"),  # (the door is its only way in: no world room names it)
                           "the room 'Door to Cellar' in chapters/scenes/start.json leads to: 'attic' is missing from the project"),
     "missing prefab door room": (_prefab_door, "in chapters/scenes/start.json leads to: 'vault' is missing from the project"),
+    "missing inherited prefab door room": (_inherited_prefab_door,
+                                           "the room 'Gate' in chapters/scenes/start.json leads to: 'crypt' is missing from the project"),
     "invalid room": (_broken_room, "room 'cellar' of the world: chapters/scenes/cellar.json can't be read"),
     "door up out": (_door_to(lambda g, o: "../outside/room.json"), "is outside the project folder"),
     "door absolute": (_door_to(lambda g, o: str(o / "room.json")), "is an absolute path"),
@@ -316,7 +331,8 @@ def test_a_door_the_game_never_makes_live_does_not_stop_the_export(tmp_path: Pat
     assert code == 0, said
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="two spellings of one file exist only on a case-insensitive file system")
+@pytest.mark.skipif(sys.platform != "win32",
+                    reason="two spellings of one file (a case-insensitive file system): the default lane runs this on Windows")
 def test_two_spellings_of_one_room_ship_it_once_and_both_find_it(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """The world names chapters/scenes/Cellar.json and a door chapters/scenes/cellar.json: one file on Windows, where
     the source game plays. The plan lists it once and the build succeeds (it failed: two entries, one file), and the
@@ -330,7 +346,8 @@ def test_two_spellings_of_one_room_ship_it_once_and_both_find_it(tmp_path: Path,
     _door_to(lambda g, o: "chapters/scenes/cellar.json")(game, tmp_path / "outside")
     plan = compute_export_plan(game)
     assert plan.ok, plan.summary()
-    assert [f.rel_path for f in plan.files if f.rel_path.lower() == "chapters/scenes/cellar.json"] == ["chapters/scenes/Cellar.json"]
+    shipped = [f.rel_path for f in plan.files if f.rel_path.lower() == "chapters/scenes/cellar.json"]
+    assert shipped == ["chapters/scenes/cellar.json"], "once, under its name on disk (not the first spelling met)"
     code, said = _export(game, tmp_path / "bundle", capsys)
     assert code == 0, said
     probe = ("import sys; sys.path.insert(0, '.'); from engine.config import load_config; "

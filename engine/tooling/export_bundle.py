@@ -429,39 +429,38 @@ def _collect_content_files(repo_root: Path) -> list[ExportFile]:
 _DOORS = ("SceneTransition", "SceneExit")  # (the behaviours that take the player to another room)
 
 
-def _prefabs(roots: list[Path]) -> dict[str, dict[str, Any]]:
-    """Each prefab's entity by id, from the files the engine loads them from, in its order (engine.prefabs:
-    ``assets/prefabs.json``, then each pack's ``data/prefabs.json``, a later one winning). A file the game couldn't
-    read gives no prefabs here."""
-    from engine.prefabs import _load_prefab_entries  # noqa: PLC0415
+def _prefabs(roots: list[Path]) -> Any:
+    """The engine's prefab resolver (engine.prefabs.PrefabManager, so ``base`` inheritance and the entity-over-prefab
+    merge are the game's own) holding the prefabs of the files the engine loads them from, in its order:
+    ``assets/prefabs.json``, then each pack's ``data/prefabs.json``, a later one winning. A file the game couldn't read
+    gives no prefabs here. Filled by hand, it never reloads from the engine's current project."""
+    from engine.prefabs import PrefabManager, _load_prefab_entries  # noqa: PLC0415
 
     base = next((r / "assets" / "prefabs.json" for r in roots if (r / "assets" / "prefabs.json").exists()), None)
     packs = sorted(((child.name.lower(), child / "data" / "prefabs.json") for r in roots if (r / "packs").is_dir()
                     for child in (r / "packs").iterdir() if (child / "data" / "prefabs.json").exists()),
                    key=lambda item: (item[0], item[1].as_posix()))
-    found: dict[str, dict[str, Any]] = {}
+    manager = PrefabManager()
     for source in ([base] if base else []) + [path for _name, path in packs]:
         try:
             entries = _load_prefab_entries(source)
         except Exception:  # noqa: BLE001  # REASON: its doors then aren't followed; the file ships as before
             continue
-        found.update({str(e["id"]): e["entity"] for e in entries if isinstance(e.get("entity"), dict)})
-    return found
+        manager._prefabs.update({str(e["id"]): e for e in entries})
+    manager._loaded = True  # (and no _loaded_roots: never reloaded from the engine's own content roots)
+    return manager
 
 
-def _door_targets(scene: dict[str, Any], prefabs: dict[str, dict[str, Any]]) -> Iterator[tuple[str, str]]:
+def _door_targets(scene: dict[str, Any], prefabs: Any) -> Iterator[tuple[str, str]]:
     """``(target, door name)`` for each door or scene exit in a room that the game makes live: listed in the entity's
-    ``behaviours``, or its prefab's when it lists none (engine.prefabs: the entity over its prefab, ``behaviour_config``
-    merged). Read as the behaviours read them: a SceneTransition's ``target_scene`` (or ``scene``/``target``) from its
-    config over the entity's own fields, a SceneExit's ``target_scene`` from its config. Doors without a target lead
-    nowhere and are skipped, as in the game."""
+    ``behaviours``, or its prefab's (and that prefab's ``base``) when it lists none, as ``PrefabManager.resolve`` makes
+    it (prefab variants not applied). Read as the behaviours read them: a SceneTransition's ``target_scene`` (or
+    ``scene``/``target``) from its config over the entity's own fields, a SceneExit's ``target_scene`` from its config.
+    Doors without a target lead nowhere and are skipped, as in the game."""
     for authored in scene.get("entities") or []:
         if not isinstance(authored, dict):
             continue
-        prefab = prefabs.get(str(authored.get("prefab_id"))) if authored.get("prefab_id") else None
-        entity = {**prefab, **authored} if prefab else authored
-        if prefab and isinstance(prefab.get("behaviour_config"), dict) and isinstance(authored.get("behaviour_config"), dict):
-            entity["behaviour_config"] = {**prefab["behaviour_config"], **authored["behaviour_config"]}
+        entity = prefabs.resolve({k: v for k, v in authored.items() if k != "variant_id"}) if authored.get("prefab_id") else authored
         raw_listed, raw_configs = entity.get("behaviours"), entity.get("behaviour_config")
         listed: list[Any] = raw_listed if isinstance(raw_listed, list) else []
         configs: dict[str, Any] = raw_configs if isinstance(raw_configs, dict) else {}
@@ -497,7 +496,7 @@ class _GameContent:
         self.real_root = Path(os.path.realpath(repo_root))
         # (one entry per file as the file system tells them apart: its path as first named, the file, links resolved)
         self.files: dict[str, tuple[str, Path]] = {}
-        self.prefabs: dict[str, dict[str, Any]] = {}
+        self.prefabs: Any = None
         self.errors: list[str] = []
         self.roots = [self.root]  # (the content roots the engine resolves room and world paths against)
         self.world: Any = None
@@ -529,13 +528,25 @@ class _GameContent:
             elif not real.is_file():
                 self.errors.append(f"{what}: {ref!r} is not a file")
             else:
-                rel = path.relative_to(self.root).as_posix()
-                self.files.setdefault(os.path.normcase(rel), (rel, real))  # (Cellar.json, cellar.json: one file on Windows)
+                rel = self.on_disk(path)  # (Cellar.json named, cellar.json on disk: cellar.json, once)
+                self.files.setdefault(f"{os.path.normcase(real)}|{rel}", (rel, real))
                 return path
             return None
         self.errors.append(f"{what}: {ref!r} is outside the project folder; it can't be bundled" if outside else
                            f"{what}: {ref!r} is missing from the project")
         return None
+
+    def on_disk(self, path: Path) -> str:
+        """``path`` (inside the project, links not followed) as it is spelled on disk, folder by folder: an exact name
+        wins, else the one name differing only in case (a case-insensitive file system found it under that one)."""
+        here, parts = self.root, []
+        for part in path.relative_to(self.root).parts:
+            names = os.listdir(here)
+            folded = [n for n in names if n.lower() == part.lower()]
+            name = part if part in names else folded[0] if len(folded) == 1 else part
+            parts.append(name)
+            here = here / name
+        return "/".join(parts)
 
     def read(self, path: Path, kind: str, what: str) -> dict[str, Any] | None:
         """A JSON file's object (migrated to the current schema for a ``scene`` or ``world``), or None after recording
@@ -733,8 +744,8 @@ def compute_export_plan(
         else:
             plan.excluded_assets.append(asset_id)
 
-    planned = {os.path.normcase(f.rel_path) for f in plan.files}
-    plan.files.extend(f for f in reached if os.path.normcase(f.rel_path) not in planned)
+    planned = {f.rel_path for f in plan.files}
+    plan.files.extend(f for f in reached if f.rel_path not in planned)
 
     # Check for missing dependencies
     for dep in dep_report.missing:

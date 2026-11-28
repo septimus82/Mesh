@@ -73,7 +73,7 @@ isn't needed.
 - the project's `main.py`, `config.json`, `cutscenes.json` (when it has one), `packs/`, `locales/*.json` and every file in its `assets/`;
 - every file the game's configuration reaches, wherever it is in the project (#760): `config.json`'s `start_scene`,
   `main_menu_scene` and `world_file`, every room of that world, every room a live door or scene exit leads to (one in
-  the object's `behaviours`, or its prefab's; by the world's room key, a bare `scenes/<name>.json` name or a path, as the
+  the object's `behaviours`, or its prefab's, inherited through `base` too, as the engine resolves prefabs; by the world's room key, a bare `scenes/<name>.json` name or a path, as the
   game resolves it), and each room's map file with its
   tilesets and their pictures;
 - the installed `engine` package as its runtime;
@@ -90,7 +90,7 @@ It replaces only an earlier bundle or an empty folder, never other files.
 or its picture that the game reaches is missing or isn't readable JSON; the world's start room or a link names a room it
 doesn't have; or any of them is named by an absolute path, lies outside the project (`../`), or is reached through a
 link or junction pointing out of it (nor is any other file of the project's shipped through such a link). Files keep
-their paths in the bundle; two spellings of one file (`Cellar.json`, `cellar.json` on Windows) ship it once. A file the game reaches that is already in `packs/`, `scenes/`, `worlds/` or `assets/` is
+their paths in the bundle; two spellings of one file (`Cellar.json`, `cellar.json` on Windows) ship it once, under its name on disk. A file the game reaches that is already in `packs/`, `scenes/`, `worlds/` or `assets/` is
 shipped as before; those folders still ship whole. Not followed yet: prefab variants, the picture of a
 `.tsx` tileset, and pictures, sounds or other assets kept outside `assets/`.
 
