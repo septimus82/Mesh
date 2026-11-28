@@ -212,7 +212,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          python3 tooling/ci_shards.py check gpu-shards --plan ${{ matrix.plan }} --shards ${{ matrix.shards }} --min-selected 605 --commit "${{ github.sha }}" > shards.txt 2>&1
+          python3 tooling/ci_shards.py check gpu-shards --plan ${{ matrix.plan }} --shards ${{ matrix.shards }} --min-selected 625 --commit "${{ github.sha }}" > shards.txt 2>&1
           code=$?
           cat shards.txt
           { echo "## gpu lane (${{ matrix.os }}): the shards together"; echo; echo '```'; cat shards.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
