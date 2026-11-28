@@ -190,6 +190,9 @@ class Vendor(Behaviour):
         )
 
     def handle_sell_request(self, item: dict[str, Any]) -> "VendorResult":
+        """Sell one ``item_id`` for its stock price times ``sell_rate``; a refusal changes no item, gold or equipment.
+        Selling the last owned copy of an equipped item unequips it; while another copy is owned the equipped one
+        stays equipped (GameStateController._normalize_equipment, #757)."""
         if not self._sell_enabled:
             return self._result(False, "Cannot sell here")
         item_id = item.get("item_id")
@@ -211,12 +214,14 @@ class Vendor(Behaviour):
         payout = max(0, int(base_price * self._sell_rate))
         if payout <= 0:
             return self._result(False, "Cannot sell that item", item_id=str(item_id), qty=1)
+        held = list(gs.get_equipment().values()).count(item_id)
         inv.remove_item(item_id, 1)
         gs.add_counter(self.currency_counter, payout)
+        unequipped = list(gs.get_equipment().values()).count(item_id) < held
         name = self._resolve_item_name(str(item_id), item)
         return self._result(
             True,
-            f"Sold {name} x1 (+{payout}g)",
+            f"Sold {name} x1 (+{payout}g)" + (" (unequipped)" if unequipped else ""),
             gold_delta=payout,
             item_id=str(item_id),
             qty=1,
