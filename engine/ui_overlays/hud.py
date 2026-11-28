@@ -357,6 +357,10 @@ class QuestLog(UIElement):
             font_size=12,
             anchor_y="top",
         )
+        self._probes: dict[float, Any] = {}  # font size -> a Text that measures lines in it
+        self._layouts: dict[tuple[str, float, float], tuple[list[tuple[str, float]], float]] = {}
+        # What the last draw put on screen: (kind, line, left, top, width, height); kind "title:<n>" or "detail".
+        self.drawn_lines: list[tuple[str, str, float, float, float, float]] = []
 
     def on_resize(self, width: int, height: int) -> None:  # noqa: ARG002
         """QuestLog computes layout per draw; no persistent cache to update."""
@@ -444,16 +448,11 @@ class QuestLog(UIElement):
         content_y = top - 52.0
         padding = 20.0
         content_width = width - padding * 1.5
+        floor = bottom + 40.0  # (text stops above the "Press Q to close" hint)
+        self.drawn_lines = []
         if not entries:
-            optional_arcade.arcade.draw_text(
-                "No tracked quests yet.",
-                left + padding,
-                content_y,
-                color=optional_arcade.arcade.color.LIGHT_GRAY,
-                font_size=13,
-                anchor_y="top",
-                width=content_width,
-            )
+            self._draw_wrapped("No tracked quests yet.", left + padding, content_y, content_width, floor,
+                               font_size=13, color=optional_arcade.arcade.color.LIGHT_GRAY)
             return
 
         left_width = max(180.0, content_width * 0.45)
@@ -464,57 +463,52 @@ class QuestLog(UIElement):
 
         y = content_y
         for idx, entry in enumerate(entries):
-            if y < bottom + 60.0:
-                break
             title_color = optional_arcade.arcade.color.YELLOW if idx == self._selection_index else optional_arcade.arcade.color.WHITE
             if entry.get("completed"):
                 title_color = optional_arcade.arcade.color.GRAY
-            optional_arcade.arcade.draw_text(
-                entry.get("title", "<quest>"),
-                left + padding,
-                y,
-                color=title_color,
-                font_size=14,
-                width=left_width,
-                anchor_y="top",
-            )
-            y -= 18.0
+            y = self._draw_wrapped(str(entry.get("title", "<quest>")), left + padding, y, left_width, floor,
+                                   font_size=14, color=title_color, kind=f"title:{idx}")
 
-        if entries:
-            selected = entries[self._selection_index]
-            detail_color = optional_arcade.arcade.color.LIGHT_GRAY
-            status = "Complete" if selected.get("completed") else "Active"
-            optional_arcade.arcade.draw_text(
-                f"Status: {status}",
-                right_left,
-                content_y,
-                color=detail_color,
-                font_size=12,
-                width=right_width,
-                anchor_y="top",
-            )
-            objective = selected.get("current_objective") or selected.get("text") or ""
-            if objective:
-                optional_arcade.arcade.draw_text(
-                    f"Objective: {objective}",
-                    right_left,
-                    content_y - 20.0,
-                    color=detail_color,
-                    font_size=12,
-                    width=right_width,
-                    anchor_y="top",
-                    multiline=True,
-                )
-            else:
-                optional_arcade.arcade.draw_text(
-                    "Objective: -",
-                    right_left,
-                    content_y - 20.0,
-                    color=detail_color,
-                    font_size=12,
-                    width=right_width,
-                    anchor_y="top",
-                )
+        selected = entries[self._selection_index]
+        detail_color = optional_arcade.arcade.color.LIGHT_GRAY
+        status = "Complete" if selected.get("completed") else "Active"
+        objective = selected.get("current_objective") or selected.get("text") or "-"
+        y = self._draw_wrapped(f"Status: {status}", right_left, content_y, right_width, floor,
+                               font_size=12, color=detail_color, kind="detail")
+        self._draw_wrapped(f"Objective: {objective}", right_left, min(y, content_y - 20.0), right_width, floor,
+                           font_size=12, color=detail_color, kind="detail")
+
+    def _draw_wrapped(self, text: str, x: float, top: float, width: float, floor: float, *, font_size: float,
+                      color: Any, kind: str = "text") -> float:
+        """Draw ``text`` from ``top`` down in lines no wider than ``width``, measured in the font it is drawn in (one
+        line at a time: arcade's draw_text keeps one cached label for every call with the same font and width, and
+        its ``multiline`` isn't part of that key, so a single-line call before it left a multiline one unwrapped).
+        Lines that would reach below ``floor`` are left out. Returns the top of the next line."""
+        key = (text, font_size, width)
+        layout = self._layouts.get(key)
+        if layout is None:
+            probe = self._probes.get(font_size)
+            if probe is None:
+                probe = self._probes[font_size] = optional_arcade.arcade.Text("Ag", 0, 0, font_size=font_size)
+            probe.text = "Ag"  # (the font's line height, whatever the probe measured last)
+            pitch = float(getattr(probe, "content_height", 1.5 * font_size))
+
+            def measure(line: str) -> float:
+                probe.text = line
+                return float(getattr(probe, "content_width", 0.6 * font_size * len(line)))
+
+            lines = _wrap(text, lambda s: measure(s) <= width)
+            if len(self._layouts) > 64:
+                self._layouts.clear()
+            layout = self._layouts[key] = ([(line, measure(line)) for line in lines], pitch)
+        lines_measured, pitch = layout
+        for line, line_width in lines_measured:
+            if top - pitch < floor:
+                break
+            optional_arcade.arcade.draw_text(line, x, top, color=color, font_size=font_size, anchor_y="top")
+            self.drawn_lines.append((kind, line, x, top, line_width, pitch))
+            top -= pitch
+        return top
 
     def _collect_entries(self) -> list[dict[str, Any]]:
         from ..quest_ui import get_active_quests  # noqa: PLC0415
