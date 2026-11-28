@@ -25,7 +25,7 @@ from engine.ai_ops import build_prefab_entity_definition
 from engine.behaviours import load_builtin_behaviours
 from engine.behaviours.registry import get_behaviour_info, list_behaviours
 from engine.entity_paint_mode import make_entity_id
-from engine.pathfinding.nav_grid import build_nav_grid_from_scene_payload
+from engine.pathfinding.nav_grid import NavGrid, build_nav_grid_from_scene_payload
 from engine.physics_model import Aabb
 from engine.physics_runtime import footprint
 from engine.scene_loader import SceneLoader
@@ -672,6 +672,7 @@ def _arrival_spot(scene: Doc, x: float, y: float, player: Doc | None = None) -> 
     w, h = info["width"] * info["tilewidth"], info["height"] * info["tileheight"]
     margin = max(info["tilewidth"], info["tileheight"])  # keep clear of the border walls
     box = player_box(player or next((e for e in entities(scene) if e.get("tag") == "player"), None))
+    grid = build_nav_grid_from_scene_payload(scene)  # (once: up to 24 spots are tried)
     first: tuple[float, float] | None = None
     for ring in range(6):
         d = -ARRIVAL_OFFSET[1] + ring * margin
@@ -680,7 +681,7 @@ def _arrival_spot(scene: Doc, x: float, y: float, player: Doc | None = None) -> 
             if not (margin <= ax <= w - margin and margin <= ay <= h - margin):
                 continue
             first = first or ((ax, ay) if ring == 0 else None)
-            if _clear_for(scene, box, ax, ay):
+            if _clear_for(scene, box, ax, ay, grid):
                 return ax, ay
     _LOG.warning("No clear arrival spot near the door at (%s, %s): the player may arrive in a wall.", x, y)
     return first or (x + ARRIVAL_OFFSET[0], y + ARRIVAL_OFFSET[1])
@@ -713,11 +714,11 @@ def _collider_box(c: Doc, size: tuple[float, float] | None) -> tuple[float, floa
     return pw, ph, 0.0, 0.0
 
 
-def _clear_for(scene: Doc, box: tuple[float, float, float, float], x: float, y: float) -> bool:
-    """Whether a collider ``box`` (as player_box gives it) standing at ``x, y`` overlaps no wall tile and no solid
-    object (the game's strict overlap: touching is clear)."""
+def _clear_for(scene: Doc, box: tuple[float, float, float, float], x: float, y: float, grid: NavGrid | None) -> bool:
+    """Whether a collider ``box`` (as player_box gives it) standing at ``x, y`` overlaps no wall tile of ``grid`` (the
+    room's, build_nav_grid_from_scene_payload) and no solid object (the game's strict overlap: touching is clear).
+    Only the room's in-scene wall tiles and solid objects count, not an external map file's tiles or HD-2D structures."""
     me = Aabb(x + box[2], y + box[3], box[0], box[1])
-    grid = build_nav_grid_from_scene_payload(scene)
     if grid is not None:
         tw, th = grid.tile_w, grid.tile_h
         for col in range(int(me.left // tw), math.ceil(me.right / tw)):

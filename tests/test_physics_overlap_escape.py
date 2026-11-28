@@ -57,10 +57,48 @@ def test_the_same_on_the_x_axis() -> None:
     assert moved.x == pytest.approx(223.0) and not result.hit_x
 
 
-def test_walking_along_a_wall_it_is_in_is_free() -> None:
-    feet = Aabb(720, 190, 19, 12)  # the wall's centre is straight below: sideways goes no deeper
+def test_walking_along_a_single_wall_centred_on_it_is_free() -> None:
+    feet = Aabb(720, 190, 19, 12)  # the one wall's centre is straight below: sideways goes no deeper
     moved, result = _move(feet, (3.0, 0.0), WALL)
     assert moved.x == pytest.approx(723.0) and not result.hit_x
+
+
+def test_more_than_half_way_in_by_its_leading_edge_it_is_still_pushed_back_out() -> None:
+    """The centre decides, not the leading edge: a box whose top is past the wall's centre (51%+ in by its leading edge)
+    while its own centre is still below the wall's centre, moving further in, ends flush below the wall."""
+    tall = Aabb(720, 150, 20, 60)  # y 120..180: top 20 px into the wall (y 160..192, centre 176); centre 150 < 176
+    for delta in (3.0, 200.0):
+        moved, result = _move(tall, (0.0, delta), WALL)
+        assert result.hit_y and moved.top == pytest.approx(WALL.bottom), (delta, moved)
+    side = Aabb(690, 176, 60, 20)  # x 660..720: right edge 16 px into the wall (x 704..736, centre 720); centre 690
+    moved, result = _move(side, (3.0, 0.0), WALL)
+    assert result.hit_x and moved.right == pytest.approx(WALL.left)
+
+
+def _row(y: float, x0: float, count: int) -> list[Aabb]:
+    return [Aabb(x0 + 16 + 32 * i, y, 32, 32) for i in range(count)]
+
+
+def test_along_a_row_of_tiles_it_is_in_it_is_pinned_but_never_deeper_and_can_leave() -> None:
+    """Recorded behaviour, not the ideal (follow-up: push out along the shallower axis): feet 8 px into a floor row,
+    walking right stop flush against the next tile and stay there, as deep as before; moving up frees them."""
+    floor = _row(176.0, 0.0, 8)  # y 160..192, tiles x 0..256
+    feet = Aabb(100, 190, 19, 12)  # x 90.5..109.5, y 184..196: over the tiles at x 64..96 and 96..128
+    first, _ = _move(feet, (3.0, 0.0), *floor)
+    assert first.right == pytest.approx(96.0) and first.y == feet.y, "flush with the next tile, no deeper"
+    assert feet.x - first.x < 32, "never a whole tile back (it used to jump ~32 px back every frame)"
+    held = first
+    for _ in range(5):
+        held, result = _move(held, (3.0, 0.0), *floor)
+        assert result.hit_x and held.x == pytest.approx(first.x) and held.y == feet.y, "pinned, still 8 px in"
+    up, result = _move(held, (0.0, 3.0), *floor)
+    assert up.y == pytest.approx(feet.y + 3.0) and not result.hit_y, "leaving the row is free"
+    column = [Aabb(116, 16 + 32 * i, 32, 32) for i in range(8)]  # a side wall column x 100..132
+    side = Aabb(105, 100, 12, 19)  # x 99..111: 11 px into the column
+    held, _ = _move(side, (0.0, 3.0), *column)
+    assert held.x == side.x and side.y - held.y < 32
+    out, result = _move(held, (-3.0, 0.0), *column)
+    assert out.x == pytest.approx(side.x - 3.0) and not result.hit_x
 
 
 @pytest.mark.parametrize("step", [10.0, 100.0, 5000.0])  # one piece; several; the capped many

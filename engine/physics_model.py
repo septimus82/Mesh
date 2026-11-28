@@ -264,11 +264,17 @@ def fast_move_steps(delta: float, size: float) -> int:
 def axis_stop(box: Aabb, delta: float, walls: Sequence[Aabb], axis: int) -> Optional[float]:
     """Where ``box``'s centre stops on ``axis`` (0 = x, 1 = y) moving ``delta`` into ``walls``, or None if none blocks.
 
-    Only a wall whose centre lies ahead in the move's direction blocks it, and the box stops flush against that
-    wall's near edge: a wall it approaches, and one it is a little way into and moves further into (pushed back out
-    on the side it came from, never deeper or through). A wall it overlaps but moves away from, or along, doesn't
-    block, so a box can always walk out of a wall. (Every touched wall used to block: moving up out of a wall below
-    snapped the box to that wall's far edge, down inside it, where every move up did the same: stuck for good.)
+    Only a wall whose centre lies ahead of the box's centre in the move's direction blocks it (its centre, not its
+    leading edge: a box over half way into a wall by its leading edge still gets pushed back out), and the box stops
+    flush against that wall's near edge. That covers a wall it approaches, and one it is partly in and moves further
+    into: it is pushed back out on the side it came from, never deeper or through. A wall it overlaps but moves away
+    from doesn't block, so a box can always walk out of a wall perpendicular to it. (Every touched wall used to block:
+    moving up out of a wall below snapped the box to that wall's far edge, down inside it, for good: #762.)
+
+    Moving *along* walls it is in is free only past a wall centred on the box. Along a row of tiles the next tile's
+    centre is ahead, so the box stops flush against that tile and stays pinned there, as deep in the row as before.
+    It is never pushed deeper or a whole tile back, and moving away from the row frees it.
+    ponytail: pushing an overlapping box out along its shallower axis would let it slide along the row (follow-up).
     """
     half = (box.w if axis == 0 else box.h) / 2
     centre = box.x if axis == 0 else box.y
