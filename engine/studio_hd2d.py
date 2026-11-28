@@ -42,7 +42,7 @@ from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 from engine import project_ops as ops
 from engine.hd2d.picking import Picker, box, box_edges, ground_point
-from engine.hd2d.renderer import Camera, fit_view
+from engine.hd2d.renderer import Camera, body_corners, fit_view
 from engine.hd2d.settings import PIXELS_PER_METRE, parse_hd2d
 from engine.logging_tools import get_logger
 from engine.studio_inspector import LazyRow
@@ -85,10 +85,22 @@ def _steps(stroke: dict[str, Any]) -> str:
             else f"a long stroke, saved in {parts} parts: {parts} undo steps")
 
 
+def _frame_size(entity: dict[str, Any]) -> tuple[float, float]:
+    """A character's picture size (px) from its Animator's frames (a tile without one): what the game draws it at."""
+    config = entity.get("behaviour_config")
+    animator = config.get("Animator") if isinstance(config, dict) else None
+    clips = animator.get("animations") if isinstance(animator, dict) else None
+    for clip in (clips.values() if isinstance(clips, dict) else ()):
+        if isinstance(clip, dict) and clip.get("frame_width") and clip.get("frame_height"):
+            return float(clip["frame_width"]), float(clip["frame_height"])
+    return 32.0, 32.0
+
+
 def game_view(scene: dict[str, Any], aspect: float) -> Camera:
     """The game's camera at the player's start (the room's middle without one): pitch, lens, distance, flat or not,
-    looking north (it never turns), at the player's head height, and kept inside the camera's bounds by the follow
-    camera's own ``fit_view`` for a picture of ``aspect`` (width / height)."""
+    looking north (it never turns), at the player's head height, and placed as the follow camera places it
+    (``fit_view``, for a picture of ``aspect``, width / height): kept inside the camera's bounds, which give way
+    where the player would otherwise leave the picture."""
     settings = parse_hd2d((scene.get("settings") or {}).get("hd2d") or {}, lenient=True)
     cam = settings.camera
     player = next((e for e in ops.entities(scene) if e.get("tag") == "player"
@@ -103,10 +115,14 @@ def game_view(scene: dict[str, Any], aspect: float) -> Camera:
     z = float((player or {}).get("elevation", 0.0) or 0.0) / PIXELS_PER_METRE
     view = Camera(cam.pitch, cam.fov, cam.distance, cam.ortho, 0.0)
     view.target = (x, y, z + cam.height)
-    if cam.bounds is not None:  # as Hd2dRenderer.update keeps the follow camera inside them
+    if cam.bounds is not None:  # as Hd2dRenderer.update places the follow camera
         floor = ground.elevation / PIXELS_PER_METRE if ground is not None else z
         x0, y0, x1, y1 = (v / PIXELS_PER_METRE for v in cam.bounds)
-        view.target = fit_view(view, view.target, floor, (x0, y0, x1, y1), aspect)
+        keep = []
+        if player is not None:
+            w, h = _frame_size(player)
+            keep = body_corners(x, y, z, w / PIXELS_PER_METRE, h / PIXELS_PER_METRE, view)
+        view.target = fit_view(view, view.target, floor, (x0, y0, x1, y1), aspect, keep=keep)
     return view
 
 class Hd2dView:

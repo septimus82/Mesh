@@ -117,16 +117,24 @@ def _with_player(scene: dict, x: float, y: float) -> dict:
 
 
 def test_see_it_keeps_the_game_camera_inside_the_room_near_its_edge() -> None:
-    """Studio's "See it" shows what play shows: the follow camera's own ``fit_view`` at the preview's shape."""
+    """Studio's "See it" shows what play shows: the follow camera's own ``fit_view`` at the preview's shape, inside the
+    room's bounds, which give way only where the player (its Animator's frame, else a tile) would leave the picture."""
+    from engine.hd2d.renderer import KEEP_MARGIN, body_corners
     from engine.studio_hd2d import game_view
 
     aspect = 1.6
-    scene = _with_player(_room(), 32.0, 32.0)  # 1 m from the room's south-west corner
-    view = game_view(scene, aspect)
-    assert view.target[0] > 1.0 and view.target[1] > 1.0  # moved in from the player
+    view = game_view(_with_player(_room(), 192.0, 192.0), aspect)  # 6 m from the room's south-west corner
+    assert view.target[0] > 6.0 and view.target[1] > 6.0  # moved in from the player
     x0, y0, x1, y1 = _floor_seen(view, aspect)
     assert x0 == pytest.approx(0.0, abs=1e-6) and y0 == pytest.approx(0.0, abs=1e-6)  # the edge, not past it
     assert x1 < 40 and y1 < 30
+    corner = game_view(_with_player(_room(), 32.0, 32.0), aspect)  # 1 m from it: kept inside, the player is out
+    x0, y0, _x1, _y1 = _floor_seen(corner, aspect)
+    assert x0 < 0.0 or y0 < 0.0, "the bounds give way"
+    vp = corner.view_projection(aspect)
+    for p in body_corners(1.0, 1.0, 0.0, 1.0, 1.0, corner):  # (a tile: the test's player has no Animator)
+        c = [vp[i][0] * p[0] + vp[i][1] * p[1] + vp[i][2] * p[2] + vp[i][3] for i in range(4)]
+        assert max(abs(c[0] / c[3]), abs(c[1] / c[3])) <= 1.0 - KEEP_MARGIN + 1e-6, "the player in the picture"
     middle = game_view(_with_player(_room(120, 90), 1920.0, 1440.0), aspect)  # far from the edges: on the player
     assert middle.target[:2] == pytest.approx((60.0, 45.0))
 
