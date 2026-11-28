@@ -8,11 +8,15 @@ from typing import TYPE_CHECKING, Any, Iterable
 if TYPE_CHECKING:
     from arcade import Sprite
 
+from engine.log_utils import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
+
+logger = get_logger(__name__)
+BLOCKED_S = 0.5  # a move_to with no headway this long (s) is blocked: it ends where it stands
 
 
 @register_behaviour(
@@ -296,6 +300,15 @@ class SequencePlayer(Behaviour):
             return True
         step_len = min(speed * dt, distance)  # this frame's share of the way, never past the target
         window.move_entity_with_collision(entity, dx / distance * step_len, dy / distance * step_len)
+        # Blocked (a wall, the room's edge): no headway for BLOCKED_S ends the step where it stands, or the
+        # sequence (and a locked player) would wait for good.
+        progress = distance - math.hypot(target_x - entity.center_x, target_y - entity.center_y)
+        if step_len > 0.0:  # (a frame of no time says nothing)
+            state["stalled"] = state.get("stalled", 0.0) + dt if progress < step_len * 0.01 else 0.0
+        if state.get("stalled", 0.0) >= BLOCKED_S:
+            logger.warning("[Mesh][Sequence] %s: move_to (%.1f, %.1f) blocked at (%.1f, %.1f); step ended",
+                           self.entity_name, target_x, target_y, entity.center_x, entity.center_y)
+            return True
         return False
 
     def _compute_move_target(self, step: dict[str, Any], entity: Sprite) -> tuple[float, float]:
