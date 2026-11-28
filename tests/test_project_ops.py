@@ -190,7 +190,7 @@ def test_a_door_above_a_wall_gets_its_arrival_spot_clear_of_the_wall() -> None:
     assert (arrival["x"], arrival["y"]) not in ((336, 208), (336, 400)), arrival
 
 
-def test_with_no_clear_spot_the_arrival_is_as_before_with_a_warning(caplog: pytest.LogCaptureFixture) -> None:
+def test_with_no_clear_spot_the_arrival_is_as_before_with_a_warning(capsys: pytest.CaptureFixture[str]) -> None:
     room = {**_scene(), "entities": [_walker()]}
     room, _, _ = ops.add_map(room, "packs/core_regions/scenes/start.json", width=24, height=16)
     room = ops.paint_tiles(room, ops.WALLS, [(c, r) for c in range(24) for r in range(16)], ops.STARTER_WALL)
@@ -198,7 +198,7 @@ def test_with_no_clear_spot_the_arrival_is_as_before_with_a_warning(caplog: pyte
     start, _house = ops.link_rooms(room, "start", "Start", (336, 304), house, key_b, "House", (200, 300))
     arrival = next(e for e in ops.entities(start) if e.get("tag") == "spawn_point")
     assert (arrival["x"], arrival["y"]) == (336, 208)
-    assert "No clear arrival spot" in caplog.text
+    assert "No clear arrival spot" in capsys.readouterr().err  # (engine loggers write to stderr, not propagating)
 
 
 def test_ensure_entity_ids_fills_only_missing_ids() -> None:

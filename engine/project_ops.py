@@ -12,7 +12,6 @@ from __future__ import annotations
 import copy
 import itertools
 import json
-import logging
 import math
 import posixpath
 import re
@@ -25,6 +24,7 @@ from engine.ai_ops import build_prefab_entity_definition
 from engine.behaviours import load_builtin_behaviours
 from engine.behaviours.registry import get_behaviour_info, list_behaviours
 from engine.entity_paint_mode import make_entity_id
+from engine.log_utils import get_logger
 from engine.pathfinding.nav_grid import NavGrid, build_nav_grid_from_scene_payload
 from engine.physics_model import Aabb
 from engine.physics_runtime import footprint
@@ -33,7 +33,7 @@ from engine.tilemap_edit import TilemapDims, ensure_tiles_array, get_layer_by_id
 from engine.tilemap_flood_fill import flood_fill_indices
 
 Doc = dict[str, Any]
-_LOG = logging.getLogger(__name__)
+_LOG = get_logger(__name__)
 
 DOOR_SPRITE = "assets/sprites/door.png"
 
