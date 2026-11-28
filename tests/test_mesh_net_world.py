@@ -666,8 +666,10 @@ def test_two_clients_travel_reconnect_and_return_over_sockets(files):
             await b.until(lambda p: len(p.state["players"]) == 2)
             # b drops; it resumes into the same expedition instance, where it stood, with its party.
             room, token, spot = b.room, b.token, b.own()[1:3]
+            together = b.state["tick"]
             await b.close()
-            await a.until(lambda p: len(p.state["players"]) == 1)
+            # (a's state may be the one it entered R1 with, before b arrived: only a later one shows b gone)
+            await a.until(lambda p: p.state["tick"] > together and len(p.state["players"]) == 1)
             b = await Peer.open(port, world, token)
             peers.append(b)
             await b.until(lambda p: p.room and p.party)
