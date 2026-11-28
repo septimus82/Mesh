@@ -36,6 +36,11 @@ QUESTS = [  # (given by someone: they wait to be accepted)
                 {"id": "bring", "title": "Bring it back", "text": "The shrine keeper waits"}]},
     {"id": "ferry", "title": "Find the ferryman", "auto_start": False,
      "stages": [{"id": "ask", "title": "Ask at the docks", "text": "Someone there knows him"}]},
+    {"id": "letter", "title": "The keeper's letter", "auto_start": False,  # (a ~200-character objective)
+     "stages": [{"id": "carry", "title": "Carry the letter",
+                 "text": ("Take the sealed letter from the shrine keeper past the old mill and the flooded crypt, "
+                          "then up the watchtower stairs before nightfall, and hand it to the lantern keeper "
+                          "waiting at the top")}]},
 ]
 
 
@@ -129,12 +134,39 @@ def test_the_hud_boxes_and_the_open_quest_log_do_not_overlap(tmp_path: Path, mon
         assert "objective" not in boxes, "the objective shows while the Quest Log is open"
         assert any(text == CONTROLS_HINT for text, *_ in hud.drawn.values()), "the controls hint went"
         panel = log.panel_rect()
+        assert log.drawn_panel == panel, f"the Quest Log drew {log.drawn_panel}, not its panel_rect() {panel}"
+        assert log.drawn_lines, "the Quest Log drew no text"
+        for kind, text, x, top, line_width, line_height in log.drawn_lines:
+            inside = panel[0] <= x and x + line_width <= panel[2] and panel[1] <= top - line_height and top <= panel[3]
+            assert inside, f"{kind} {text!r} lies outside the panel {panel}"
         for kind, rect in boxes.items():
             assert _apart(rect, panel), f"{kind} {rect} overlaps the open Quest Log {panel}"
-        closed_boxes = {kind: rect for kind, (_text, *rect) in closed.items()}
-        kinds = sorted(closed_boxes)
-        for n, a in enumerate(kinds):
-            for b in kinds[n + 1:]:
-                assert _apart(closed_boxes[a], closed_boxes[b]), f"{a} {closed_boxes[a]} overlaps {b} {closed_boxes[b]}"
+        _assert_all_apart(closed)
+    finally:
+        dispose_game_window(window)
+
+
+def _assert_all_apart(drawn: dict[str, tuple[str, float, float, float, float]]) -> None:
+    boxes = {kind: rect for kind, (_text, *rect) in drawn.items()}
+    kinds = sorted(boxes)
+    for n, a in enumerate(kinds):
+        for b in kinds[n + 1:]:
+            assert _apart(boxes[a], boxes[b]), f"{a} {boxes[a]} overlaps {b} {boxes[b]}"
+
+
+@pytest.mark.parametrize("size", [(800, 600), (640, 480)])
+def test_a_long_objective_and_a_wide_toast_do_not_overlap(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+                                                          size: tuple[int, int]) -> None:
+    # A ~200-character objective reaches down past the toasts' top: the controls hint wraps to its left.
+    window = _window(_project(tmp_path / "game"), size, monkeypatch)
+    try:
+        assert window.quest_manager.start_quest("letter") is True
+        hud = window.player_hud
+        hud.enqueue_toast(CONTROLS_HINT, seconds=30.0)
+        window.on_draw()
+        objective = hud.drawn["objective"]
+        assert objective[0].startswith("Objective: Carry the letter") and objective[2] < size[1] - 110, objective
+        assert CONTROLS_HINT in [text for text, *_ in hud.drawn.values()], hud.drawn
+        _assert_all_apart(hud.drawn)
     finally:
         dispose_game_window(window)

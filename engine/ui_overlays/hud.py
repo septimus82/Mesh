@@ -26,6 +26,7 @@ _HUD_PROVIDER_EXCEPTIONS: tuple[type[Exception], ...] = (
 # text's measured width (#422 H8: the box was estimated from the character count and capped at 360 px while the text
 # was drawn unbounded, so the controls hint ran far past its border).
 TOAST_LEFT = 20.0  # from the window's left edge; the box keeps the same margin from its right edge
+TOAST_TOP = 110.0  # the first toast's top, down from the window's top (the next ones stack below it)
 TOAST_PAD_X, TOAST_PAD_Y = 12.0, 6.0
 TOAST_MIN_WIDTH, TOAST_MAX_WIDTH = 180.0, 640.0  # (a short message keeps its box; a long one wraps before 640 px)
 TOAST_LINE_HEIGHT = 22.0  # the line pitch at text scale 1, as before; a taller font or text scale gets more
@@ -76,6 +77,15 @@ def layout_toast(text: str, *, measure: Callable[[str], float], line_height: flo
     text_width = math.ceil(max(measure(line) for line in lines) + 2 * TOAST_PAD_X)
     width = min(max_width, max(TOAST_MIN_WIDTH, float(text_width)))
     return ToastLayout(lines, width, len(lines) * line_height + 2 * TOAST_PAD_Y, line_height)
+
+
+def _below(play_bar: Any, left: float, right: float, top: float) -> float:
+    """``top``, or just under Studio's play bar (Stop, Flags, Menu; ``Studio.play_bar_rect``) when a play-test has it
+    over ``left``..``right``: a small window, or a bar widened by the AI permissions, put it over the HP bar and the
+    objective (#769)."""
+    if play_bar is None or play_bar[2] <= left or play_bar[0] >= right:
+        return top
+    return min(top, float(play_bar[1]) - HUD_GAP)
 
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -369,6 +379,7 @@ class QuestLog(UIElement):
         self._text_cache = TextCache()  # one Text a line drawn
         # What the last draw put on screen: (kind, line, left, top, width, height); kind "title:<n>" or "detail".
         self.drawn_lines: list[tuple[str, str, float, float, float, float]] = []
+        self.drawn_panel: tuple[float, float, float, float] | None = None  # (left, bottom, right, top) last drawn
 
     def on_resize(self, width: int, height: int) -> None:  # noqa: ARG002
         """QuestLog computes layout per draw; no persistent cache to update."""
@@ -432,6 +443,7 @@ class QuestLog(UIElement):
         entries = self._collect_entries()
         left, bottom, right, top = self.panel_rect()
         width, height = right - left, top - bottom
+        self.drawn_panel = (left, bottom, right, top)  # (the box drawn here, from these same numbers)
         _draw_rectangle_filled(
             center_x=(left + right) / 2.0,
             center_y=(top + bottom) / 2.0,
@@ -830,6 +842,9 @@ class PlayerHUD(UIElement):
         log = getattr(getattr(self.window, "ui_controller", None), "quest_log", None)
         if log is not None and log.is_visible():  # (wrapped to the open Quest Log's left, not run under it)
             max_width = min(max_width, log.panel_rect()[0] - HUD_GAP - TOAST_LEFT)
+        objective = self.drawn.get("objective")  # (this frame's: a long one reaches down past the toasts' top)
+        if objective is not None and objective[2] < float(self.window.height) - TOAST_TOP:
+            max_width = min(max_width, objective[1] - HUD_GAP - TOAST_LEFT)
         key = (text, max_width, scale)
         layout = self._toast_layouts.get(key)
         if layout is None:
@@ -856,7 +871,7 @@ class PlayerHUD(UIElement):
         if toasts:
             from ..text_draw import draw_text_cached  # noqa: PLC0415
 
-            top = self.window.height - 110.0
+            top = self.window.height - TOAST_TOP
             cache = getattr(self.window, "text_cache", None)
             for index, (toast_text, alpha) in enumerate(toasts):
                 if not toast_text:
@@ -903,11 +918,14 @@ class PlayerHUD(UIElement):
         if health_state.max_hp <= 0:
             return
 
+        rect_of = getattr(getattr(self.window, "studio", None), "play_bar_rect", None)
+        play_bar = rect_of() if callable(rect_of) else None  # (once a frame: it lays the bar out)
+
         # Draw Health Bar
         bar_x = 20
         bar_width = 200
         bar_height = 20
-        bar_y = self._below_play_bar(bar_x - 2, bar_x + bar_width + 2, self.window.height - 28) - 2  # (its border: 2)
+        bar_y = _below(play_bar, bar_x - 2, bar_x + bar_width + 2, self.window.height - 28) - 2  # (its border: 2)
 
         # Background
         _draw_rectangle_filled(
@@ -955,7 +973,7 @@ class PlayerHUD(UIElement):
                     text.x = self.window.width - 20.0  # (its 300 px box's right edge: the lines start at its left)
                     left = float(getattr(text, "left", text.x - 300.0))  # (a stand-in arcade's Text: the box)
                     right = left + float(getattr(text, "content_width", 300.0))
-                    text.y = self._below_play_bar(left, right, self.window.height - 20.0)
+                    text.y = _below(play_bar, left, right, self.window.height - 20.0)
                     text.draw()
                     bottom = text.y - float(getattr(text, "content_height", 0.0))
                     self.drawn["objective"] = (objective, left, bottom, right, text.y)
@@ -1007,15 +1025,6 @@ class PlayerHUD(UIElement):
         self._level_text.anchor_x = "left"
         self._level_text.anchor_y = "center"
         self._level_text.draw()
-
-    def _below_play_bar(self, left: float, right: float, top: float) -> float:
-        """``top``, or just under Studio's play bar (Stop, Flags, Menu) when a play-test has it over ``left``..``right``:
-        a small window, or a bar widened by the AI permissions, put it over the HP bar and the objective (#769)."""
-        rect_of = getattr(getattr(self.window, "studio", None), "play_bar_rect", None)
-        bar = rect_of() if callable(rect_of) else None
-        if bar is None or bar[2] <= left or bar[0] >= right:
-            return top
-        return min(top, float(bar[1]) - HUD_GAP)
 
     def get_hud_view_model(self) -> HudViewModel | None:
         return self._latest_view_model
