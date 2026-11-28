@@ -24,12 +24,16 @@ from engine.ai_ops import build_prefab_entity_definition
 from engine.behaviours import load_builtin_behaviours
 from engine.behaviours.registry import get_behaviour_info, list_behaviours
 from engine.entity_paint_mode import make_entity_id
+from engine.log_utils import get_logger
+from engine.pathfinding.nav_grid import NavGrid, build_nav_grid_from_scene_payload
+from engine.physics_model import Aabb
 from engine.physics_runtime import footprint
 from engine.scene_loader import SceneLoader
 from engine.tilemap_edit import TilemapDims, ensure_tiles_array, get_layer_by_id, set_tile
 from engine.tilemap_flood_fill import flood_fill_indices
 
 Doc = dict[str, Any]
+_LOG = get_logger(__name__)
 
 DOOR_SPRITE = "assets/sprites/door.png"
 
@@ -610,17 +614,20 @@ def new_room(world: Doc, label: str, scenes_dir: str, player_template: Doc | Non
 def link_rooms(
     scene_a: Doc, key_a: str, label_a: str, at_a: tuple[float, float],
     scene_b: Doc, key_b: str, label_b: str, at_b: tuple[float, float],
+    player: Doc | None = None,
 ) -> tuple[Doc, Doc]:
-    """Add a walk-in door in each room leading to the other, each with an arrival spot beside it."""
+    """Add a walk-in door in each room leading to the other, each with an arrival spot beside it where ``player``
+    (the game's player definition; by default each room's own player object) stands clear of walls."""
     if key_a == key_b:
         raise OpError("A door has to lead to a different room.")
     out_a, out_b = copy.deepcopy(scene_a), copy.deepcopy(scene_b)
-    _add_door(out_a, key_a, at_a, to_key=key_b, to_label=label_b, arrive_as=f"from_{key_b}")
-    _add_door(out_b, key_b, at_b, to_key=key_a, to_label=label_a, arrive_as=f"from_{key_a}")
+    _add_door(out_a, key_a, at_a, to_key=key_b, to_label=label_b, arrive_as=f"from_{key_b}", player=player)
+    _add_door(out_b, key_b, at_b, to_key=key_a, to_label=label_a, arrive_as=f"from_{key_a}", player=player)
     return _checked(scene_a, out_a), _checked(scene_b, out_b)
 
 
-def _add_door(scene: Doc, key: str, at: tuple[float, float], *, to_key: str, to_label: str, arrive_as: str) -> None:
+def _add_door(scene: Doc, key: str, at: tuple[float, float], *, to_key: str, to_label: str, arrive_as: str,
+              player: Doc | None = None) -> None:
     x, y = float(at[0]), float(at[1])
     spawn_into_target = f"from_{key}"
     door = {
@@ -642,7 +649,7 @@ def _add_door(scene: Doc, key: str, at: tuple[float, float], *, to_key: str, to_
         },
     }
     scene.setdefault("entities", []).append(door)
-    ax, ay = _arrival_spot(scene, x, y)
+    ax, ay = _arrival_spot(scene, x, y, player)
     scene["entities"].append({
         "id": unique_entity_id(scene, make_entity_id(key, f"arrival_{to_key}", ax, ay)),
         "name": f"Arrival from {to_label}",
@@ -654,20 +661,78 @@ def _add_door(scene: Doc, key: str, at: tuple[float, float], *, to_key: str, to_
 
 
 
-def _arrival_spot(scene: Doc, x: float, y: float) -> tuple[float, float]:
-    """Where a player coming through the door appears: below it, unless that is off the map (a door near
-    the bottom edge put arrivals in the void), then above it, then beside it. Rooms without a map keep below."""
+def _arrival_spot(scene: Doc, x: float, y: float, player: Doc | None = None) -> tuple[float, float]:
+    """Where a player coming through the door appears: the nearest spot on the map where the player's collider
+    is clear of walls and solid objects, below the door first, then above, right and left, 96 px away and then a
+    tile further each time (a door near the bottom edge put arrivals in the void; one above a wall put them in it,
+    stuck). With no clear spot, the first on the map at 96 px, with a warning. Rooms without a map keep below."""
     info = map_info(scene)
-    offsets = (ARRIVAL_OFFSET, (0.0, -ARRIVAL_OFFSET[1]), (-ARRIVAL_OFFSET[1], 0.0), (ARRIVAL_OFFSET[1], 0.0))
     if info is None:
         return x + ARRIVAL_OFFSET[0], y + ARRIVAL_OFFSET[1]
     w, h = info["width"] * info["tilewidth"], info["height"] * info["tileheight"]
     margin = max(info["tilewidth"], info["tileheight"])  # keep clear of the border walls
-    for dx, dy in offsets:
-        ax, ay = x + dx, y + dy
-        if margin <= ax <= w - margin and margin <= ay <= h - margin:
-            return ax, ay
-    return x + ARRIVAL_OFFSET[0], y + ARRIVAL_OFFSET[1]
+    box = player_box(player or next((e for e in entities(scene) if e.get("tag") == "player"), None))
+    grid = build_nav_grid_from_scene_payload(scene)  # (once: up to 24 spots are tried)
+    first: tuple[float, float] | None = None
+    for ring in range(6):
+        d = -ARRIVAL_OFFSET[1] + ring * margin
+        for dx, dy in ((0.0, -d), (0.0, d), (d, 0.0), (-d, 0.0)):
+            ax, ay = x + dx, y + dy
+            if not (margin <= ax <= w - margin and margin <= ay <= h - margin):
+                continue
+            first = first or ((ax, ay) if ring == 0 else None)
+            if _clear_for(scene, box, ax, ay, grid):
+                return ax, ay
+    _LOG.warning("No clear arrival spot near the door at (%s, %s): the player may arrive in a wall.", x, y)
+    return first or (x + ARRIVAL_OFFSET[0], y + ARRIVAL_OFFSET[1])
+
+
+def player_box(player: Doc | None) -> tuple[float, float, float, float]:
+    """The player's collider as the game builds it, ``(w, h, offset_x, offset_y)`` from its centre: an automatic
+    footprint is the feet of its picture, whose size is its Animator's starting frame times ``scale`` (the game's
+    sprite), or 32x32 when the document doesn't say (a plain picture: its file isn't read here)."""
+    player = player or {}
+    animator: Doc = (player.get("behaviour_config") or {}).get("Animator") or {}
+    raw = animator.get("animations")
+    clips: Doc = raw if isinstance(raw, dict) else {}
+    clip = (clips.get(str(animator.get("animation_state"))) or clips.get(str(animator.get("idle_clip")))
+            or next(iter(clips.values()), None))
+    try:
+        scale = float(player.get("scale") or 1.0)
+        size = (float(clip["frame_width"]) * scale, float(clip["frame_height"]) * scale) if clip else None
+    except (KeyError, TypeError, ValueError):
+        size = None
+    return _collider_box(collider_of(player, size), size)
+
+
+def _collider_box(c: Doc, size: tuple[float, float] | None) -> tuple[float, float, float, float]:
+    if c["kind"] == "box":
+        return c["w"], c["h"], c["offset_x"], c["offset_y"]
+    if c["kind"] == "circle":
+        return 2 * c["r"], 2 * c["r"], c["offset_x"], c["offset_y"]
+    pw, ph = size or (32.0, 32.0)
+    return pw, ph, 0.0, 0.0
+
+
+def _clear_for(scene: Doc, box: tuple[float, float, float, float], x: float, y: float, grid: NavGrid | None) -> bool:
+    """Whether a collider ``box`` (as player_box gives it) standing at ``x, y`` overlaps no wall tile of ``grid`` (the
+    room's, build_nav_grid_from_scene_payload) and no solid object (the game's strict overlap: touching is clear).
+    Only the room's in-scene wall tiles and solid objects count, not an external map file's tiles or HD-2D structures."""
+    me = Aabb(x + box[2], y + box[3], box[0], box[1])
+    if grid is not None:
+        tw, th = grid.tile_w, grid.tile_h
+        for col in range(int(me.left // tw), math.ceil(me.right / tw)):
+            for up in range(int(me.bottom // th), math.ceil(me.top / th)):  # rows counted from the bottom
+                cell = (col, grid.height - 1 - up)
+                if grid.in_bounds(cell) and grid.to_index(cell) in grid.blocked:
+                    return False
+    for e in entities(scene):
+        if e.get("solid") and e.get("tag") != "player":
+            # ponytail: a solid object's plain picture counts as 32x32 (its file isn't read here)
+            ow, oh, ox, oy = _collider_box(collider_of(e), None)
+            if me.intersection(Aabb(float(e.get("x", 0)) + ox, float(e.get("y", 0)) + oy, ow, oh)):
+                return False
+    return True
 
 # --- maps -----------------------------------------------------------------------------------
 

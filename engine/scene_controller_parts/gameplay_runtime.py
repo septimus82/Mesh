@@ -7,31 +7,34 @@ def move_entity_with_collision(self, sprite, dx: float, dy: float, friction: flo
     import math
 
     import engine.scene_controller_core as scene_controller_module
-    from engine.physics_model import fast_move_steps
+    from engine.physics_model import Aabb, axis_stop, fast_move_steps
 
     if not (math.isfinite(dx) and math.isfinite(dy)):  # a NaN/inf move would park the sprite at NaN for good
         return
     check = scene_controller_module.optional_arcade.arcade.check_for_collision_with_list
-    # Cut a fast move into pieces no longer than half the sprite, so a thin wall can't be skipped.
+
+    def box(s: Any) -> Aabb:
+        return Aabb((s.left + s.right) / 2, (s.bottom + s.top) / 2, s.right - s.left, s.top - s.bottom)
+
+    # Cut a fast move into pieces no longer than half the sprite, so a thin wall can't be skipped. A wall the
+    # sprite is already in blocks only going deeper (engine.physics_model.axis_stop), as for the player.
     nx, ny = fast_move_steps(dx, sprite.width), fast_move_steps(dy, sprite.height)
     for _ in range(nx):
+        before = box(sprite)
         sprite.center_x += dx / nx
         hit_list = check(sprite, self.solid_sprites)
-        if hit_list:
-            if dx > 0:
-                sprite.right = min(wall.left for wall in hit_list)
-            elif dx < 0:
-                sprite.left = max(wall.right for wall in hit_list)
+        stop = axis_stop(before, dx, [box(w) for w in hit_list], 0) if hit_list else None
+        if stop is not None:
+            sprite.center_x += stop - box(sprite).x
             break
 
     for _ in range(ny):
+        before = box(sprite)
         sprite.center_y += dy / ny
         hit_list = check(sprite, self.solid_sprites)
-        if hit_list:
-            if dy > 0:
-                sprite.top = min(wall.bottom for wall in hit_list)
-            elif dy < 0:
-                sprite.bottom = max(wall.top for wall in hit_list)
+        stop = axis_stop(before, dy, [box(w) for w in hit_list], 1) if hit_list else None
+        if stop is not None:
+            sprite.center_y += stop - box(sprite).y
             break
 
 
