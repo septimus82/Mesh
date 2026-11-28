@@ -44,7 +44,7 @@ class DummyAttacker:
     def __init__(self):
         self.attacks = 0
 
-    def attack(self):
+    def attack(self, toward=None):
         self.attacks += 1
 
 

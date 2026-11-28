@@ -879,7 +879,7 @@ jobs:
 
       - name: The shards together ran the whole suite, each test once
         if: always()  # (also when the download failed: then it refuses, red)
-        run: python3 tooling/ci_shards.py check shard-records --plan ${{ matrix.plan }} --shards ${{ matrix.shards }} --min-selected 13600 --commit "${{ github.sha }}"
+        run: python3 tooling/ci_shards.py check shard-records --plan ${{ matrix.plan }} --shards ${{ matrix.shards }} --min-selected 14000 --commit "${{ github.sha }}"
 
   timing-rolling:
     # Report-only (#373, #400): the integration branch's recent CI timings against the committed advisory model, so a

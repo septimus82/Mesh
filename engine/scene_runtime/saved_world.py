@@ -43,6 +43,7 @@ import copy
 from typing import Any
 
 from engine.log_utils import get_logger
+from engine.scene_entity_gating import is_player_entity_payload
 from engine.scene_runtime.room_memory import room_key
 
 logger = get_logger(__name__)
@@ -167,7 +168,7 @@ def compose(save: dict[str, Any], room: dict[str, Any], room_path: str) -> dict[
     have = {i for i in map(_id, kept) if i}
     removed = _removed(save, room_path)
     added = [copy.deepcopy(e) for e in room.get("entities") or []
-             if _id(e) and _id(e) not in have and _id(e) not in removed]
+             if _id(e) and _id(e) not in have and (_id(e) not in removed or is_player_entity_payload(e))]  # (#750)
     out["entities"] = kept + added
     if "state" in save:
         out["state"] = copy.deepcopy(save["state"])

@@ -146,6 +146,16 @@ def test_not_in_the_project_in_another_room_or_collected_earlier(made: Any) -> N
     assert "collected or defeated earlier" in _diag(studio, "coin")["blocking"]["message"]
 
 
+def test_the_player_is_never_reported_as_collected_or_defeated_earlier(made: Any) -> None:
+    """#750: a save from before the fix may list the player as removed; reads ignore it, and so does the diagnosis."""
+    studio = made(HERO, DOOR)
+    room = str(studio.window.scene_controller.room_path)
+    studio.window.game_state_controller.set_var("room_memory", {room: {"removed": ["hero"]}})
+    _sprite(studio, "hero").remove_from_sprite_lists()  # (dead)
+    out = _diag(studio, "hero")
+    assert "collected or defeated earlier" not in json.dumps(out)
+
+
 # --------------------------------------------------------------------- its own conditions
 
 def test_its_own_flags_hidden_by_show_when_and_a_door_used_up(made: Any) -> None:

@@ -168,8 +168,8 @@ class Lever:
 
 
 def single_player(world: World | None, room: SceneRoom, actor_at: tuple[float, float, float],
-                  target: tuple[float, float, float], monkeypatch: pytest.MonkeyPatch) -> dict[str, bool]:
-    """The game's own code, ``window.hd2d_world`` the World (None: a 2D room), an actor facing right at ``actor_at``
+                  target: tuple[float, float, float], monkeypatch: pytest.MonkeyPatch, facing: str = "right") -> dict[str, bool]:
+    """The game's own code, ``window.hd2d_world`` the World (None: a 2D room), an actor facing ``facing`` at ``actor_at``
     and each kind of target at ``target``: what took effect. Sprites touch where their collider boxes overlap (the
     authority's test; Arcade's own needs pictures)."""
     from engine.interaction import perform_interaction
@@ -179,7 +179,7 @@ def single_player(world: World | None, room: SceneRoom, actor_at: tuple[float, f
     monkeypatch.setattr(optional_arcade.arcade, "check_for_collision",
                         lambda a, b: shapes_overlap(entity_shape(a), entity_shape(b)))
     x, y, z = actor_at
-    actor: Any = sprite(x, y, room._template_size(), {**room.template, "elevation": z, "facing": "right"})
+    actor: Any = sprite(x, y, room._template_size(), {**room.template, "elevation": z, "facing": facing})
     actor.mesh_tag = actor.mesh_name = "player"
     actor.angle, actor.change_x, actor.change_y = 0.0, 0.0, 0.0
 
@@ -253,6 +253,19 @@ def test_both_runtimes_give_the_floor_rules_answer(case: str, room: SceneRoom, w
     assert same_level(world, sprite(*actor[:2], room._template_size(), {**room.template, "elevation": actor[2]}),
                       SimpleNamespace(center_x=target[0], center_y=target[1], width=0.0, height=0.0,
                                       mesh_entity_data={"elevation": target[2], "components": BOX})) is expected
+
+
+@pytest.mark.parametrize("facing", ["right", "up", "left", "down"])
+def test_the_swing_goes_the_way_the_attacker_faces(facing: str, room: SceneRoom, world: World,
+                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+    """#751: on the ground of the HD-2D World, the swing goes the way the actor faces (as the authority's: FACINGS),
+    standing still: an enemy that far ahead is hit, one as far behind is not (the player could only hit east)."""
+    fx, fy = {"right": (1, 0), "up": (0, 1), "left": (-1, 0), "down": (0, -1)}[facing]
+    (ax, ay, az), _target = placed(room, "ground, ground")
+    for side, expected in ((1, True), (-1, False)):
+        target = (ax + side * fx * room.reach, ay + side * fy * room.reach, 0.0)
+        done = single_player(world, room, (ax, ay, az), target, monkeypatch, facing=facing)
+        assert done["attack"] is expected, f"facing {facing}, enemy {'ahead' if side > 0 else 'behind'}"
 
 
 def test_without_an_hd2d_world_nothing_changes(room: SceneRoom, monkeypatch: pytest.MonkeyPatch) -> None:
