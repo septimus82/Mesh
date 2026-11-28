@@ -326,7 +326,7 @@ def _tiers(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> 
 def test_a_gpu_shard_runs_the_plugin_by_the_gpu_plan_and_isnt_held_to_the_whole_floor(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     rc, cmd, summary = _tiers(tmp_path, monkeypatch, ["--shard", "2/2", "gpu"])
-    assert rc == 0, summary["problems"]  # (1 test < min_selected 605: the fan-in holds the whole selection to it)
+    assert rc == 0, summary["problems"]  # (1 test < min_selected 625: the fan-in holds the whole selection to it)
     text = " ".join(cmd)
     assert "-m gl" in text and "-p tooling.ci_shards_plugin --mesh-shard 2/2 --mesh-shard-plan gpu" in text
     assert re.search(r"--mesh-shard-record \S*artifacts[\\/]shards[\\/]shard-2\.json", text)
@@ -337,7 +337,7 @@ def test_a_gpu_shard_runs_the_plugin_by_the_gpu_plan_and_isnt_held_to_the_whole_
 def test_the_unsharded_gpu_lane_is_unchanged(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     rc, cmd, summary = _tiers(tmp_path, monkeypatch, ["gpu"])
     assert "ci_shards_plugin" not in " ".join(cmd) and summary["shard"] is None
-    assert rc == 1 and summary["problems"] == ["the lane selected 1 tests, fewer than the 605 it should"]
+    assert rc == 1 and summary["problems"] == ["the lane selected 1 tests, fewer than the 625 it should"]
 
 
 def test_a_linux_gpu_shard_runs_by_linux_s_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

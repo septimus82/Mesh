@@ -42,12 +42,12 @@ from xml.etree import ElementTree
 
 SHARDS = 2  # (the default split; a plan with another count says so in PLAN_SHARDS, e.g. Windows' default suite: 3)
 # The default suite's floor (#648): CI's checks of it on both OSes (``check --min-selected``: each OS's fan-in over its
-# two shards) fail when it collects fewer tests, so a conftest, marker or collection
-# change that drops most of the suite turns CI red instead of green. Set under the measured collection (14,331 at
-# #749's head, with room for the PRs landing beside it: valid up to 14,736); tests/test_test_lanes_contract.py keeps it
-# within 5% of what the suite collects. A legitimate
+# shards) fail when it collects fewer tests, so a conftest, marker or collection
+# change that drops most of the suite turns CI red instead of green. Set about 0.7% under what CI collects (14,503 on
+# both OSes at 857bc240), so the suite can grow to 15,157 before it must rise; tests/test_test_lanes_contract.py keeps
+# it within 5% of what the suite collects. A legitimate
 # test removal lowers it on purpose, in the same PR; growth past 5% raises it there too.
-DEFAULT_MIN_SELECTED = 14_000
+DEFAULT_MIN_SELECTED = 14_400
 SCHEME = "f13c-2"  # (bump when the assignment rule changes: records of another scheme are refused; 2: S1 5.9's re-pin)
 RECORD_SCHEMA = 1
 OK_OUTCOMES = ("passed", "skipped", "xfailed", "xpassed")  # (what lets an unsharded run pass too)
