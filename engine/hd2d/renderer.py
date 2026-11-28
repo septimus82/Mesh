@@ -411,6 +411,15 @@ class Camera:
 KEEP_MARGIN = 0.1  # NDC: the followed character stays this far inside the picture's edges (5% of it each side)
 
 
+def body_corners(x: float, y: float, z: float, width: float, height: float,
+                 camera: Camera) -> list[tuple[float, float, float]]:
+    """The corners (m) of a character's upright billboard as the game's camera draws it (Hd2dRenderer._sprite_quads):
+    its feet at (x, y, z), ``width`` across facing the camera, ``height`` tall stretched by 1 / cos(pitch)."""
+    half, h = width / 2, height / max(0.5, math.cos(math.radians(camera.pitch)))
+    rx, ry, _ = camera.right()
+    return [(x + sx * rx * half, y + sx * ry * half, z + top) for sx in (-1.0, 1.0) for top in (0.0, h)]
+
+
 def _shows(camera: Camera, target: tuple[float, float, float], points: list[tuple[float, float, float]],
            aspect: float) -> bool:
     """Whether every one of ``points`` (m) is in the picture, ``KEEP_MARGIN`` inside its edges, with the camera looking
@@ -418,9 +427,10 @@ def _shows(camera: Camera, target: tuple[float, float, float], points: list[tupl
     probe = Camera(camera.pitch, camera.fov, camera.distance, camera.ortho, camera.yaw)
     probe.target = target
     vp = probe.view_projection(aspect)
+    lim = 1.0 - KEEP_MARGIN + 1e-9  # (keep_shown's answers lie on the edge)
     for p in points:
         x, y, z, w = (vp[i][0] * p[0] + vp[i][1] * p[1] + vp[i][2] * p[2] + vp[i][3] for i in range(4))
-        if w <= 1e-6 or abs(x / w) > 1.0 - KEEP_MARGIN or abs(y / w) > 1.0 - KEEP_MARGIN:
+        if w <= 1e-6 or abs(x / w) > lim or abs(y / w) > lim:
             return False
     return True
 
@@ -431,30 +441,47 @@ def fit_view(camera: Camera, goal: tuple[float, float, float], floor: float,
     """``goal`` (the follow camera's target, m) moved so the picture of the floor at height ``floor`` (m) stays inside
     ``bounds`` (m: x0, y0, x1, y1), and centred on them along an axis where they are narrower than the picture.
     Unchanged when the picture reaches the horizon (there is no edge of the floor to keep to).
-    ``keep``: points (m; the followed character's corners, head and feet) that must stay in the picture: the bounds
-    give way to them. The picture is a tilted trapezoid, narrower near the camera than far from it, and characters
-    stand up from the floor, so a picture kept inside the room can still leave a character at its edge out of it."""
+    ``keep``: points (m; the followed character's corners, head and feet: body_corners) that must stay in the picture:
+    the bounds give way to them, by the least move that shows them (keep_shown). The picture is a tilted trapezoid,
+    narrower near the camera than far from it, and characters stand up from the floor, so a picture kept inside the
+    room can still leave a character at its edge out of it."""
     return keep_shown(camera, _fit_floor(camera, goal, floor, bounds, aspect), goal, list(keep), aspect)
 
 
 def keep_shown(camera: Camera, start: tuple[float, float, float], end: tuple[float, float, float],
                points: list[tuple[float, float, float]], aspect: float) -> tuple[float, float, float]:
-    """The camera target nearest ``start`` on the way to ``end`` (one that shows them: centred on the character) that
-    shows every one of ``points`` (_shows); ``start`` itself when it does."""
+    """The camera target nearest ``start`` (the least move along the ground) that shows every one of ``points``
+    (_shows): ``start`` itself when it does; ``end`` (centred on them) when no target can (a character taller than
+    the picture)."""
     if not points or _shows(camera, start, points, aspect):
         return start
-
-    def toward(s: float) -> tuple[float, float, float]:
-        return (start[0] + (end[0] - start[0]) * s, start[1] + (end[1] - start[1]) * s,
-                start[2] + (end[2] - start[2]) * s)
-
-    # The targets that show every point form a convex set (each point in the frustum: half-spaces of the target),
-    # so along the way they are one stretch ending at ``end``: its first, by bisection.
-    lo, hi = 0.0, 1.0
-    for _ in range(24):
-        mid = (lo + hi) / 2
-        lo, hi = (lo, mid) if _shows(camera, toward(mid), points, aspect) else (mid, hi)
-    return toward(hi)
+    probe = Camera(camera.pitch, camera.fov, camera.distance, camera.ortho, camera.yaw)
+    probe.target = start
+    m = probe.view_projection(aspect)
+    lim = 1.0 - KEEP_MARGIN
+    # Moving the target by d = (dx, dy) shows p where it showed p - d (a translated camera), and clip coordinates are
+    # linear in p, so each point's four edges (s * clip_x or s * clip_y <= lim * clip_w) are half-planes a . d <= b.
+    # The targets that show every point are their intersection, a convex polygon; the nearest of its points to
+    # ``start`` is the nearest feasible foot of one edge line or crossing of two (closed form, no search).
+    planes = []
+    for p in points:
+        c = [m[i][0] * p[0] + m[i][1] * p[1] + m[i][2] * p[2] + m[i][3] for i in range(4)]
+        for k in (0, 1):
+            for s in (1.0, -1.0):
+                planes.append((lim * m[3][0] - s * m[k][0], lim * m[3][1] - s * m[k][1], lim * c[3] - s * c[k]))
+    candidates = []
+    for i, (a0, a1, b) in enumerate(planes):
+        n = a0 * a0 + a1 * a1
+        if n > 1e-18:
+            candidates.append((a0 * b / n, a1 * b / n))
+        for c0, c1, e in planes[i + 1:]:
+            det = a0 * c1 - a1 * c0
+            if abs(det) > 1e-12:
+                candidates.append(((b * c1 - e * a1) / det, (a0 * e - c0 * b) / det))
+    for dx, dy in sorted(candidates, key=lambda d: d[0] * d[0] + d[1] * d[1]):
+        if all(a0 * dx + a1 * dy <= b + 1e-9 * (1.0 + abs(b)) for a0, a1, b in planes):
+            return (start[0] + dx, start[1] + dy, start[2])
+    return end
 
 
 def _fit_floor(camera: Camera, goal: tuple[float, float, float], floor: float,
@@ -1339,12 +1366,10 @@ class Hd2dRenderer:
             program["u_cut_fwd"] = (0.0, 0.0, 0.0, 0.0)
 
     def _body(self, sprite: Any) -> list[tuple[float, float, float]]:
-        """The corners (m) of ``sprite``'s upright billboard as the game's camera draws it (_sprite_quads): feet and head."""
-        half = abs(sprite.width) / PIXELS_PER_METRE / 2
-        h = abs(sprite.height) / PIXELS_PER_METRE / max(0.5, math.cos(math.radians(self.camera.pitch)))
-        x, y, z = sprite.center_x / PIXELS_PER_METRE, sprite.bottom / PIXELS_PER_METRE, self.elevation_of(sprite) / PIXELS_PER_METRE
-        rx, ry, _ = self.camera.right()
-        return [(x + sx * rx * half, y + sx * ry * half, z + top) for sx in (-1.0, 1.0) for top in (0.0, h)]
+        """``sprite``'s billboard corners (m) as the game's camera draws it: feet and head (body_corners)."""
+        return body_corners(sprite.center_x / PIXELS_PER_METRE, sprite.bottom / PIXELS_PER_METRE,
+                            self.elevation_of(sprite) / PIXELS_PER_METRE, abs(sprite.width) / PIXELS_PER_METRE,
+                            abs(sprite.height) / PIXELS_PER_METRE, self.camera)
 
     def update(self, delta_time: float) -> None:
         if self.particles is not None:
@@ -1355,10 +1380,11 @@ class Hd2dRenderer:
         if sprite is None:
             return
         cam = self.settings.camera
-        body = self._body(sprite)  # what of the character must stay in the picture
         goal = (sprite.center_x / PIXELS_PER_METRE, sprite.bottom / PIXELS_PER_METRE,
                 self.elevation_of(sprite) / PIXELS_PER_METRE + cam.height)
+        body: list[tuple[float, float, float]] = []  # what of the character must stay in the picture (bounded rooms)
         if cam.bounds is not None:
+            body = self._body(sprite)
             ground = self.settings.ground
             floor = ground.elevation / PIXELS_PER_METRE if ground is not None else goal[2] - cam.height
             x0, y0, x1, y1 = (v / PIXELS_PER_METRE for v in cam.bounds)
@@ -1369,7 +1395,8 @@ class Hd2dRenderer:
         k = 1.0 - math.exp(-8.0 * max(0.0, delta_time))  # smooth follow, frame-rate independent
         t = self.camera.target
         smooth = (t[0] + (goal[0] - t[0]) * k, t[1] + (goal[1] - t[1]) * k, t[2] + (goal[2] - t[2]) * k)
-        self.camera.target = keep_shown(self.camera, smooth, goal, body, self._aspect)  # (a lagging follow, too)
+        # A bounded room's lagging follow keeps the character in the picture too; an unbounded room's simply follows
+        self.camera.target = keep_shown(self.camera, smooth, goal, body, self._aspect)
 
     def draw(self, *, solid: Any | None = None, read: bool = False, camera: Camera | None = None,
              viewport: tuple[int, int, int, int] | None = None, overlay: Callable[[tuple[float, ...]], None] | None = None,
