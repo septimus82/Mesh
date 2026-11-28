@@ -555,10 +555,10 @@ def move_entity_with_physics(
                         _log_swallow("PHRT-015", "engine.physics_runtime blanket exception fallback")
                         continue
 
-        return [_sprite_to_aabb(s) for s in hits]
+        return [_sprite_to_aabb(s) for s in hits if s is not entity]  # a solid mover is in the list too
 
     # 3. Execute Pure Model
-    result = sweep_axis_separate(req, query_tiles)
+    result = sweep_axis_separate(req, query_tiles, bounds)
     kept = keep_inside(Aabb(*result.final_pos, start_aabb.w, start_aabb.h), delta, bounds)
     if kept != result.final_pos:
         result = replace(result, final_pos=kept)

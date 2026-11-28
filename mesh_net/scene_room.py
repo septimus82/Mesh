@@ -252,7 +252,7 @@ def move(mover: Body, delta: tuple[float, float], solids: list[Body]) -> None:
 
     def query(aabb: Aabb) -> list[Aabb]:
         probe = Circle(aabb.x, aabb.y, radius) if radius else aabb
-        return [shape_aabb(s) for s in map(entity_shape, solids) if shapes_overlap(probe, s)]
+        return [shape_aabb(s) for s in map(entity_shape, (b for b in solids if b is not mover)) if shapes_overlap(probe, s)]
 
     result = sweep_axis_separate(MoveRequest("player", (start.x, start.y), delta, start), query)
     mover.center_x += result.final_pos[0] - start.x
