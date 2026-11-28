@@ -295,6 +295,7 @@ class Studio(InspectorMixin, SoundMixin):
 
         self.ui = gui.UIManager(window)
         self.play_ui = gui.UIManager(window)
+        self._play_bar: Any = None  # its bar (Stop, Flags, Menu), while play-testing
         window.push_handlers(self)
         self.ui.enable()
         self._first_clicks = FirstClicks("Studio")  # pyglet keeps only a weak reference to handlers
@@ -1281,6 +1282,7 @@ class Studio(InspectorMixin, SoundMixin):
             playing.on_click = lambda _e: self.toggle_ai_gameplay_control()
             bar.add(playing)
         root.add(bar, anchor_x="center", anchor_y="top", align_y=-6)
+        self._play_bar = bar
         if not self.play_flags_open:
             return
         state = getattr(self.window, "game_state", None)
@@ -1300,6 +1302,15 @@ class Studio(InspectorMixin, SoundMixin):
             box.add(self._label(f"{name} = {float(value):g}", color=C_TEXT, size=10))
         box.with_padding(all=8).with_background(color=(*C_RAISED, 235))
         root.add(box, anchor_x="right", anchor_y="top", align_x=-8, align_y=-44)
+
+    def play_bar_rect(self) -> tuple[float, float, float, float] | None:
+        """The play bar's left, bottom, right and top edges while play-testing, else None: laid out now, as arcade.gui
+        lays it out to draw it (the game's HUD, drawn first, keeps its HP bar and objective clear of it)."""
+        if self.mode != "play" or self._play_bar is None:
+            return None
+        self.play_ui.execute_layout()
+        rect = self._play_bar.rect
+        return float(rect.left), float(rect.bottom), float(rect.right), float(rect.top)
 
     def _toggle_play_flags(self) -> None:
         self.play_flags_open = not self.play_flags_open
