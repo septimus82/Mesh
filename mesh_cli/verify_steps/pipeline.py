@@ -933,7 +933,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     with suppress_stdout():
                         package_result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(repo_root))
                     code = int(package_result.returncode)
-                    error = "" if code == 0 else f"failed with code {code}"
+                    error = "" if code == 0 else f"failed with code {code}{_error_line(package_result)}"
                     if code == 0:
                         check_path = package_root / "package_check.json"
                         if not check_path.exists():
@@ -1029,7 +1029,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     build_code = int(build_result.returncode)
                     if build_code != 0:
                         code = build_code
-                        error = f"build-web failed with code {build_code}"
+                        error = f"build-web failed with code {build_code}{_error_line(build_result)}"
                     elif smoke_code != 0:
                         code = smoke_code
                         error = f"web-smoke failed with code {smoke_code}"
@@ -2530,3 +2530,10 @@ def run_verify_steps(state: VerifyStepContext) -> None:
     state.exit_code = int(exit_code)
     state.failure_seen = bool(failure_seen)
     state.step_duration_total_ms = int(step_duration_total_ms)
+
+
+def _error_line(result: Any) -> str:
+    """The last ``ERROR:`` line a failed command printed (why it refused an output folder, say), or ""."""
+    lines = [line.strip() for text in (result.stdout or "", result.stderr or "") for line in text.splitlines()]
+    found = [line for line in lines if "ERROR:" in line]
+    return f": {found[-1]}" if found else ""

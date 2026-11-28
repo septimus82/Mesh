@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -119,6 +120,13 @@ def _run_packaged_runtime_smoke(
     return int(result.returncode) == 0, int(result.returncode)
 
 
+def _inside(path: Path, out_root: Path, stage: Path) -> Path:
+    """``path``, moved from the output folder into the build folder when it points into the output (the earlier
+    package stays untouched while the new one is built)."""
+    full = Path(os.path.abspath(path))
+    return stage / full.relative_to(out_root) if full.is_relative_to(out_root) else path
+
+
 def package_player_bundle(
     *,
     out_dir: str,
@@ -126,18 +134,39 @@ def package_player_bundle(
     smoke: bool = False,
     smoke_diagnostics_artifact: str | None = None,
 ) -> int:
+    """Build the player package into ``out_dir``: built beside it, then swapped in only when complete and its checks
+    pass (#749). An existing ``out_dir`` is replaced only when empty or an earlier package exactly as built; a folder
+    that is, or holds, the project, the repository, the home folder or a drive root, or lies inside the packaged
+    sources, is refused before anything is touched."""
+    from engine.tooling.export_bundle import ExportError, build_into, seal_bundle
+
     cwd = Path.cwd()
     repo_root = _resolve_repo_root(cwd)
+    out_root = Path(os.path.abspath(repo_root / out_dir))  # (not resolved: a link given as --out is refused, never followed)
 
-    out_root = Path(out_dir)
-    if not out_root.is_absolute():
-        out_root = repo_root / out_root
-    out_root = out_root.resolve()
+    def build(stage: Path) -> int:
+        if _build_package(stage, out_root, repo_root, manifest_path=manifest_path, smoke=smoke,
+                          smoke_diagnostics_artifact=smoke_diagnostics_artifact) != 0:
+            raise ExportError("the player package was not built (see above)")
+        seal_bundle(stage, "mesh package-player")
+        return 0
 
-    if out_root.exists():
-        shutil.rmtree(out_root)
-    out_root.mkdir(parents=True, exist_ok=True)
+    result = build_into(out_root, build, tag="[Mesh][PackagePlayer]", created_by="mesh package-player",
+                        protected=(repo_root, cwd), legacy=("manifest.json", "package_check.json", "engine", "mesh_cli"),
+                        sources=[repo_root / name for name in _PACKAGE_SOURCE_ROOTS])
+    return 0 if result == 0 else 1
 
+
+def _build_package(
+    stage: Path,
+    out_root: Path,
+    repo_root: Path,
+    *,
+    manifest_path: str | None,
+    smoke: bool,
+    smoke_diagnostics_artifact: str | None,
+) -> int:
+    """Write the package into ``stage`` (reported as ``out_root``, where it will be); 0 when its checks pass."""
     included_files: list[str] = []
     excluded_prefixes = sorted(set(FORBIDDEN_EDITOR_PREFIXES))
 
@@ -145,15 +174,16 @@ def package_player_bundle(
         rel = _normalize_relpath(source_path.relative_to(repo_root))
         if _is_forbidden_editor_relpath(rel, forbidden_prefixes=FORBIDDEN_EDITOR_PREFIXES):
             continue
-        target = out_root / rel
+        target = stage / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, target)
         included_files.append(rel)
 
     smoke_scene_source = repo_root / DEFAULT_SMOKE_SCENE
     if not smoke_scene_source.exists() or not smoke_scene_source.is_file():
+        print(f"[Mesh][PackagePlayer] ERROR: {DEFAULT_SMOKE_SCENE} is missing")
         return 1
-    smoke_scene_target = out_root / DEFAULT_SMOKE_SCENE
+    smoke_scene_target = stage / DEFAULT_SMOKE_SCENE
     smoke_scene_target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(smoke_scene_source, smoke_scene_target)
     included_files.append(_normalize_relpath(DEFAULT_SMOKE_SCENE))
@@ -169,7 +199,7 @@ def package_player_bundle(
         "world_file": None,
     }
     write_json_atomic(
-        out_root / "config.json",
+        stage / "config.json",
         minimal_config,
         indent=2,
         sort_keys=True,
@@ -184,7 +214,7 @@ def package_player_bundle(
         if _is_forbidden_editor_relpath(rel, forbidden_prefixes=FORBIDDEN_EDITOR_PREFIXES)
     ]
     total_bytes = int(
-        sum(int((out_root / rel).stat().st_size) for rel in included_files if (out_root / rel).exists())
+        sum(int((stage / rel).stat().st_size) for rel in included_files if (stage / rel).exists())
     )
 
     content_roots_included = sorted({"scenes"} if any(path.startswith("scenes/") for path in included_files) else set())
@@ -201,8 +231,9 @@ def package_player_bundle(
     manifest_target = Path(manifest_path) if manifest_path else (out_root / "manifest.json")
     if not manifest_target.is_absolute():
         manifest_target = repo_root / manifest_target
+    manifest_written = _inside(manifest_target, out_root, stage)
     write_json_atomic(
-        manifest_target,
+        manifest_written,
         manifest_payload,
         indent=2,
         sort_keys=True,
@@ -212,9 +243,12 @@ def package_player_bundle(
     smoke_ok = True
     smoke_rc = 0
     if smoke:
+        diagnostics = smoke_diagnostics_artifact
+        if diagnostics and Path(diagnostics).is_absolute():
+            diagnostics = str(_inside(Path(diagnostics), out_root, stage))
         smoke_ok, smoke_rc = _run_packaged_runtime_smoke(
-            out_root,
-            diagnostics_artifact=smoke_diagnostics_artifact,
+            stage,
+            diagnostics_artifact=diagnostics,
         )
 
     manifest_sorted = bool(manifest_payload["included_files"] == sorted(manifest_payload["included_files"]))
@@ -225,8 +259,8 @@ def package_player_bundle(
         trailing_newline=True,
     )
     manifest_canonical_json = False
-    if manifest_target.exists():
-        manifest_canonical_json = manifest_target.read_text(encoding="utf-8") == expected_manifest_text
+    if manifest_written.exists():
+        manifest_canonical_json = manifest_written.read_text(encoding="utf-8") == expected_manifest_text
     check_payload = {
         "ok": bool(len(forbidden_hits) == 0 and smoke_ok and manifest_sorted and manifest_canonical_json),
         "package_root": package_root,
@@ -241,12 +275,14 @@ def package_player_bundle(
         "smoke_returncode": int(smoke_rc),
     }
     write_json_atomic(
-        out_root / "package_check.json",
+        stage / "package_check.json",
         check_payload,
         indent=2,
         sort_keys=True,
         trailing_newline=True,
     )
+    if not check_payload["ok"]:
+        print(dumps_json_deterministic(check_payload, indent=2, sort_keys=True, trailing_newline=True), end="")
 
     return 0 if check_payload["ok"] else 1
 
