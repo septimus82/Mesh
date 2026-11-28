@@ -575,6 +575,17 @@ class CameraController:
 
         return (self.window.width / 2.0, self.window.height / 2.0)
 
+    def world_rect(self) -> tuple[float, float, float, float] | None:
+        """The room's rectangle clamp_camera_to_world keeps the camera in (left, bottom, right, top, px): its camera
+        bounds (scene settings, else its tilemap's size), else (0, 0) to its world size; None: a room with no size.
+        A 2D room's movers are kept in the same one (engine.physics_runtime.room_bounds)."""
+        if self.bounds is not None:
+            return self.bounds
+        w, h = self.window.world_width, self.window.world_height
+        if isinstance(w, (int, float)) and isinstance(h, (int, float)) and w > 0 and h > 0:
+            return (0.0, 0.0, float(w), float(h))
+        return None
+
     def clamp_camera_to_world(
         self,
         target_x: float,

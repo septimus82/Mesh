@@ -110,7 +110,7 @@ def test_rooms_without_hd2d_floors_move_with_the_2d_physics(world: object, monke
     from engine.behaviours.player_controller import PlayerController
 
     calls: list[tuple] = []
-    monkeypatch.setattr("engine.physics_runtime.move_entity_with_physics", lambda e, d, s: calls.append(d))
+    monkeypatch.setattr("engine.physics_runtime.move_entity_with_physics", lambda e, d, s, b=None: calls.append(d))
     window = _controller_window(None if world is None else MagicMock())  # a mock world is not an HD-2D World
     PlayerController(_walker(0, 0), window, speed=100.0).update(0.1)
     assert calls and calls[0][0] == pytest.approx(10.0), "the unchanged 2D sweep moved it"

@@ -89,7 +89,7 @@ Candidate-level `variant_id` entries inside the encounter set take precedence ov
 | ----- | ---- | ------- | ----- |
 | `lerp_factor` | number | 5.0 | Base smoothing speed when following targets. |
 | `padding` | number | 0.0 | Extra inset applied before clamping to bounds. |
-| `bounds.left/right/top/bottom` | numbers | unset | Explicit world-space rectangle that constrains the camera center. |
+| `bounds.left/right/top/bottom` | numbers | unset | The room's world-space rectangle: the camera keeps its visible area inside it, and in a 2D room every mover (the player, enemies, patrols, followers, cutscene moves) stops flush at its edges as at walls. Unset: the tilemap's size, else `settings.world_width`/`world_height`; a room with none of these has no edge. (HD-2D rooms are bounded by their floors.) |
 | `zoom.initial` | number | 1.0 | Starting zoom value when the scene loads. |
 | `zoom.target` | number | matches `initial` | Default zoom target before behaviours override it. |
 | `zoom.speed` | number | 5.0 | How quickly zoom eases toward the target. |
