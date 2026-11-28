@@ -145,6 +145,61 @@ def test_a_door_near_the_bottom_edge_gets_its_arrival_spot_on_the_map() -> None:
     assert 32 <= arrival["x"] <= 640 - 32 and 32 <= arrival["y"] <= 480 - 32, arrival
     assert math.dist((arrival["x"], arrival["y"]), (128, 48)) >= 64
 
+
+def _walker() -> dict:
+    """The starter player: a 32x48 walking picture whose collider is its feet (an automatic box)."""
+    clip = {"sheet": "assets/sprites/starter_hero.png", "frame_width": 32, "frame_height": 48, "frames": 1, "start": 0}
+    return {**PLAYER, "components": {"collider": {"kind": "box", "auto": True}},
+            "behaviour_config": {"Animator": {"animation_state": "idle_down", "animations": {"idle_down": clip}}}}
+
+
+def test_the_players_collider_is_the_games() -> None:
+    from engine.physics_model import footprint
+
+    feet = footprint(32, 48)
+    assert ops.player_box(_walker()) == (feet["w"], feet["h"], feet["offset_x"], feet["offset_y"])
+    assert ops.player_box({**_walker(), "scale": 2.0})[:2] == (footprint(64, 96)["w"], footprint(64, 96)["h"])
+    assert ops.player_box({**PLAYER, "components": {"collider": {"kind": "box", "w": 10, "h": 6, "offset_y": -4}}}) \
+        == (10.0, 6.0, 0.0, -4.0)
+
+
+def test_a_door_above_a_wall_gets_its_arrival_spot_clear_of_the_wall() -> None:
+    """The final acceptance smoke: the door's arrival spot, 96 px below it, put the player's feet into the wall tile
+    under it, and the player got stuck there. The spot is now one where the player's collider is clear."""
+    room = {**_scene(), "entities": [_walker()]}
+    room, _, _ = ops.add_map(room, "packs/core_regions/scenes/start.json", width=24, height=16)
+    info = ops.map_info(room)
+    under = ops.cell_at(info, 336, 176)  # the tile (y 160..192) the feet (y 184..196) would stand in at (336, 208)
+    room = ops.paint_tiles(room, ops.WALLS, [under], ops.STARTER_WALL)
+    _world_doc, house, key_b, _ = ops.new_room(_world(), "House", "packs/core_regions/scenes", PLAYER)
+
+    start, _house = ops.link_rooms(room, "start", "Start", (336, 304), house, key_b, "House", (200, 300))
+    arrival = next(e for e in ops.entities(start) if e.get("tag") == "spawn_point")
+    w, h, ox, oy = ops.player_box(_walker())
+    feet = ops.Aabb(arrival["x"] + ox, arrival["y"] + oy, w, h)
+    wall = ops.Aabb(*ops.cell_center(info, *under), 32, 32)
+    assert (arrival["x"], arrival["y"]) != (336, 208) and feet.intersection(wall) is None, arrival
+    assert math.dist((arrival["x"], arrival["y"]), (336, 304)) >= 96, "still clear of the walk-in door"
+
+    # A solid object there counts too; the room's own player is what's measured when no player is given
+    blocker = {"id": "rock", "name": "Rock", "x": 336, "y": 400, "solid": True}
+    start, _house = ops.link_rooms({**room, "entities": [*room["entities"], blocker]}, "start", "Start", (336, 304),
+                                   house, key_b, "House", (200, 300))
+    arrival = next(e for e in ops.entities(start) if e.get("tag") == "spawn_point")
+    assert (arrival["x"], arrival["y"]) not in ((336, 208), (336, 400)), arrival
+
+
+def test_with_no_clear_spot_the_arrival_is_as_before_with_a_warning(caplog: pytest.LogCaptureFixture) -> None:
+    room = {**_scene(), "entities": [_walker()]}
+    room, _, _ = ops.add_map(room, "packs/core_regions/scenes/start.json", width=24, height=16)
+    room = ops.paint_tiles(room, ops.WALLS, [(c, r) for c in range(24) for r in range(16)], ops.STARTER_WALL)
+    _world_doc, house, key_b, _ = ops.new_room(_world(), "House", "packs/core_regions/scenes", PLAYER)
+    start, _house = ops.link_rooms(room, "start", "Start", (336, 304), house, key_b, "House", (200, 300))
+    arrival = next(e for e in ops.entities(start) if e.get("tag") == "spawn_point")
+    assert (arrival["x"], arrival["y"]) == (336, 208)
+    assert "No clear arrival spot" in caplog.text
+
+
 def test_ensure_entity_ids_fills_only_missing_ids() -> None:
     scene = {"entities": [{"name": "A", "x": 1, "y": 2}, {"id": "keep", "name": "B", "x": 0, "y": 0}]}
     out = ops.ensure_entity_ids(scene, "start")

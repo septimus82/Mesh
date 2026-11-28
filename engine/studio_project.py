@@ -948,7 +948,7 @@ class Project:
         ids_a, ids_b = ops.shared_player_ids(self._room(key_a)), ops.shared_player_ids(self._room(key_b))
         with ops.retired_ids(self.ids_seen):  # (Studio's door tool: its doors' ids never given back either)
             a, b = ops.link_rooms(self.scene(key_a), key_a, self.label(key_a), at_a, self.scene(key_b), key_b,
-                                  self.label(key_b), at_b)
+                                  self.label(key_b), at_b, player=self.player)
         self._record(before)
         self._store(key_a, a, ids_a)
         self._store(key_b, b, ids_b)

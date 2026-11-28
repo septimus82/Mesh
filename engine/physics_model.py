@@ -261,6 +261,26 @@ def fast_move_steps(delta: float, size: float) -> int:
     return min(256, max(1, math.ceil(abs(delta) / half)))
 
 
+def axis_stop(box: Aabb, delta: float, walls: Sequence[Aabb], axis: int) -> Optional[float]:
+    """Where ``box``'s centre stops on ``axis`` (0 = x, 1 = y) moving ``delta`` into ``walls``, or None if none blocks.
+
+    Only a wall whose centre lies ahead in the move's direction blocks it, and the box stops flush against that
+    wall's near edge: a wall it approaches, and one it is a little way into and moves further into (pushed back out
+    on the side it came from, never deeper or through). A wall it overlaps but moves away from, or along, doesn't
+    block, so a box can always walk out of a wall. (Every touched wall used to block: moving up out of a wall below
+    snapped the box to that wall's far edge, down inside it, where every move up did the same: stuck for good.)
+    """
+    half = (box.w if axis == 0 else box.h) / 2
+    centre = box.x if axis == 0 else box.y
+    if delta == 0:
+        return None
+    if delta > 0:
+        near = [w.left if axis == 0 else w.bottom for w in walls if (w.x if axis == 0 else w.y) > centre]
+        return min(near) - half if near else None
+    near = [w.right if axis == 0 else w.top for w in walls if (w.x if axis == 0 else w.y) < centre]
+    return max(near) + half if near else None
+
+
 def _sweep_in_steps(req: MoveRequest, query_tiles: "TileQuery", nx: int, ny: int) -> MoveResult:
     """The same x-then-y sweep as one move, walked in short pieces, stopping an axis at its first wall."""
     aabb = req.aabb
@@ -340,59 +360,28 @@ def sweep_axis_separate(
 
         # Check collisions
         walls_x = query_tiles(next_aabb_x)
+        stop_x = axis_stop(curr_aabb, dx, walls_x, 0)
 
-        if walls_x:
+        if stop_x is not None:  # stopped flush against the wall ahead (or kept out of one it is in)
             hit_x = True
-
-            # Snap logic matches SceneController
             if dx > 0:
-                # Moving right: snap to left-most wall edge
-                min_left = min(w.left for w in walls_x)
-                # New right = min_left -> New center = min_left - w/2
-                snapped_x = min_left - curr_aabb.w / 2
-
-                # Record hit
-                for w in walls_x:
-                    # Approximation: we only care about the one we hit first?
-                    # SceneController logic grabs ALL overlapping and takes min.
-                    # We'll just record generic hits for now as we don't use them for physics response other than snap
-                    hits.append(Hit("tile", "wall", (-1.0, 0.0), overlap=None))
-
-                curr_aabb = Aabb(snapped_x, curr_aabb.y, curr_aabb.w, curr_aabb.h)
-
-            elif dx < 0:
-                # Moving left: snap to right-most wall edge
-                max_right = max(w.right for w in walls_x)
-                snapped_x = max_right + curr_aabb.w / 2
-
+                hits.extend(Hit("tile", "wall", (-1.0, 0.0), overlap=None) for _ in walls_x)
+            else:
                 hits.append(Hit("tile", "wall", (1.0, 0.0), overlap=None))
-                curr_aabb = Aabb(snapped_x, curr_aabb.y, curr_aabb.w, curr_aabb.h)
+            curr_aabb = Aabb(stop_x, curr_aabb.y, curr_aabb.w, curr_aabb.h)
         else:
-            # No hit
             curr_aabb = next_aabb_x
 
     # 2. Move Y
     if abs(dy) > 1e-9:
         next_aabb_y = curr_aabb.move(0, dy)
         walls_y = query_tiles(next_aabb_y)
+        stop_y = axis_stop(curr_aabb, dy, walls_y, 1)
 
-        if walls_y:
+        if stop_y is not None:
             hit_y = True
-            if dy > 0:
-                # Moving up: snap to bottom of wall
-                min_bottom = min(w.bottom for w in walls_y)
-                snapped_y = min_bottom - curr_aabb.h / 2
-
-                hits.append(Hit("tile", "wall", (0.0, -1.0), overlap=None))
-                curr_aabb = Aabb(curr_aabb.x, snapped_y, curr_aabb.w, curr_aabb.h)
-
-            elif dy < 0:
-                # Moving down: snap to top of wall
-                max_top = max(w.top for w in walls_y)
-                snapped_y = max_top + curr_aabb.h / 2
-
-                hits.append(Hit("tile", "wall", (0.0, 1.0), overlap=None))
-                curr_aabb = Aabb(curr_aabb.x, snapped_y, curr_aabb.w, curr_aabb.h)
+            hits.append(Hit("tile", "wall", (0.0, -1.0) if dy > 0 else (0.0, 1.0), overlap=None))
+            curr_aabb = Aabb(curr_aabb.x, stop_y, curr_aabb.w, curr_aabb.h)
         else:
             curr_aabb = next_aabb_y
 
