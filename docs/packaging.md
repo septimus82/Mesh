@@ -71,12 +71,28 @@ isn't needed.
 `mesh export build`, run in a project folder, writes a standalone game to `dist/bundle`:
 
 - the project's `main.py`, `config.json`, `cutscenes.json` (when it has one), `packs/`, `locales/*.json` and every file in its `assets/`;
+- every file the game's configuration reaches, wherever it is in the project (#760): `config.json`'s `start_scene`,
+  `main_menu_scene` and `world_file`, every room of that world, every room a live door or scene exit leads to (one in
+  the object's `behaviours`, or its prefab's, inherited through `base` too, as the engine resolves prefabs; by the world's room key, a bare `scenes/<name>.json` name or a path, as the
+  game resolves it), and each room's map file with its
+  tilesets and their pictures;
 - the installed `engine` package as its runtime;
 - the engine's interface text, `share/mesh-engine/locales/*.json` (the installed Mesh's allow-listed copy);
 - `bundle_manifest.json`, with each file's hash and no path of the maker's machine.
 
 It runs with `python main.py` wherever Mesh's dependencies (arcade, pillow, jsonschema) are installed, without Mesh.
 It replaces only an earlier bundle or an empty folder, never other files.
+
+**What stops an export before anything is written (#760).** The export checks the game it is about to ship against its
+`config.json` and refuses, with every problem named, a non-zero exit and the earlier export left as it was, when:
+`config.json` can't be read by the game (not JSON, or fails its schema, or a bad `start_scene`/`world_file`/
+`main_menu_scene`/`content_roots`); a project has no `main.py` or no `start_scene`; a room, the world, a map, a tileset
+or its picture that the game reaches is missing or isn't readable JSON; the world's start room or a link names a room it
+doesn't have; or any of them is named by an absolute path, lies outside the project (`../`), or is reached through a
+link or junction pointing out of it (nor is any other file of the project's shipped through such a link). Files keep
+their paths in the bundle; two spellings of one file (`Cellar.json`, `cellar.json` on Windows) ship it once, under its name on disk. A file the game reaches that is already in `packs/`, `scenes/`, `worlds/` or `assets/` is
+shipped as before; those folders still ship whole. Not followed yet: prefab variants, the picture of a
+`.tsx` tileset, and pictures, sounds or other assets kept outside `assets/`.
 
 **Replacing an earlier export (F4, #422).** A failed export never costs the last good one:
 
@@ -195,4 +211,5 @@ wheel.
 | `tests/test_bundled_data_roots.py` (fast) | The source tree comes first, then an install's `share/mesh-engine`, for files and folders |
 | `tests/test_export_bundle.py` (fast) | A project exports as a standalone game; an export never replaces a folder that isn't an earlier bundle |
 | `tests/test_export_bundle_replacement.py` (integration, F4) | A failed copy (first or later file), manifest write or check, a file changed mid-export, a failed handover, a failed rollback (both copies kept and named, then recovered), a failed cleanup, an interrupt, and an export killed between the renames (a real child process): none loses the earlier export. Absent, empty and earlier-export folders are filled or replaced; a changed (same length), missing or truncated file, a malformed or duplicate manifest entry, saves, foreign files, unlisted bytecode and links or junctions are never replaced or followed; folders named like an export's working folders but without its owner file (or with anything else in them), even the very folder emptied, and a changed backup, are never deleted; an extra empty folder stops a replacement; a save or a same-length edit made while the export runs (during the build, after the earlier one is moved aside, or during its deletion) is never lost; a replacement is byte for byte a fresh export |
+| `tests/test_export_follows_config.py` (integration; one test gpu lane, hidden window, #760) | A game keeping its world and rooms in `chapters/` exports them, its map and tileset; the export, copied elsewhere with the project deleted, starts in the same opening room as the source (its own engine). A missing or invalid room, a door (its own or its prefab's) to a missing room, a door out of the project (`../`, absolute), a room behind a junction pointing out, a deleted start room, a `config.json` that isn't JSON or fails its schema, and a missing `main.py` each exit 1 with the problem named and the earlier export byte for byte as it was. A door the game never makes live doesn't stop it; two spellings of one room (Windows) ship it once and both find it. Every template's plan is unchanged |
 | `tooling/hd2d_install_acceptance.py` (manual, hidden windows) | The whole HD-2D workflow from a clean install, including running the exported game with Mesh's dependencies only. Evidence: `docs/reviews/milestone16_stage6b_distribution.md`. |
