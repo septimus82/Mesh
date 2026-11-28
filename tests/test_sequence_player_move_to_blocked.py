@@ -2,7 +2,7 @@
 
 It used to finish only within ``tolerance`` of its target, so a blocked mover waited for good, and with
 ``lock_player_input`` the player stayed locked for good (#770 review: an NPC at x=600 in a 768 px room, move_to
-x=900, stuck at x=752 after 30 s). Now no headway for SequencePlayer.BLOCKED_S ends the step where it stands; the
+x=900, stuck at x=752 after 30 s). Now not moving for SequencePlayer.BLOCKED_S ends the step where it stands; the
 sequence goes on, and its end releases the lock.
 """
 
@@ -106,6 +106,19 @@ def test_a_normal_move_to_still_reaches_its_target_exactly() -> None:
     ])
     _run(player, 30.0)
     assert (guide.center_x, guide.center_y) == (700.0, 300.0) and window.signals == ["arrived"]
+
+
+def test_sliding_along_a_wall_at_a_shallow_angle_is_not_blocked() -> None:
+    """It gets under 1% of a step nearer each frame while sliding (under ~5.7 degrees), yet it is moving: it arrives.
+    (Headway counted as nearness ended it at (124, 106.08), 2 px short of clearing the wall: #770 review.)"""
+    window = _Window([_Sprite(150.0, 46.0, 20.0, 92.0)])  # x 140..160, y 0..92
+    guide = _Sprite(100.0, 100.0)
+    player = SequencePlayer(guide, window, lock_player_input=False, auto_start=True, steps=[
+        {"type": "move_to", "x": 200, "y": 109, "speed": 120},
+        {"type": "signal", "event": "arrived"},
+    ])
+    _run(player, 30.0)
+    assert (guide.center_x, guide.center_y) == (200.0, 109.0) and window.signals == ["arrived"]
 
 
 def test_a_slow_mover_is_not_taken_for_a_blocked_one() -> None:

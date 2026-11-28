@@ -16,7 +16,7 @@ from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
 logger = get_logger(__name__)
-BLOCKED_S = 0.5  # a move_to with no headway this long (s) is blocked: it ends where it stands
+BLOCKED_S = 0.5  # a move_to that hasn't moved for this long (s) is blocked: it ends where it stands
 
 
 @register_behaviour(
@@ -299,10 +299,12 @@ class SequencePlayer(Behaviour):
             entity.center_y = target_y
             return True
         step_len = min(speed * dt, distance)  # this frame's share of the way, never past the target
+        x0, y0 = entity.center_x, entity.center_y
         window.move_entity_with_collision(entity, dx / distance * step_len, dy / distance * step_len)
-        # Blocked (a wall, the room's edge): no headway for BLOCKED_S ends the step where it stands, or the
-        # sequence (and a locked player) would wait for good.
-        progress = distance - math.hypot(target_x - entity.center_x, target_y - entity.center_y)
+        # Blocked (a wall, the room's edge): not moving for BLOCKED_S ends the step where it stands, or the
+        # sequence (and a locked player) would wait for good. (How far it moved, not how much nearer it got: sliding
+        # along a wall at a shallow angle gets little nearer each frame but is on its way.)
+        progress = math.hypot(entity.center_x - x0, entity.center_y - y0)
         if step_len > 0.0:  # (a frame of no time says nothing)
             state["stalled"] = state.get("stalled", 0.0) + dt if progress < step_len * 0.01 else 0.0
         if state.get("stalled", 0.0) >= BLOCKED_S:
