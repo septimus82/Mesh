@@ -113,8 +113,8 @@ class PlayerController(Behaviour):
         if isinstance(hd2d_world, Hd2dWorld):  # an HD-2D room with floors: height-aware movement
             hd2d_world.move(self.entity, (vx * dt, vy * dt), solid_sprites)
         elif solid_sprites is not None:
-            from engine.physics_runtime import move_entity_with_physics
-            move_entity_with_physics(self.entity, (vx * dt, vy * dt), solid_sprites)
+            from engine.physics_runtime import move_entity_with_physics, room_bounds
+            move_entity_with_physics(self.entity, (vx * dt, vy * dt), solid_sprites, room_bounds(self.window))
         else:
             # Fallback for legacy / headless without scene
             self.window.move_entity_with_collision(self.entity, vx * dt, vy * dt)

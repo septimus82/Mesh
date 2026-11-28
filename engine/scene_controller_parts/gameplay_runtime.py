@@ -7,7 +7,8 @@ def move_entity_with_collision(self, sprite, dx: float, dy: float, friction: flo
     import math
 
     import engine.scene_controller_core as scene_controller_module
-    from engine.physics_model import Aabb, axis_stop, fast_move_steps
+    from engine.physics_model import Aabb, axis_stop, fast_move_steps, keep_inside
+    from engine.physics_runtime import room_bounds
 
     if not (math.isfinite(dx) and math.isfinite(dy)):  # a NaN/inf move would park the sprite at NaN for good
         return
@@ -36,6 +37,13 @@ def move_entity_with_collision(self, sprite, dx: float, dy: float, friction: flo
         if stop is not None:
             sprite.center_y += stop - box(sprite).y
             break
+
+    # A 2D room's edges stop it as walls do (the player's too: engine.physics_runtime.room_bounds).
+    after = box(sprite)
+    kept = keep_inside(after, (dx, dy), room_bounds(getattr(self, "window", None)))
+    if kept != (after.x, after.y):
+        sprite.center_x += kept[0] - after.x
+        sprite.center_y += kept[1] - after.y
 
 
 def on_collectible_picked(self, collectible, collector) -> None:

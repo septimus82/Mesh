@@ -287,6 +287,28 @@ def axis_stop(box: Aabb, delta: float, walls: Sequence[Aabb], axis: int) -> Opti
     return max(near) + half if near else None
 
 
+def keep_inside(box: Aabb, delta: Tuple[float, float],
+                bounds: Optional[Tuple[float, float, float, float]]) -> Tuple[float, float]:
+    """Where ``box``'s centre ends after a move of ``delta`` that left it at ``box``, kept inside a 2D room's
+    ``bounds`` (left, bottom, right, top; None: a room with no size, never kept).
+
+    On each axis it moved along, a box past the edge it moved toward stops flush with that edge, as against a wall
+    there (axis_stop). Moving away from an edge, or along it, is free: a box put outside (a spawn, a teleport) walks
+    back in, and a move further out puts it at the edge instead (as axis_stop pushes a box out of a wall it moves
+    deeper into). Applied after the sweep, so a move of any length (a slow frame) ends at the edge.
+    """
+    if bounds is None:
+        return (box.x, box.y)
+    left, bottom, right, top = bounds
+    out = [box.x, box.y]
+    for axis, (lo, hi, half) in enumerate(((left, right, box.w / 2), (bottom, top, box.h / 2))):
+        if delta[axis] > 0 and out[axis] + half > hi:
+            out[axis] = hi - half
+        elif delta[axis] < 0 and out[axis] - half < lo:
+            out[axis] = lo + half
+    return (out[0], out[1])
+
+
 def _sweep_in_steps(req: MoveRequest, query_tiles: "TileQuery", nx: int, ny: int) -> MoveResult:
     """The same x-then-y sweep as one move, walked in short pieces, stopping an axis at its first wall."""
     aabb = req.aabb

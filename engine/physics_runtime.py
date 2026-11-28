@@ -4,6 +4,7 @@ Connects pure physics_model to Arcade/SceneController state.
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, List, Optional, Tuple
 
 import engine.optional_arcade as optional_arcade
@@ -15,6 +16,7 @@ from engine.physics_model import (
     MoveRequest,
     MoveResult,
     footprint,  # noqa: F401
+    keep_inside,
     sweep_axis_separate,
 )
 
@@ -457,11 +459,13 @@ def move_entity_with_physics(
     entity: Any,
     delta: Tuple[float, float],
     solid_sprites: Any, # optional_arcade.arcade.SpriteList
+    bounds: Optional[Tuple[float, float, float, float]] = None,
 ) -> MoveResult:
     """
     Execute a move using the deterministic physics model.
     Updates entity position in-place.
     Returns the result details.
+    ``bounds``: a 2D room's edges, kept inside as walls (room_bounds; None: not kept, as World.move's sweep).
     """
     global _LAST_SOLID_SPRITES
     _LAST_SOLID_SPRITES = solid_sprites if solid_sprites else []
@@ -555,6 +559,9 @@ def move_entity_with_physics(
 
     # 3. Execute Pure Model
     result = sweep_axis_separate(req, query_tiles)
+    kept = keep_inside(Aabb(*result.final_pos, start_aabb.w, start_aabb.h), delta, bounds)
+    if kept != result.final_pos:
+        result = replace(result, final_pos=kept)
 
     # 4. Apply Side Effects: move the entity by what the shape moved. (Setting its centre to the
     # shape's would drift an offset collider, e.g. one at the feet, by its offset every frame.)
@@ -562,3 +569,13 @@ def move_entity_with_physics(
     entity.center_y += result.final_pos[1] - start_aabb.y
 
     return result
+
+
+def room_bounds(window: Any) -> Optional[Tuple[float, float, float, float]]:
+    """A 2D room's edges its movers are kept inside (left, bottom, right, top, px): the camera's own rectangle
+    (CameraController.world_rect), so the two agree. None: a room with no size, or an HD-2D room (World.move's
+    floors bound its walkers)."""
+    if getattr(window, "hd2d_world", None) is not None:
+        return None
+    world_rect = getattr(getattr(window, "camera_controller", None), "world_rect", None)
+    return world_rect() if callable(world_rect) else None
