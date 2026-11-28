@@ -558,7 +558,8 @@ def move_entity_with_physics(
                         _log_swallow("PHRT-015", "engine.physics_runtime blanket exception fallback")
                         continue
 
-        return [solid_box(s, _sprite_to_aabb(s)) for s in hits]
+        # (a solid mover is in the list too: after a push its own collider, still at its start, would be a wall)
+        return [solid_box(s, _sprite_to_aabb(s)) for s in hits if s is not entity]
 
     # 3. Execute Pure Model
     result = sweep_axis_separate(req, query_tiles, bounds, push_out)

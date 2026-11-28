@@ -417,3 +417,32 @@ def test_in_hd2d_a_push_into_a_world_wall_is_dropped_so_the_player_still_walks_a
         for _ in range(5):
             world.move(hero, (0.0, d), [tile])
         assert (hero.center_x, hero.center_y) == (start[0], pytest.approx(start[1] + 5 * d)), (overlap, d)
+
+
+@pytest.mark.parametrize("fence_is_entity", [False, True])
+@pytest.mark.parametrize("feet_in", [1.0, 8.0])
+def test_a_solid_mover_pushed_out_then_pressing_back_stops_flush_and_never_hops_a_fence(
+        feet_in: float, fence_is_entity: bool) -> None:
+    """A solid player in its own solids list (19x48), feet ``feet_in`` px into a floor row, a 4 px fence just above its
+    head (1 px above it standing on the row). Pressing down lifts it out of the row and it stops flush on it; then pressing up it stops under the fence.
+    Its own collider, still at its start after the push, must not count as a wall: stopping against that collider's
+    far side lifted it up instead of down, and on over the fence (#772 review)."""
+    from engine.physics_runtime import move_entity_with_physics
+    from mesh_net.scene_room import Body, move
+
+    y0 = 192.0 - feet_in + 24.0  # bottom feet_in px below the row's top (y 160..192)
+    fence_y = 243.0  # y 241..245, 4 px thick: 1 px above the head once it stands on the row
+    player = _Solid(100, y0, 19, 48)
+    fence = _Solid(100, fence_y, 200, 4) if fence_is_entity else _Sprite(100, fence_y, 200, 4)
+    solids = _tile_row() + [fence, player]
+    walker = Body(100, y0, 19, 48, {"id": "walker"})
+    bodies = [Body(t.center_x, t.center_y, 32, 32, {}) for t in _tile_row()]
+    bodies += [Body(100, fence_y, 200, 4, {"id": "fence"} if fence_is_entity else {}), walker]
+    for name, step, mover in (("player", lambda d: move_entity_with_physics(player, d, solids), player),
+                              ("net", lambda d: move(walker, d, bodies), walker)):
+        step((0.0, -3.0))
+        assert mover.center_y - 24.0 == pytest.approx(192.0), (name, "pressing down: out of the row, flush on it")
+        for _ in range(5):
+            step((0.0, 3.0))
+            assert mover.center_y + 24.0 <= fence_y - 2.0 + 1e-9, (name, "never over the fence", mover.center_y)
+        assert mover.center_y + 24.0 == pytest.approx(fence_y - 2.0), (name, "pressing up: flush under the fence")

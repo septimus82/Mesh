@@ -253,7 +253,8 @@ def move(mover: Body, delta: tuple[float, float], solids: list[Body], *, push_ou
 
     def query(aabb: Aabb) -> list[Aabb]:
         probe = Circle(aabb.x, aabb.y, radius) if radius else aabb
-        return [solid_box(b, shape_aabb(s)) for b, s in ((b, entity_shape(b)) for b in solids) if shapes_overlap(probe, s)]
+        others = (b for b in solids if b is not mover)  # (its own body, still at its start, would be a wall after a push)
+        return [solid_box(b, shape_aabb(s)) for b, s in ((b, entity_shape(b)) for b in others) if shapes_overlap(probe, s)]
 
     result = sweep_axis_separate(MoveRequest("player", (start.x, start.y), delta, start), query, push_out=push_out)
     mover.center_x += result.final_pos[0] - start.x
