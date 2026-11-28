@@ -31,6 +31,7 @@ TOAST_MIN_WIDTH, TOAST_MAX_WIDTH = 180.0, 640.0  # (a short message keeps its bo
 TOAST_LINE_HEIGHT = 22.0  # the line pitch at text scale 1, as before; a taller font or text scale gets more
 TOAST_FONT, TOAST_FONT_SIZE = "Consolas", 12.0
 ELLIPSIS = "\u2026"  # ends the last Quest Log line that fits when more of its text doesn't
+HUD_GAP = 6.0  # between a HUD box and what it keeps clear of (Studio's play bar, the open Quest Log)
 
 
 @dataclass(frozen=True, slots=True)
@@ -337,7 +338,10 @@ class HealthBar(UIElement):
 
 
 class QuestLog(UIElement):
-    """Side panel overlay that lists tracked quests and their objectives."""
+    """Side panel overlay that lists tracked quests and their objectives.
+
+    Tracked = started (``quest_ui.get_active_quests``): active quests, and completed ones greyed with "Status:
+    Complete"; quests not yet accepted aren't listed. The HUD's pinned objective shows the first active one only."""
 
     def __init__(self, window: "GameWindow") -> None:
         super().__init__(window)
@@ -426,13 +430,8 @@ class QuestLog(UIElement):
             return
 
         entries = self._collect_entries()
-        width = min(420.0, max(280.0, self.window.width * 0.4))
-        height = max(220.0, self.window.height - 160.0)
-        left = self.window.width - width - 24.0
-        right = left + width
-        bottom = 72.0
-        top = bottom + height
-
+        left, bottom, right, top = self.panel_rect()
+        width, height = right - left, top - bottom
         _draw_rectangle_filled(
             center_x=(left + right) / 2.0,
             center_y=(top + bottom) / 2.0,
@@ -490,6 +489,12 @@ class QuestLog(UIElement):
                                font_size=12, color=detail_color, kind="detail")
         self._draw_wrapped(f"Objective: {objective}", right_left, min(y, content_y - 20.0), right_width, floor,
                            font_size=12, color=detail_color, kind="detail")
+
+    def panel_rect(self) -> tuple[float, float, float, float]:
+        """The panel's left, bottom, right and top edges in this window (toasts keep to its left while it's open)."""
+        width = min(420.0, max(280.0, self.window.width * 0.4))
+        left = self.window.width - width - 24.0
+        return left, 72.0, left + width, 72.0 + max(220.0, self.window.height - 160.0)
 
     def _measure(self, line: str, size: float) -> float:
         """``line``'s width in the Quest Log's font at ``size`` (text scale applied)."""
@@ -624,6 +629,8 @@ class PlayerHUD(UIElement):
         self._toast_layouts: dict[tuple[str, float, float], ToastLayout] = {}
         self._hud_frame: int = 0
         self._latest_view_model: HudViewModel | None = None
+        # What the last draw put on screen: kind ("hp", "objective", "toast:<n>") -> (text, left, bottom, right, top).
+        self.drawn: dict[str, tuple[str, float, float, float, float]] = {}
         self._health_text = optional_arcade.arcade.Text(
             text="",
             x=20,
@@ -675,16 +682,11 @@ class PlayerHUD(UIElement):
         if not entries:
             return None
 
-        picked: dict[str, Any] | None = None
-        for entry in entries:
-            if not isinstance(entry, dict):
-                continue
-            status = str(entry.get("status") or "").strip().lower()
-            if status in {"active", "in_progress", "started"}:
-                picked = entry
-                break
-        if picked is None:
-            picked = next((entry for entry in entries if isinstance(entry, dict)), None)
+        # The first active quest's, or none: the listing has every quest, not yet accepted and completed ones too, and
+        # falling back to any of them showed an objective before its quest was accepted and after it was done (#768).
+        picked = next((entry for entry in entries if isinstance(entry, dict) and not entry.get("completed")
+                       and str(entry.get("status") or "").strip().lower() in {"active", "in_progress", "started"}),
+                      None)
         if picked is None:
             return None
 
@@ -811,6 +813,7 @@ class PlayerHUD(UIElement):
             self.enqueue_toast(hint, seconds=4.0)
 
     def draw(self) -> None:
+        self.drawn = {}
         if getattr(getattr(self.window, "editor_controller", None), "active", False):
             return
         self._draw_stats()
@@ -824,6 +827,9 @@ class PlayerHUD(UIElement):
 
         scale = get_text_scale()
         max_width = min(TOAST_MAX_WIDTH, float(self.window.width) - 2 * TOAST_LEFT)
+        log = getattr(getattr(self.window, "ui_controller", None), "quest_log", None)
+        if log is not None and log.is_visible():  # (wrapped to the open Quest Log's left, not run under it)
+            max_width = min(max_width, log.panel_rect()[0] - HUD_GAP - TOAST_LEFT)
         key = (text, max_width, scale)
         layout = self._toast_layouts.get(key)
         if layout is None:
@@ -852,7 +858,7 @@ class PlayerHUD(UIElement):
 
             top = self.window.height - 110.0
             cache = getattr(self.window, "text_cache", None)
-            for toast_text, alpha in toasts:
+            for index, (toast_text, alpha) in enumerate(toasts):
                 if not toast_text:
                     continue
                 fade = max(0.0, min(1.0, float(alpha)))
@@ -860,6 +866,7 @@ class PlayerHUD(UIElement):
                     continue
                 layout = self.toast_layout(toast_text)
                 left, right, bottom = TOAST_LEFT, TOAST_LEFT + layout.width, top - layout.height
+                self.drawn[f"toast:{index}"] = (toast_text, left, bottom, right, top)
                 _draw_rectangle_filled(
                     center_x=(left + right) / 2.0,
                     center_y=(top + bottom) / 2.0,
@@ -898,9 +905,9 @@ class PlayerHUD(UIElement):
 
         # Draw Health Bar
         bar_x = 20
-        bar_y = self.window.height - 30
         bar_width = 200
         bar_height = 20
+        bar_y = self._below_play_bar(bar_x - 2, bar_x + bar_width + 2, self.window.height - 28) - 2  # (its border: 2)
 
         # Background
         _draw_rectangle_filled(
@@ -930,6 +937,7 @@ class PlayerHUD(UIElement):
         self._health_text.anchor_x = "center"
         self._health_text.anchor_y = "center"
         self._health_text.draw()
+        self.drawn["hp"] = (self._health_text.text, bar_x - 2, bar_y - bar_height - 2, bar_x + bar_width + 2, bar_y + 2)
 
         cfg = getattr(self.window, "engine_config", None)
         if cfg is None or getattr(cfg, "hud_show_objective", True):
@@ -942,10 +950,15 @@ class PlayerHUD(UIElement):
             if show_objective:
                 objective = self.build_pinned_objective_text(getattr(self.window, "quest_manager", None))
                 if objective:
-                    self._quest_text.text = objective
-                    self._quest_text.x = self.window.width - 20
-                    self._quest_text.y = self.window.height - 20
-                    self._quest_text.draw()
+                    text = self._quest_text
+                    text.text = objective
+                    text.x = self.window.width - 20.0  # (its 300 px box's right edge: the lines start at its left)
+                    left = float(getattr(text, "left", text.x - 300.0))  # (a stand-in arcade's Text: the box)
+                    right = left + float(getattr(text, "content_width", 300.0))
+                    text.y = self._below_play_bar(left, right, self.window.height - 20.0)
+                    text.draw()
+                    bottom = text.y - float(getattr(text, "content_height", 0.0))
+                    self.drawn["objective"] = (objective, left, bottom, right, text.y)
 
         if cfg is not None and not getattr(cfg, "hud_show_xp_bar", True):
             return
@@ -994,6 +1007,15 @@ class PlayerHUD(UIElement):
         self._level_text.anchor_x = "left"
         self._level_text.anchor_y = "center"
         self._level_text.draw()
+
+    def _below_play_bar(self, left: float, right: float, top: float) -> float:
+        """``top``, or just under Studio's play bar (Stop, Flags, Menu) when a play-test has it over ``left``..``right``:
+        a small window, or a bar widened by the AI permissions, put it over the HP bar and the objective (#769)."""
+        rect_of = getattr(getattr(self.window, "studio", None), "play_bar_rect", None)
+        bar = rect_of() if callable(rect_of) else None
+        if bar is None or bar[2] <= left or bar[0] >= right:
+            return top
+        return min(top, float(bar[1]) - HUD_GAP)
 
     def get_hud_view_model(self) -> HudViewModel | None:
         return self._latest_view_model
