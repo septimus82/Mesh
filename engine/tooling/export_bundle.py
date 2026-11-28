@@ -429,19 +429,45 @@ def _collect_content_files(repo_root: Path) -> list[ExportFile]:
 _DOORS = ("SceneTransition", "SceneExit")  # (the behaviours that take the player to another room)
 
 
-def _door_targets(scene: dict[str, Any]) -> Iterator[tuple[str, str]]:
-    """``(target, door name)`` for each door or scene exit in a room, read as the behaviours read them: a
-    SceneTransition's ``target_scene`` (or ``scene``/``target``) from its config over the entity's own fields, a
-    SceneExit's ``target_scene`` from its config. Doors without a target lead nowhere and are skipped, as in the game."""
-    for entity in scene.get("entities") or []:
-        if not isinstance(entity, dict):
+def _prefabs(roots: list[Path]) -> dict[str, dict[str, Any]]:
+    """Each prefab's entity by id, from the files the engine loads them from, in its order (engine.prefabs:
+    ``assets/prefabs.json``, then each pack's ``data/prefabs.json``, a later one winning). A file the game couldn't
+    read gives no prefabs here."""
+    from engine.prefabs import _load_prefab_entries  # noqa: PLC0415
+
+    base = next((r / "assets" / "prefabs.json" for r in roots if (r / "assets" / "prefabs.json").exists()), None)
+    packs = sorted(((child.name.lower(), child / "data" / "prefabs.json") for r in roots if (r / "packs").is_dir()
+                    for child in (r / "packs").iterdir() if (child / "data" / "prefabs.json").exists()),
+                   key=lambda item: (item[0], item[1].as_posix()))
+    found: dict[str, dict[str, Any]] = {}
+    for source in ([base] if base else []) + [path for _name, path in packs]:
+        try:
+            entries = _load_prefab_entries(source)
+        except Exception:  # noqa: BLE001  # REASON: its doors then aren't followed; the file ships as before
             continue
+        found.update({str(e["id"]): e["entity"] for e in entries if isinstance(e.get("entity"), dict)})
+    return found
+
+
+def _door_targets(scene: dict[str, Any], prefabs: dict[str, dict[str, Any]]) -> Iterator[tuple[str, str]]:
+    """``(target, door name)`` for each door or scene exit in a room that the game makes live: listed in the entity's
+    ``behaviours``, or its prefab's when it lists none (engine.prefabs: the entity over its prefab, ``behaviour_config``
+    merged). Read as the behaviours read them: a SceneTransition's ``target_scene`` (or ``scene``/``target``) from its
+    config over the entity's own fields, a SceneExit's ``target_scene`` from its config. Doors without a target lead
+    nowhere and are skipped, as in the game."""
+    for authored in scene.get("entities") or []:
+        if not isinstance(authored, dict):
+            continue
+        prefab = prefabs.get(str(authored.get("prefab_id"))) if authored.get("prefab_id") else None
+        entity = {**prefab, **authored} if prefab else authored
+        if prefab and isinstance(prefab.get("behaviour_config"), dict) and isinstance(authored.get("behaviour_config"), dict):
+            entity["behaviour_config"] = {**prefab["behaviour_config"], **authored["behaviour_config"]}
         raw_listed, raw_configs = entity.get("behaviours"), entity.get("behaviour_config")
         listed: list[Any] = raw_listed if isinstance(raw_listed, list) else []
         configs: dict[str, Any] = raw_configs if isinstance(raw_configs, dict) else {}
         for kind in _DOORS:
             config: dict[str, Any] = {}
-            present = kind in configs
+            present = False
             for entry in listed:
                 if entry == kind or (isinstance(entry, dict) and entry.get("type") == kind):
                     present = True
@@ -469,7 +495,9 @@ class _GameContent:
     def __init__(self, repo_root: Path) -> None:
         self.root = Path(os.path.abspath(repo_root))
         self.real_root = Path(os.path.realpath(repo_root))
-        self.files: dict[str, Path] = {}  # (path in the project, as the game names it: the file, links resolved)
+        # (one entry per file as the file system tells them apart: its path as first named, the file, links resolved)
+        self.files: dict[str, tuple[str, Path]] = {}
+        self.prefabs: dict[str, dict[str, Any]] = {}
         self.errors: list[str] = []
         self.roots = [self.root]  # (the content roots the engine resolves room and world paths against)
         self.world: Any = None
@@ -483,7 +511,7 @@ class _GameContent:
             self.errors.append(f"{what} names no file ({ref!r})")
             return None
         if text.startswith("/") or ":" in text:
-            self.errors.append(f"{what} is an absolute path ({ref!r}); a game names its files relative to its folder, "
+            self.errors.append(f"{what}: {ref!r} is an absolute path; a game names its files relative to its folder, "
                                "so it can't be bundled")
             return None
         outside = False
@@ -494,18 +522,19 @@ class _GameContent:
                 continue
             real = Path(os.path.realpath(path))
             if not path.is_relative_to(self.root):
-                self.errors.append(f"{what} ({ref!r}) is outside the project folder; it can't be bundled")
+                self.errors.append(f"{what}: {ref!r} is outside the project folder; it can't be bundled")
             elif not real.is_relative_to(self.real_root):
-                self.errors.append(f"{what} ({ref!r}) is reached through a link pointing outside the project "
+                self.errors.append(f"{what}: {ref!r} is reached through a link pointing outside the project "
                                    f"({real}); it can't be bundled")
             elif not real.is_file():
-                self.errors.append(f"{what} ({ref!r}) is not a file")
+                self.errors.append(f"{what}: {ref!r} is not a file")
             else:
-                self.files.setdefault(path.relative_to(self.root).as_posix(), real)
+                rel = path.relative_to(self.root).as_posix()
+                self.files.setdefault(os.path.normcase(rel), (rel, real))  # (Cellar.json, cellar.json: one file on Windows)
                 return path
             return None
-        self.errors.append(f"{what} ({ref!r}) is outside the project folder; it can't be bundled" if outside else
-                           f"{what} ({ref!r}) is missing from the project")
+        self.errors.append(f"{what}: {ref!r} is outside the project folder; it can't be bundled" if outside else
+                           f"{what}: {ref!r} is missing from the project")
         return None
 
     def read(self, path: Path, kind: str, what: str) -> dict[str, Any] | None:
@@ -520,7 +549,7 @@ class _GameContent:
                 raise ValueError("it is not a JSON object")
             return migrate_payload(kind, data) if kind in ("scene", "world") else data
         except Exception as exc:  # noqa: BLE001  # REASON: any reason the game couldn't read it stops the export, named
-            self.errors.append(f"{what} ({rel}) can't be read: {exc}")
+            self.errors.append(f"{what}: {rel} can't be read: {exc}")
             return None
 
     def walk(self, config: dict[str, Any], *, project: bool) -> None:
@@ -542,6 +571,7 @@ class _GameContent:
                                        "bundled")
             if self.errors:
                 return
+        self.prefabs = _prefabs(self.roots)
         if config.get("world_file"):
             path = self.locate(config["world_file"], self.roots, "the world (config.json 'world_file')")
             data = self.read(path, "world", "the world") if path else None
@@ -575,11 +605,12 @@ class _GameContent:
         scene = self.read(path, "scene", what)
         if scene is None:
             return
-        for target, door in _door_targets(scene):
-            self.room(self.door_path(target), f"room {target!r} (where {door!r} in {rel} leads)")
+        for target, door in _door_targets(scene, self.prefabs):
+            self.room(self.door_path(target), f"the room {door!r} in {rel} leads to")
         tilemap = scene.get("tilemap")
         given = [tilemap.get(k) for k in ("resolved_path", "path")] if isinstance(tilemap, dict) else []
         refs: list[str] = [r for r in given if isinstance(r, str) and r.strip()]
+        refs = [r for r in refs if not (r.startswith(("/", "\\")) or ":" in r)] or refs  # (absolute: the game falls back)
         if refs:  # (engine.scene_runtime.scene_load_apply: the first one found beside the room, else in the game's folder)
             bases = [path.parent, self.root]
             ref = next((r for r in refs if any(os.path.lexists(os.path.normpath(b / r)) for b in bases)), refs[-1])
@@ -635,7 +666,7 @@ def _game_content(repo_root: Path, plan: ExportPlan) -> list[ExportFile]:
     content.walk(config, project=project)
     plan.errors.extend(content.errors)
     return [ExportFile(rel_path=rel, src_path=str(src), sha256=compute_sha256(src), size=src.stat().st_size,
-                       category="content") for rel, src in sorted(content.files.items())]
+                       category="content") for rel, src in sorted(content.files.values())]
 
 
 def compute_export_plan(
@@ -1116,7 +1147,7 @@ def build_bundle(
 
     if plan.errors:
         print(f"[export-bundle] ERROR: {len(plan.errors)} errors:")
-        for err in plan.errors[:10]:
+        for err in plan.errors:
             print(f"  - {err}")
         return 1, None
 

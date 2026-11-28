@@ -236,18 +236,40 @@ def _broken_config(game: Path, outside: Path) -> None:
     (game / "config.json").write_text('{"start_scene": "chapters/scenes/start.json",', encoding="utf-8")
 
 
+def _schema_invalid_config(game: Path, outside: Path) -> None:
+    config = _json(game / "config.json")
+    config["width"] = "wide"  # (JSON, but not a config the game accepts: engine.config validates it at start)
+    _write(game / "config.json", config)
+
+
 def _no_main(game: Path, outside: Path) -> None:
     (game / "main.py").unlink()
 
 
+def _prefab_door(game: Path, outside: Path) -> None:
+    """A door made live by its prefab (the room's entity lists no behaviours of its own), leading to a missing room."""
+    prefabs = _json(game / "assets" / "prefabs.json")
+    prefabs.append({"id": "portal", "display_name": "Portal", "tags": ["door"],
+                    "entity": {"behaviours": ["SceneTransition"], "behaviour_config": {"SceneTransition": {"target_scene": "vault"}}}})
+    _write(game / "assets" / "prefabs.json", prefabs)
+    start = game / "chapters" / "scenes" / "start.json"
+    scene = _json(start)
+    scene["entities"].append({"id": "start_portal_200_300_0_0", "prefab_id": "portal", "x": 200.0, "y": 300.0})
+    _write(start, scene)
+
+
 REFUSED: dict[str, tuple[Callable[[Path, Path], None], str]] = {
-    "missing room": (_missing_room, "room 'cellar' of the world ('chapters/scenes/cellar.json') is missing"),
-    "invalid room": (_broken_room, "chapters/scenes/cellar.json) can't be read"),
+    "missing room": (_missing_room, "room 'cellar' of the world: 'chapters/scenes/cellar.json' is missing from the project"),
+    "missing door room": (_door_to(lambda g, o: "attic"),  # (the door is its only way in: no world room names it)
+                          "the room 'Door to Cellar' in chapters/scenes/start.json leads to: 'attic' is missing from the project"),
+    "missing prefab door room": (_prefab_door, "in chapters/scenes/start.json leads to: 'vault' is missing from the project"),
+    "invalid room": (_broken_room, "room 'cellar' of the world: chapters/scenes/cellar.json can't be read"),
     "door up out": (_door_to(lambda g, o: "../outside/room.json"), "is outside the project folder"),
     "door absolute": (_door_to(lambda g, o: str(o / "room.json")), "is an absolute path"),
     "linked out": (_linked_room, "is reached through a link pointing outside the project"),
-    "deleted start": (_deleted_start, "the start room (config.json 'start_scene') ('chapters/scenes/start.json') is missing"),
+    "deleted start": (_deleted_start, "the start room (config.json 'start_scene'): 'chapters/scenes/start.json' is missing"),
     "invalid config": (_broken_config, "config.json can't be read by the game"),
+    "schema-invalid config": (_schema_invalid_config, "config.json can't be read by the game"),
     "no main.py": (_no_main, "main.py is missing"),
 }
 
@@ -279,6 +301,44 @@ def test_an_export_with_content_missing_broken_or_outside_the_project_is_refused
     assert _tree(out) == before, "the earlier export is exactly as it was"
     assert sorted(p.name for p in out.parent.iterdir()) == ["bundle"], "no working folder or journal left beside it"
     assert _export(game, out, capsys, "plan")[0] == 1
+
+
+def test_a_door_the_game_never_makes_live_does_not_stop_the_export(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """A SceneTransition left in an object's ``behaviour_config`` but not in its ``behaviours`` (nor its prefab's) is
+    never built by the game, so its stale target is no reason to refuse the export."""
+    game = _chapters_game(tmp_path / "game")
+    start = game / "chapters" / "scenes" / "start.json"
+    scene = _json(start)
+    scene["entities"][-1]["behaviours"] = []
+    scene["entities"][-1]["behaviour_config"]["SceneTransition"]["target_scene"] = "attic"
+    _write(start, scene)
+    code, said = _export(game, tmp_path / "bundle", capsys)
+    assert code == 0, said
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="two spellings of one file exist only on a case-insensitive file system")
+def test_two_spellings_of_one_room_ship_it_once_and_both_find_it(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """The world names chapters/scenes/Cellar.json and a door chapters/scenes/cellar.json: one file on Windows, where
+    the source game plays. The plan lists it once and the build succeeds (it failed: two entries, one file), and the
+    exported game finds it by both names."""
+    from engine.tooling.export_bundle import compute_export_plan
+
+    game = _chapters_game(tmp_path / "game")
+    world = _json(game / "chapters" / "worlds" / "main.json")
+    world["scenes"]["cellar"]["path"] = "chapters/scenes/Cellar.json"
+    _write(game / "chapters" / "worlds" / "main.json", world)
+    _door_to(lambda g, o: "chapters/scenes/cellar.json")(game, tmp_path / "outside")
+    plan = compute_export_plan(game)
+    assert plan.ok, plan.summary()
+    assert [f.rel_path for f in plan.files if f.rel_path.lower() == "chapters/scenes/cellar.json"] == ["chapters/scenes/Cellar.json"]
+    code, said = _export(game, tmp_path / "bundle", capsys)
+    assert code == 0, said
+    probe = ("import sys; sys.path.insert(0, '.'); from engine.config import load_config; "
+             "from engine.paths import pin_config, resolve_path; pin_config(load_config('config.json')); "
+             "print('MESH-FOUND', all(resolve_path(p).is_file() for p in sys.argv[1:]))")
+    out = subprocess.run([sys.executable, "-c", probe, "chapters/scenes/Cellar.json", "chapters/scenes/cellar.json"],
+                         cwd=tmp_path / "bundle", env=_env(), capture_output=True, text=True, timeout=120)
+    assert "MESH-FOUND True" in out.stdout, out.stdout + out.stderr
 
 
 @pytest.mark.parametrize("template", ["blank", "adventure", "starter", "hd2d_rpg", "monster", "lighting_playground"])
