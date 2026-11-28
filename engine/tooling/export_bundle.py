@@ -10,6 +10,12 @@ game: the project's ``main.py``, ``config.json``, ``packs/``, ``locales/*.json``
 runtime and the engine's interface text (``share/mesh-engine/locales``). It runs with
 ``python main.py`` wherever Mesh's dependencies (arcade, pillow, jsonschema) are installed, without Mesh itself.
 
+Besides those folders, the bundle holds every file the game's ``config.json`` reaches, wherever it is in the project
+(#760): its start room, menu room and world, the world's rooms, the rooms doors lead to, and their maps, tilesets and
+tileset pictures (``_GameContent``). One that is missing, unreadable, named by an absolute path, outside the project or
+reached through a link pointing out of it, an invalid ``config.json``, or a project without ``main.py`` stops the export
+before anything is written.
+
 Replacing an earlier export (F4, #422): the new bundle is built and checked in ``.<name>~new/b`` beside the output
 folder, and only then handed over: the earlier bundle is moved to ``.<name>~old/b``, the new one to ``<name>``, and both
 working folders deleted. If the second move fails, the first is undone; if that fails too, both bundles are kept and
@@ -52,7 +58,7 @@ import shutil
 import stat
 import sys
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -416,6 +422,222 @@ def _collect_content_files(repo_root: Path) -> list[ExportFile]:
     return files
 
 
+# --------------------------------------------------------------------------- #
+# What the game's configuration references (#760)
+# --------------------------------------------------------------------------- #
+
+_DOORS = ("SceneTransition", "SceneExit")  # (the behaviours that take the player to another room)
+
+
+def _door_targets(scene: dict[str, Any]) -> Iterator[tuple[str, str]]:
+    """``(target, door name)`` for each door or scene exit in a room, read as the behaviours read them: a
+    SceneTransition's ``target_scene`` (or ``scene``/``target``) from its config over the entity's own fields, a
+    SceneExit's ``target_scene`` from its config. Doors without a target lead nowhere and are skipped, as in the game."""
+    for entity in scene.get("entities") or []:
+        if not isinstance(entity, dict):
+            continue
+        raw_listed, raw_configs = entity.get("behaviours"), entity.get("behaviour_config")
+        listed: list[Any] = raw_listed if isinstance(raw_listed, list) else []
+        configs: dict[str, Any] = raw_configs if isinstance(raw_configs, dict) else {}
+        for kind in _DOORS:
+            config: dict[str, Any] = {}
+            present = kind in configs
+            for entry in listed:
+                if entry == kind or (isinstance(entry, dict) and entry.get("type") == kind):
+                    present = True
+                    if isinstance(entry, dict):
+                        params = entry.get("params")
+                        config.update(params if isinstance(params, dict) else {})
+                        config.update({k: v for k, v in entry.items() if k not in ("type", "params")})
+            if not present:
+                continue
+            own = configs.get(kind)
+            config.update(own if isinstance(own, dict) else {})
+            fields = {**entity, **config} if kind == "SceneTransition" else config
+            keys = ("target_scene", "scene", "target") if kind == "SceneTransition" else ("target_scene",)
+            target = next((fields[k] for k in keys if fields.get(k)), "")
+            if isinstance(target, str) and target.strip():
+                yield target.strip(), str(entity.get("name") or entity.get("id") or kind)
+
+
+class _GameContent:
+    """The files the game loads, found as the engine finds them, from its ``config.json``: the start room, the menu
+    room, the world and each of its rooms, every room a door or scene exit leads to, and each room's map file with
+    its tilesets and their pictures. Each is checked (there, readable, inside the project and not reached through a
+    link pointing out of it); ``errors`` says what isn't."""
+
+    def __init__(self, repo_root: Path) -> None:
+        self.root = Path(os.path.abspath(repo_root))
+        self.real_root = Path(os.path.realpath(repo_root))
+        self.files: dict[str, Path] = {}  # (path in the project, as the game names it: the file, links resolved)
+        self.errors: list[str] = []
+        self.roots = [self.root]  # (the content roots the engine resolves room and world paths against)
+        self.world: Any = None
+        self._seen: set[Path] = set()
+
+    def locate(self, ref: Any, bases: Iterable[Path], what: str) -> Path | None:
+        """The project file ``ref`` names, tried against ``bases`` in order as the engine does (the first that
+        exists), or None after recording why not: missing, absolute, outside the project, a link pointing out."""
+        text = ref.strip().replace("\\", "/") if isinstance(ref, str) else ""
+        if not text:
+            self.errors.append(f"{what} names no file ({ref!r})")
+            return None
+        if text.startswith("/") or ":" in text:
+            self.errors.append(f"{what} is an absolute path ({ref!r}); a game names its files relative to its folder, "
+                               "so it can't be bundled")
+            return None
+        outside = False
+        for base in bases:
+            path = Path(os.path.normpath(base / text))
+            if not os.path.lexists(path):
+                outside = outside or not path.is_relative_to(self.root)
+                continue
+            real = Path(os.path.realpath(path))
+            if not path.is_relative_to(self.root):
+                self.errors.append(f"{what} ({ref!r}) is outside the project folder; it can't be bundled")
+            elif not real.is_relative_to(self.real_root):
+                self.errors.append(f"{what} ({ref!r}) is reached through a link pointing outside the project "
+                                   f"({real}); it can't be bundled")
+            elif not real.is_file():
+                self.errors.append(f"{what} ({ref!r}) is not a file")
+            else:
+                self.files.setdefault(path.relative_to(self.root).as_posix(), real)
+                return path
+            return None
+        self.errors.append(f"{what} ({ref!r}) is outside the project folder; it can't be bundled" if outside else
+                           f"{what} ({ref!r}) is missing from the project")
+        return None
+
+    def read(self, path: Path, kind: str, what: str) -> dict[str, Any] | None:
+        """A JSON file's object (migrated to the current schema for a ``scene`` or ``world``), or None after recording
+        why it can't be used."""
+        from engine.migrations import migrate_payload  # noqa: PLC0415
+
+        rel = path.relative_to(self.root).as_posix()
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                raise ValueError("it is not a JSON object")
+            return migrate_payload(kind, data) if kind in ("scene", "world") else data
+        except Exception as exc:  # noqa: BLE001  # REASON: any reason the game couldn't read it stops the export, named
+            self.errors.append(f"{what} ({rel}) can't be read: {exc}")
+            return None
+
+    def walk(self, config: dict[str, Any], *, project: bool) -> None:
+        """Everything the game reaches from ``config`` (its ``config.json``, already checked against its schema)."""
+        from engine.config import _validate_config_value  # noqa: PLC0415
+        from engine.world_controller import WorldController  # noqa: PLC0415
+
+        for key in ("start_scene", "main_menu_scene", "world_file", "content_roots"):
+            problem = _validate_config_value(key, config[key]) if key in config else None
+            if problem:
+                self.errors.append(f"config.json: '{key}' {problem}")
+        if self.errors:
+            return
+        if config.get("content_roots"):
+            self.roots = [Path(os.path.normpath(self.root / str(r))) for r in config["content_roots"]]
+            for given, root in zip(config["content_roots"], self.roots, strict=True):
+                if ":" in str(given) or not root.is_relative_to(self.root):
+                    self.errors.append(f"config.json: content root {given!r} is outside the project; it can't be "
+                                       "bundled")
+            if self.errors:
+                return
+        if config.get("world_file"):
+            path = self.locate(config["world_file"], self.roots, "the world (config.json 'world_file')")
+            data = self.read(path, "world", "the world") if path else None
+            if data is not None:
+                self.world = WorldController(data)
+                rooms = self.world.export_metadata()["scene_keys"]
+                start = self.world.get_start_scene_key()
+                if start and start not in rooms:
+                    self.errors.append(f"the world's start room {start!r} is not one of its rooms ({', '.join(rooms)})")
+                for link in data.get("links") or []:
+                    ends = [link.get(end) for end in ("from", "to")] if isinstance(link, dict) else []
+                    for end in ends:
+                        if end and end not in rooms:
+                            self.errors.append(f"the world links to {end!r}, which is not one of its rooms")
+                for key in rooms:
+                    self.room(self.world.get_scene_path(key), f"room {key!r} of the world")
+        if "start_scene" in config:
+            self.room(config["start_scene"], "the start room (config.json 'start_scene')")
+        elif project:
+            self.errors.append("config.json names no 'start_scene': the game has no room to start in")
+        if config.get("main_menu_scene"):
+            self.room(config["main_menu_scene"], "the menu room (config.json 'main_menu_scene')")
+
+    def room(self, ref: Any, what: str) -> None:
+        """A room, then everything it reaches: the rooms its doors lead to, its map file."""
+        path = self.locate(ref, self.roots, what)
+        if path is None or path in self._seen:
+            return
+        self._seen.add(path)
+        rel = path.relative_to(self.root).as_posix()
+        scene = self.read(path, "scene", what)
+        if scene is None:
+            return
+        for target, door in _door_targets(scene):
+            self.room(self.door_path(target), f"room {target!r} (where {door!r} in {rel} leads)")
+        tilemap = scene.get("tilemap")
+        given = [tilemap.get(k) for k in ("resolved_path", "path")] if isinstance(tilemap, dict) else []
+        refs: list[str] = [r for r in given if isinstance(r, str) and r.strip()]
+        if refs:  # (engine.scene_runtime.scene_load_apply: the first one found beside the room, else in the game's folder)
+            bases = [path.parent, self.root]
+            ref = next((r for r in refs if any(os.path.lexists(os.path.normpath(b / r)) for b in bases)), refs[-1])
+            map_path = self.locate(ref, bases, f"the map of {rel}")
+            if map_path is not None:
+                self.tilesets(map_path)
+
+    def door_path(self, target: str) -> str:
+        """A door's target as the game resolves it (engine.scene_runtime.transitions): a room of the world by its
+        key, else a bare name as ``scenes/<name>.json`` when that exists, else a path."""
+        mapped = self.world.get_scene_path(target) if self.world is not None else None
+        if mapped:
+            return str(mapped)
+        if "/" not in target and "\\" not in target and not target.endswith(".json"):
+            if any(os.path.lexists(root / "scenes" / f"{target}.json") for root in self.roots):
+                return f"scenes/{target}.json"
+        return target
+
+    def tilesets(self, map_path: Path) -> None:
+        """A map file's tilesets and their pictures (engine.tilemap: a tileset beside the map, its picture beside the
+        tileset)."""
+        rel = map_path.relative_to(self.root).as_posix()
+        data = self.read(map_path, "map", f"the map {rel}")
+        for entry in (data or {}).get("tilesets") or []:
+            if not isinstance(entry, dict):
+                continue
+            base, tileset = map_path.parent, entry
+            if isinstance(entry.get("source"), str) and entry["source"].strip():
+                path = self.locate(entry["source"], [map_path.parent], f"a tileset of {rel}")
+                if path is None or path.suffix.lower() != ".json":
+                    continue  # (a .tsx tileset is shipped; its picture is not followed)
+                tileset, base = self.read(path, "tileset", "a tileset") or {}, path.parent
+            if isinstance(tileset.get("image"), str) and tileset["image"].strip():
+                self.locate(tileset["image"], [base], f"the picture of a tileset of {rel}")
+
+
+def _game_content(repo_root: Path, plan: ExportPlan) -> list[ExportFile]:
+    """What the game's ``config.json`` references, wherever it is in the project (#760), as content files; every
+    problem (an invalid ``config.json``, no ``main.py`` in a project, a room missing, unreadable or outside the
+    project) in ``plan.errors``."""
+    from engine.schema_validation import validate  # noqa: PLC0415
+
+    project = is_project(repo_root)
+    if project and not (repo_root / "main.py").is_file():
+        plan.errors.append("main.py is missing: an exported game starts with it (mesh new writes one)")
+    try:
+        config = json.loads((repo_root / "config.json").read_text(encoding="utf-8"))
+        validate(config, "config.schema.json", "config.json")  # (as the game does when it starts: engine.config)
+    except Exception as exc:  # noqa: BLE001  # REASON: any reason the game couldn't read it stops the export, named
+        plan.errors.append(f"config.json can't be read by the game: {exc}")
+        return []
+    content = _GameContent(repo_root)
+    content.walk(config, project=project)
+    plan.errors.extend(content.errors)
+    return [ExportFile(rel_path=rel, src_path=str(src), sha256=compute_sha256(src), size=src.stat().st_size,
+                       category="content") for rel, src in sorted(content.files.items())]
+
+
 def compute_export_plan(
     repo_root: Path,
     *,
@@ -445,21 +667,22 @@ def compute_export_plan(
     runtime_files = _collect_runtime_files(repo_root)
     plan.files.extend(runtime_files)
 
-    # Collect content files
+    # Collect content files: the fixed folders as before, and whatever else the game's configuration reaches (#760)
     content_files = _collect_content_files(repo_root)
     plan.files.extend(content_files)
+    reached = _game_content(repo_root, plan)
 
-    # Determine required assets from dependency graph
-    required_assets: set[str] = set()
+    # Collect asset files
+    all_assets = {a["id"]: a for a in manifest.get("assets", [])}
+
+    # Determine required assets from dependency graph (and the game's reach: a map's tileset picture)
+    required_assets: set[str] = {f.rel_path for f in reached if f.rel_path in all_assets}
     for ref in dep_report.references:
         required_assets.add(ref.asset_id)
 
     # Always include prefabs.json if it exists
     if (repo_root / "assets" / "prefabs.json").exists():
         required_assets.add("assets/prefabs.json")
-
-    # Collect asset files
-    all_assets = {a["id"]: a for a in manifest.get("assets", [])}
 
     for asset_id, asset_info in sorted(all_assets.items()):
         src_path = repo_root / asset_id
@@ -479,12 +702,20 @@ def compute_export_plan(
         else:
             plan.excluded_assets.append(asset_id)
 
+    planned = {os.path.normcase(f.rel_path) for f in plan.files}
+    plan.files.extend(f for f in reached if os.path.normcase(f.rel_path) not in planned)
+
     # Check for missing dependencies
     for dep in dep_report.missing:
         plan.missing_deps.append(dep.asset_id)
 
     # Propagate errors from dependency report
     plan.errors.extend(dep_report.errors)
+
+    # Nothing of the project's comes from outside it, through a link or junction (the engine package may: it's Mesh's)
+    real_root = Path(os.path.realpath(repo_root))
+    plan.errors.extend(f"{f.rel_path} is a link to {f.src_path}, outside the project; it can't be bundled"
+                       for f in plan.files if f.category != "runtime" and not Path(f.src_path).is_relative_to(real_root))
 
     # Sort files for determinism
     plan.files.sort(key=lambda f: f.rel_path)
