@@ -88,3 +88,17 @@ def test_an_object_the_room_still_has_is_the_room_s_as_authored_now_where_play_l
 
 def test_only_a_save_without_its_own_room_copy_needs_its_room() -> None:
     assert needs_its_room(_save([], room_ids=["player"])) and not needs_its_room(_save([]))
+
+
+@pytest.mark.parametrize("player", [
+    {"id": "hero", "x": 5.0, "y": 6.0, "prefab_id": "player"},  # (the shared player, as a Studio room's file has it)
+    {"id": "hero", "x": 5.0, "y": 6.0, "tag": "Player"},
+    {"id": "hero", "x": 5.0, "y": 6.0, "tags": ["player"]},
+    {"id": "hero", "x": 5.0, "y": 6.0, "behaviours": ["PlayerController"]},
+], ids=["shared_player", "tag", "tags", "controller"])
+def test_a_save_that_recorded_the_player_as_removed_still_brings_it_back(player: dict) -> None:
+    """#750: a save made after a game-over retry before the fix lacks the player and lists it as removed."""
+    room = _room("chest")
+    room["entities"].append(player)
+    scene = compose(_save([], removed=("hero", "chest"), room_ids=["hero", "chest"]), room, ROOM_PATH)
+    assert [e["id"] for e in scene["entities"]] == ["hero"]  # (the player back; the chest stays removed)

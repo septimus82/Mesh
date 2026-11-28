@@ -165,7 +165,7 @@ def _not_in_room(project: Any, window: Any, entity_id: str, flag: Any) -> tuple[
         return observed, causes, set()
     _key, _label, entity = here[0]
     removed = room_memory.removed_ids(window, str(getattr(window.scene_controller, "room_path", "") or ""))
-    if entity_id in removed:
+    if entity_id in removed and not is_player_entity_payload(entity):  # (#750: never the player)
         observed.append(_cond("in_room", False, "It was collected or defeated earlier in this game (the room "
                                                 "remembers it), so it isn't brought back.", running_room=room))
         return observed, causes, set()

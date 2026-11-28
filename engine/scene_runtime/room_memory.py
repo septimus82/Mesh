@@ -7,7 +7,8 @@ in that room.
 What persists: the authored objects (those with an ``id``) that were in the room when it loaded and
 were removed during play (collected, destroyed, defeated). They are recorded per room in the game
 state's variables (``room_memory``), so saves carry them with everything else, and they are left out
-when the room loads again. A new game (a new game state) starts with every room as authored.
+when the room loads again. A new game (a new game state) starts with every room as authored. The player is never one of
+them, though it leaves the room's sprite lists when it dies (#750: ``engine.scene_entity_gating.is_player_entity_payload``).
 
 What does not: objects spawned at runtime (projectiles, effects), positions of things that move, and
 anything a flag already controls (flags persist on their own). (A defeated enemy's drop the inventory refused is a
@@ -34,6 +35,7 @@ from pathlib import Path
 from typing import Any
 
 from engine.log_utils import get_logger
+from engine.scene_entity_gating import is_player_entity_payload
 
 logger = get_logger(__name__)
 
@@ -63,6 +65,13 @@ def removed_ids(window: Any, room: str) -> set[str]:
 
 def spawned_ids(entities: list[Any]) -> set[str]:
     return {str(e["id"]) for e in entities if isinstance(e, dict) and isinstance(e.get("id"), str) and e["id"]}
+
+
+def player_ids(entities: Any) -> set[str]:
+    """The ids of a room's player objects: never remembered as removed (#750; a dead player leaves the sprite lists
+    too, and comes back on retry). Saves that recorded one anyway still load with it: reads ignore it too."""
+    return {str(e["id"]) for e in entities or []
+            if is_player_entity_payload(e) and isinstance(e.get("id"), str) and e["id"]}
 
 
 def is_save_slot(window: Any, path: str) -> bool:
@@ -97,7 +106,7 @@ def remember_removed(controller: Any) -> None:
         data = getattr(sprite, "mesh_entity_data", None)
         if isinstance(data, dict) and isinstance(data.get("id"), str):
             alive.add(data["id"])
-    gone = (set(spawned) - alive) | removed_ids(controller.window, room)
+    gone = ((set(spawned) - alive) | removed_ids(controller.window, room)) - getattr(controller, "_room_player_ids", set())
     if not gone:
         return
     memory = dict(_memory(controller.window))
