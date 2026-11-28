@@ -17,6 +17,7 @@ from engine.physics_model import (
     MoveResult,
     footprint,  # noqa: F401
     keep_inside,
+    solid_box,
     sweep_axis_separate,
 )
 
@@ -460,12 +461,14 @@ def move_entity_with_physics(
     delta: Tuple[float, float],
     solid_sprites: Any, # optional_arcade.arcade.SpriteList
     bounds: Optional[Tuple[float, float, float, float]] = None,
+    push_out: bool = True,
 ) -> MoveResult:
     """
     Execute a move using the deterministic physics model.
     Updates entity position in-place.
     Returns the result details.
     ``bounds``: a 2D room's edges, kept inside as walls (room_bounds; None: not kept, as World.move's sweep).
+    ``push_out``: False skips the push out of wall tiles (sweep_axis_separate; World._step's retry).
     """
     global _LAST_SOLID_SPRITES
     _LAST_SOLID_SPRITES = solid_sprites if solid_sprites else []
@@ -555,10 +558,11 @@ def move_entity_with_physics(
                         _log_swallow("PHRT-015", "engine.physics_runtime blanket exception fallback")
                         continue
 
-        return [_sprite_to_aabb(s) for s in hits]
+        # (a solid mover is in the list too: after a push its own collider, still at its start, would be a wall)
+        return [solid_box(s, _sprite_to_aabb(s)) for s in hits if s is not entity]
 
     # 3. Execute Pure Model
-    result = sweep_axis_separate(req, query_tiles)
+    result = sweep_axis_separate(req, query_tiles, bounds, push_out)
     kept = keep_inside(Aabb(*result.final_pos, start_aabb.w, start_aabb.h), delta, bounds)
     if kept != result.final_pos:
         result = replace(result, final_pos=kept)

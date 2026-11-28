@@ -69,6 +69,7 @@ from engine.physics_model import (
     entity_shape,
     shape_aabb,
     shapes_overlap,
+    solid_box,
     sweep_axis_separate,
 )
 
@@ -244,7 +245,7 @@ def body(entity: dict[str, Any], root: Path) -> Body:
     return Body(float(entity.get("x", 0.0)), float(entity.get("y", 0.0)), w, h, entity)
 
 
-def move(mover: Body, delta: tuple[float, float], solids: list[Body]) -> None:
+def move(mover: Body, delta: tuple[float, float], solids: list[Body], *, push_out: bool = True) -> None:
     """engine.physics_runtime.move_entity_with_physics for a collider-shaped mover, without Arcade."""
     shape = entity_shape(mover)
     start = shape_aabb(shape)
@@ -252,9 +253,10 @@ def move(mover: Body, delta: tuple[float, float], solids: list[Body]) -> None:
 
     def query(aabb: Aabb) -> list[Aabb]:
         probe = Circle(aabb.x, aabb.y, radius) if radius else aabb
-        return [shape_aabb(s) for s in map(entity_shape, solids) if shapes_overlap(probe, s)]
+        others = (b for b in solids if b is not mover)  # (its own body, still at its start, would be a wall after a push)
+        return [solid_box(b, shape_aabb(s)) for b, s in ((b, entity_shape(b)) for b in others) if shapes_overlap(probe, s)]
 
-    result = sweep_axis_separate(MoveRequest("player", (start.x, start.y), delta, start), query)
+    result = sweep_axis_separate(MoveRequest("player", (start.x, start.y), delta, start), query, push_out=push_out)
     mover.center_x += result.final_pos[0] - start.x
     mover.center_y += result.final_pos[1] - start.y
 

@@ -27,7 +27,7 @@ from __future__ import annotations
 import math
 from typing import Any, Callable, Iterable
 
-from engine.hd2d.world import NAV_HALF, World, elevation_of
+from engine.hd2d.world import NAV_HALF, Sweep, World, elevation_of
 from engine.physics_model import entity_aabb
 
 PX = 32.0  # px per metre (engine.hd2d.settings.PIXELS_PER_METRE)
@@ -37,9 +37,6 @@ STUCK_S = 1.0  # s: no headway towards a way out for this long: the next one
 RETRY_S = 5.0  # s: stranded, it looks for a way out again this often (the ground may have changed)
 REPLANS = 3  # routes planned again in a row without reaching a point: it gives that point up for a while
 BACK_OFF_S = 5.0  # s: ... this long before the next
-
-Sweep = Callable[[Any, tuple[float, float], list[Any]], Any]
-
 
 def parse_route(points: Any) -> list[tuple[float, float, float]]:
     """A route as authored (``[x, y]`` or ``[x, y, elevation]`` px each); anything else left out."""
